@@ -1,0 +1,325 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "ec0bd5d87423c61bf6487dbf8a67aba7",
+    "entities": [
+      {
+        "tableName": "saved_stories",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stable_article_id` TEXT NOT NULL, `api_id` TEXT NOT NULL, `title` TEXT NOT NULL, `summary` TEXT NOT NULL, `original_url` TEXT, `source` TEXT NOT NULL, `published_at` TEXT, `created_at` TEXT, `thumbnail_url` TEXT, `categories` TEXT NOT NULL, `saved_at` INTEGER NOT NULL, PRIMARY KEY(`stable_article_id`))",
+        "fields": [
+          {
+            "fieldPath": "stableArticleId",
+            "columnName": "stable_article_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "apiId",
+            "columnName": "api_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "summary",
+            "columnName": "summary",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "originalUrl",
+            "columnName": "original_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "source",
+            "columnName": "source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "publishedAt",
+            "columnName": "published_at",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "created_at",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "thumbnailUrl",
+            "columnName": "thumbnail_url",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "categories",
+            "columnName": "categories",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "savedAtEpochMillis",
+            "columnName": "saved_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stable_article_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_saved_stories_api_id",
+            "unique": false,
+            "columnNames": [
+              "api_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_stories_api_id` ON `${TABLE_NAME}` (`api_id`)"
+          },
+          {
+            "name": "index_saved_stories_saved_at",
+            "unique": false,
+            "columnNames": [
+              "saved_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_saved_stories_saved_at` ON `${TABLE_NAME}` (`saved_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "story_notes",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stable_article_id` TEXT NOT NULL, `legacy_article_id` TEXT, `article_title` TEXT NOT NULL, `text` TEXT NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`stable_article_id`))",
+        "fields": [
+          {
+            "fieldPath": "stableArticleId",
+            "columnName": "stable_article_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "legacyArticleId",
+            "columnName": "legacy_article_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "articleTitle",
+            "columnName": "article_title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMillis",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stable_article_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_story_notes_legacy_article_id",
+            "unique": false,
+            "columnNames": [
+              "legacy_article_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_notes_legacy_article_id` ON `${TABLE_NAME}` (`legacy_article_id`)"
+          },
+          {
+            "name": "index_story_notes_updated_at",
+            "unique": false,
+            "columnNames": [
+              "updated_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_notes_updated_at` ON `${TABLE_NAME}` (`updated_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "story_reflections",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`stable_article_id` TEXT NOT NULL, `legacy_article_id` TEXT, `article_title` TEXT NOT NULL, `article_source` TEXT NOT NULL, `reaction_id` TEXT NOT NULL, `created_at` INTEGER NOT NULL, PRIMARY KEY(`stable_article_id`))",
+        "fields": [
+          {
+            "fieldPath": "stableArticleId",
+            "columnName": "stable_article_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "legacyArticleId",
+            "columnName": "legacy_article_id",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "articleTitle",
+            "columnName": "article_title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "articleSource",
+            "columnName": "article_source",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reactionId",
+            "columnName": "reaction_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAtEpochMillis",
+            "columnName": "created_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "stable_article_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_story_reflections_legacy_article_id",
+            "unique": false,
+            "columnNames": [
+              "legacy_article_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_reflections_legacy_article_id` ON `${TABLE_NAME}` (`legacy_article_id`)"
+          },
+          {
+            "name": "index_story_reflections_reaction_id",
+            "unique": false,
+            "columnNames": [
+              "reaction_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_reflections_reaction_id` ON `${TABLE_NAME}` (`reaction_id`)"
+          },
+          {
+            "name": "index_story_reflections_created_at",
+            "unique": false,
+            "columnNames": [
+              "created_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_story_reflections_created_at` ON `${TABLE_NAME}` (`created_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "reading_story_opens",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day_key` TEXT NOT NULL, `stable_article_id` TEXT NOT NULL, `opened_at` INTEGER NOT NULL, PRIMARY KEY(`day_key`, `stable_article_id`))",
+        "fields": [
+          {
+            "fieldPath": "dayKey",
+            "columnName": "day_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stableArticleId",
+            "columnName": "stable_article_id",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "openedAtEpochMillis",
+            "columnName": "opened_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day_key",
+            "stable_article_id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_reading_story_opens_stable_article_id",
+            "unique": false,
+            "columnNames": [
+              "stable_article_id"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reading_story_opens_stable_article_id` ON `${TABLE_NAME}` (`stable_article_id`)"
+          },
+          {
+            "name": "index_reading_story_opens_opened_at",
+            "unique": false,
+            "columnNames": [
+              "opened_at"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_reading_story_opens_opened_at` ON `${TABLE_NAME}` (`opened_at`)"
+          }
+        ]
+      },
+      {
+        "tableName": "original_story_opens",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`day_key` TEXT NOT NULL, `open_count` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY(`day_key`))",
+        "fields": [
+          {
+            "fieldPath": "dayKey",
+            "columnName": "day_key",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "openCount",
+            "columnName": "open_count",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "updatedAtEpochMillis",
+            "columnName": "updated_at",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "day_key"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ec0bd5d87423c61bf6487dbf8a67aba7')"
+    ]
+  }
+}

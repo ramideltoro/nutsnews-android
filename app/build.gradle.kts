@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ksp)
+    alias(libs.plugins.room)
 }
 
 android {
@@ -46,6 +48,18 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+
+    sourceSets {
+        getByName("debug").assets.directories.add("$projectDir/schemas")
+    }
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 dependencies {
@@ -59,6 +73,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
+    implementation(libs.androidx.room.ktx)
+    implementation(libs.androidx.room.runtime)
     implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.okhttp)
@@ -66,7 +82,11 @@ dependencies {
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
+    ksp(libs.androidx.room.compiler)
+
+    testImplementation(libs.androidx.room.testing)
     testImplementation(libs.junit4)
     testImplementation(libs.kotlin.test)
     testImplementation(libs.okhttp.mockwebserver.junit4)
+    testImplementation(libs.robolectric)
 }
