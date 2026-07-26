@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">NutsNews</string>
+    <string name="daily_reminder_channel_name">Daily good-news reset</string>
+    <string name="daily_reminder_channel_description">A gentle daily reminder to read positive news.</string>
+    <string name="daily_reminder_title">Your NutsNews reset is ready</string>
+    <string name="daily_reminder_body">Take a minute for today’s calm, positive stories.</string>
 </resources>

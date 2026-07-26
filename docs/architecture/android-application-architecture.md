@@ -115,6 +115,16 @@ persisting as they change. The editor can discard its remaining draft and
 reload the latest persisted values. Its Compose screen is exercised on the JVM
 with Robolectric's Compose UI test host.
 
+`AndroidDailyReminderManager` owns the single local daily reminder. It creates
+the native notification channel, gates scheduling on Android's runtime and
+system notification settings, and replaces or cancels an inexact
+`setAndAllowWhileIdle` alarm without requesting exact-alarm access. The alarm
+receiver posts the iOS-matched reminder and immediately schedules the next
+local occurrence; a separate receiver restores the preference-backed schedule
+after boot, package replacement, clock changes, and timezone changes. Tapping
+the notification routes through the single-top Activity to Daily Digest after
+startup has resolved.
+
 `GoodMoodRecommendationEngine` separately preserves the Good Mood screen's
 Calm, Hopeful, Inspired, and Curious definitions and field-specific weights.
 It excludes unsafe cards, selects one featured result plus ordered remaining

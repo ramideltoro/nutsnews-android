@@ -11,11 +11,14 @@ import com.nutsnews.app.data.story.StoryNoteRepository
 import com.nutsnews.app.data.story.StoryReflectionRepository
 import com.nutsnews.app.navigation.AppNavigator
 import com.nutsnews.app.navigation.DefaultAppNavigator
+import com.nutsnews.app.reminder.DailyReminderManager
+import com.nutsnews.app.reminder.NoOpDailyReminderManager
 
 interface AppContainer {
     val navigator: AppNavigator
     val articleApiClient: NutsNewsApiClient
     val userPreferencesRepository: UserPreferencesRepository
+    val dailyReminderManager: DailyReminderManager
     val readingStatsRepository: ReadingStatsRepository
     val savedStoryRepository: SavedStoryRepository
     val storyNoteRepository: StoryNoteRepository
@@ -30,6 +33,8 @@ class DefaultAppContainer(
     private val responseCache: ArticleResponseCache = EmptyArticleResponseCache,
     override val userPreferencesRepository: UserPreferencesRepository =
         InMemoryUserPreferencesRepository(),
+    override val dailyReminderManager: DailyReminderManager =
+        NoOpDailyReminderManager,
 ) : AppContainer {
     override val navigator: AppNavigator by lazy {
         DefaultAppNavigator()
