@@ -22,22 +22,12 @@ data class UserPreferences(
 )
 
 object UserPreferenceDefaults {
-    val ValidTopicIds: Set<String> =
-        setOf(
-            "animals",
-            "science",
-            "community",
-            "wellness",
-            "achievements",
-            "travel",
-            "culture",
-            "nature",
-        )
-    val DefaultTopicIds: Set<String> = setOf("community", "science", "animals")
-    val ValidMoodIds: Set<String> = setOf("calm", "hopeful", "inspired", "curious")
+    val ValidTopicIds: Set<String> = NutsNewsPersonalization.topicIds
+    val DefaultTopicIds: Set<String> = NutsNewsPersonalization.DefaultTopicIds
+    val ValidMoodIds: Set<String> = NutsNewsPersonalization.moodIds
     val ValidReminderHours: Set<Int> = setOf(8, 15, 20)
 
-    const val DefaultMoodId = "calm"
+    const val DefaultMoodId = NutsNewsPersonalization.DefaultMoodId
     const val DefaultDailyGoal = 3
     const val DefaultReminderHour = 8
     const val HapticsEnabled = true
