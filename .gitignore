@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+.idea/
+.kotlin/
+build/
+captures/
+local.properties
+**/build/
+
+# Android signing and generated artifacts
+*.aab
+*.apk
+*.jks
+*.keystore
+keystore.properties
+
+# macOS
+.DS_Store
