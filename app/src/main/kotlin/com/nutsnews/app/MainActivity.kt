@@ -6,6 +6,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -16,12 +22,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.splash.StartupSplash
+import com.nutsnews.app.feature.splash.StartupSplashTiming
+import com.nutsnews.app.feature.splash.StartupSplashUiState
+import com.nutsnews.app.feature.splash.StartupSplashViewModel
 import com.nutsnews.app.navigation.AppDestination
 import com.nutsnews.app.navigation.AppNavigator
 
@@ -37,6 +48,8 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val startupSplashViewModel: StartupSplashViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -44,8 +57,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val uiState by bootstrapViewModel.uiState.collectAsStateWithLifecycle()
+            val splashUiState by
+                startupSplashViewModel.uiState.collectAsStateWithLifecycle()
             NutsNewsApp(
                 uiState = uiState,
+                splashUiState = splashUiState,
                 onNavigateUp = bootstrapViewModel::onNavigateUp,
             )
         }
@@ -64,6 +80,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 internal fun NutsNewsApp(
     uiState: BootstrapUiState,
+    splashUiState: StartupSplashUiState,
     modifier: Modifier = Modifier,
     onNavigateUp: () -> Boolean = { false },
     destinationContent: @Composable (AppDestination) -> Unit = {
@@ -71,12 +88,52 @@ internal fun NutsNewsApp(
     },
 ) {
     NutsNewsTheme {
-        BackHandler(enabled = uiState.canNavigateUp) {
+        BackHandler(
+            enabled = !splashUiState.isShowingSplash && uiState.canNavigateUp,
+        ) {
             onNavigateUp()
         }
-        key(uiState.destination) {
-            Surface(modifier = modifier.fillMaxSize()) {
-                destinationContent(uiState.destination)
+
+        val contentProgress by
+            animateFloatAsState(
+                targetValue = if (splashUiState.isShowingSplash) 0f else 1f,
+                animationSpec =
+                    tween(
+                        durationMillis = StartupSplashTiming.ContentTransitionMillis,
+                        easing = FastOutSlowInEasing,
+                    ),
+                label = "Startup content transition",
+            )
+
+        Box(modifier = modifier.fillMaxSize()) {
+            key(uiState.destination) {
+                Surface(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = contentProgress
+                                scaleX = 0.99f + (0.01f * contentProgress)
+                                scaleY = 0.99f + (0.01f * contentProgress)
+                            },
+                ) {
+                    destinationContent(uiState.destination)
+                }
+            }
+
+            AnimatedVisibility(
+                visible = splashUiState.isShowingSplash,
+                enter = EnterTransition.None,
+                exit =
+                    fadeOut(
+                        animationSpec =
+                            tween(
+                                durationMillis = StartupSplashTiming.ContentTransitionMillis,
+                                easing = FastOutSlowInEasing,
+                            ),
+                    ),
+            ) {
+                StartupSplash(uiState = splashUiState)
             }
         }
     }
@@ -98,5 +155,8 @@ private fun NutsNewsDestinationPlaceholder(destination: AppDestination) {
 @Preview(showBackground = true)
 @Composable
 private fun NutsNewsAppPreview() {
-    NutsNewsApp(uiState = BootstrapUiState())
+    NutsNewsApp(
+        uiState = BootstrapUiState(),
+        splashUiState = StartupSplashUiState(),
+    )
 }
