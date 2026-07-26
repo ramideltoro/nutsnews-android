@@ -96,6 +96,12 @@ while each selection atomically replaces every matching legacy/current row with
 fresh story metadata and a timestamp. Reflection lookups and aggregate counts
 are observable.
 
+`RoomReadingStatsRepository` records stable story IDs once per local calendar
+day while refreshing each story's last-open timestamp. Original-source opens
+increment independently. Its observable projection supplies today's counts,
+all-time unique stories, a today-anchored streak, and 1–30 recent days with
+explicit zero-count entries.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
