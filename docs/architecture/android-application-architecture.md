@@ -59,9 +59,10 @@ long-lived application dependencies and supplies interfaces to ViewModel
 factories. It uses constructor creation and Kotlin lazy properties, with no
 service locator or dependency-injection framework.
 
-The production article API client and its shared, 20-second OkHttp transport
-are application-scoped dependencies owned by this container. Tests replace the
-transport without changing production URLs or feature code.
+The production article API client, shared 20-second OkHttp transport, and
+disk-backed response cache are application-scoped dependencies owned by this
+container. Tests replace the transport, cache, and clock without changing
+production URLs or feature code.
 
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
