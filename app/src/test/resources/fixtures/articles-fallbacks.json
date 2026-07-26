@@ -1,0 +1,39 @@
+{
+  "articles": [
+    {
+      "id": "api-id",
+      "title": "API identity",
+      "originalUrl": "https://example.com/original",
+      "publishedAt": "not-a-date"
+    },
+    {
+      "id": "  api-only  ",
+      "title": "API fallback",
+      "categories": ["", "  "]
+    },
+    {
+      "id": " ",
+      "title": "  Normalized Title  ",
+      "source": " ",
+      "summary": " ",
+      "aiSummary": "  Fallback summary  ",
+      "originalUrl": " ",
+      "original_url": "https://example.com/snake-fallback",
+      "thumbnailUrl": " ",
+      "image_url": "https://images.example.com/fallback.jpg",
+      "category": " "
+    },
+    {
+      "title": " ",
+      "source": "",
+      "published_at": "2026-01-02T03:04:05+02:00",
+      "categories": "News, news, SCIENCE, science"
+    },
+    {
+      "id": 1.5,
+      "title": "Fractional IDs are unsupported",
+      "original_url": ":// malformed",
+      "thumbnail_url": "https://images.example.com/valid.jpg"
+    }
+  ]
+}

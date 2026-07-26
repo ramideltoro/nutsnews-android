@@ -1,0 +1,25 @@
+{
+  "articles": [
+    {
+      "id": "story-camel",
+      "title": "  A bright story  ",
+      "summary": "  Primary summary  ",
+      "aiSummary": "Ignored AI summary",
+      "originalUrl": "https://example.com/camel",
+      "source": "  Example Daily  ",
+      "publishedAt": "2026-07-04T23:30:15.123Z",
+      "publishedOnSiteAt": "2026-07-05T00:00:00Z",
+      "thumbnailUrl": "https://images.example.com/thumbnail-camel.jpg",
+      "categories": [" Community ", "Science", "community", ""]
+    },
+    {
+      "id": "image-camel",
+      "title": "Image fallback",
+      "aiSummary": "Camel AI summary",
+      "createdAt": "2026-06-01T12:00:00Z",
+      "imageUrl": "https://images.example.com/image-camel.jpg",
+      "categories": "Kindness | Animals, Wellness;Achievement/Science"
+    }
+  ],
+  "nextPage": 2
+}
