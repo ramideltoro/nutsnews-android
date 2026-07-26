@@ -8,6 +8,8 @@ import com.nutsnews.app.data.network.OkHttpTransport
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
+import java.time.Duration
+import java.util.Locale
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -52,35 +54,54 @@ sealed class NutsNewsApiException(
     ) : NutsNewsApiException("NutsNews could not read the article response.", cause)
 }
 
+enum class NutsNewsFetchPolicy {
+    UseCache,
+    ReloadIgnoringCache,
+}
+
 class NutsNewsApiClient(
     private val endpoints: NutsNewsEndpoints = NutsNewsEndpoints.Production,
     private val transport: HttpTransport = OkHttpTransport(),
+    private val responseCache: ArticleResponseCache = EmptyArticleResponseCache,
 ) {
     suspend fun fetchArticles(
         page: Int = 0,
         category: String? = null,
-    ): ArticlesResponse =
-        executeAndDecode(
-            articleRequest(page = page, category = category),
+        fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
+    ): ArticlesResponse {
+        val request = articleRequest(page = page, category = category)
+        return fetchWithCache(
+            request = request,
+            cacheKey = articleCacheKey(page = page, category = category),
+            freshness = FeedFreshness,
+            fetchPolicy = fetchPolicy,
         )
+    }
 
     suspend fun searchArticles(
         query: String,
         page: Int = 0,
         limit: Int = ArchiveSearchRequest.DefaultPageSize,
+        fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
     ): ArticlesResponse {
         val request = ArchiveSearchRequest.create(query = query, page = page, limit = limit)
         if (!request.meetsMinimum) {
             return ArticlesResponse(articles = emptyList(), nextPage = null)
         }
 
-        return executeAndDecode(searchRequest(request))
+        return fetchWithCache(
+            request = searchRequest(request),
+            cacheKey = searchCacheKey(request),
+            freshness = SearchFreshness,
+            fetchPolicy = fetchPolicy,
+        )
     }
 
     fun searchOutcomes(
         query: String,
         page: Int = 0,
         limit: Int = ArchiveSearchRequest.DefaultPageSize,
+        fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
     ): Flow<ArchiveSearchOutcome> =
         flow {
             val request = ArchiveSearchRequest.create(query = query, page = page, limit = limit)
@@ -105,7 +126,13 @@ class NutsNewsApiClient(
             )
 
             try {
-                val response = executeAndDecode(searchRequest(request))
+                val response =
+                    searchArticles(
+                        query = request.query,
+                        page = request.page,
+                        limit = request.limit,
+                        fetchPolicy = fetchPolicy,
+                    )
                 if (response.articles.isEmpty()) {
                     emit(
                         ArchiveSearchOutcome.Empty(
@@ -180,7 +207,40 @@ class NutsNewsApiClient(
         )
     }
 
-    private suspend fun executeAndDecode(request: HttpRequest): ArticlesResponse {
+    private suspend fun fetchWithCache(
+        request: HttpRequest,
+        cacheKey: String,
+        freshness: Duration,
+        fetchPolicy: NutsNewsFetchPolicy,
+    ): ArticlesResponse {
+        if (fetchPolicy == NutsNewsFetchPolicy.UseCache) {
+            decodeCachedResponse(cacheKey = cacheKey, maxAge = freshness)?.let { return it }
+        }
+
+        return try {
+            val freshResponse = fetchFreshResponse(request)
+            responseCache.write(key = cacheKey, response = freshResponse)
+            decodeResponse(freshResponse)
+        } catch (error: NutsNewsApiException) {
+            decodeCachedResponse(cacheKey = cacheKey, maxAge = null)?.let { return it }
+            throw error
+        }
+    }
+
+    private suspend fun decodeCachedResponse(
+        cacheKey: String,
+        maxAge: Duration?,
+    ): ArticlesResponse? {
+        val cachedResponse = responseCache.read(key = cacheKey, maxAge = maxAge) ?: return null
+        return try {
+            decodeResponse(cachedResponse)
+        } catch (_: NutsNewsApiException.Decoding) {
+            responseCache.remove(cacheKey)
+            null
+        }
+    }
+
+    private suspend fun fetchFreshResponse(request: HttpRequest): String {
         val response =
             try {
                 transport.execute(request)
@@ -193,12 +253,15 @@ class NutsNewsApiClient(
             }
 
         validate(response)
-        return try {
-            ArticleJsonDecoder.decodeResponse(response.body!!)
+        return response.body!!
+    }
+
+    private fun decodeResponse(response: String): ArticlesResponse =
+        try {
+            ArticleJsonDecoder.decodeResponse(response)
         } catch (error: ArticleDecodingException) {
             throw NutsNewsApiException.Decoding(error)
         }
-    }
 
     private fun validate(response: HttpResponse) {
         if (response.statusCode !in HttpStatusCodes) {
@@ -213,7 +276,23 @@ class NutsNewsApiClient(
     }
 
     companion object {
+        val FeedFreshness: Duration = Duration.ofMinutes(15)
+        val SearchFreshness: Duration = Duration.ofMinutes(5)
+
         private val HttpStatusCodes = 100..599
         private val SuccessStatusCodes = 200..299
+
+        internal fun articleCacheKey(
+            page: Int,
+            category: String?,
+        ): String {
+            val normalizedCategory = category?.trim()?.lowercase(Locale.ROOT)
+            val categoryKey = normalizedCategory?.takeIf(String::isNotEmpty) ?: "all"
+            return "articles:v1:page=$page:category=$categoryKey"
+        }
+
+        internal fun searchCacheKey(request: ArchiveSearchRequest): String =
+            "search:v1:q=${request.query.trim().lowercase(Locale.ROOT)}" +
+                ":page=${request.page}:limit=${request.limit}"
     }
 }
