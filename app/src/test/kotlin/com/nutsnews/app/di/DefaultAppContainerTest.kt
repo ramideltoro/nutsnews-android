@@ -10,5 +10,6 @@ class DefaultAppContainerTest {
 
         assertSame(container.navigator, container.navigator)
         assertSame(container.articleApiClient, container.articleApiClient)
+        assertSame(container.userPreferencesRepository, container.userPreferencesRepository)
     }
 }
