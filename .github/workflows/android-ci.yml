@@ -52,6 +52,9 @@ jobs:
       - name: Validate CI workflow contract
         run: ./scripts/validate-android-ci.sh
 
+      - name: Validate brand assets
+        run: ./scripts/validate-brand-assets.sh
+
       - name: Compile, lint, test, and assemble debug APK
         shell: bash
         run: |

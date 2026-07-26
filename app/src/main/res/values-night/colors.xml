@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The approved splash artwork and gradient are intentionally theme-invariant. -->
+    <color name="launcher_background">#F28A0F</color>
+    <color name="splash_gradient_start">#FCC233</color>
+    <color name="splash_gradient_center">#F28A0F</color>
+    <color name="splash_gradient_end">#BF4A00</color>
+    <color name="splash_system_bar">#421B00</color>
+</resources>
