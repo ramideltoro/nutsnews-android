@@ -90,6 +90,12 @@ nonblank write transaction removes the old legacy-keyed row before upserting
 the stable row; a blank write deletes both identities. Notes and counts are
 observable, and an injected clock supplies `updatedAt`.
 
+`RoomStoryReflectionRepository` stores one typed Smile, Hope, or Revisit
+reaction per stable story ID. Stable-ID reads retain the legacy API-ID fallback,
+while each selection atomically replaces every matching legacy/current row with
+fresh story metadata and a timestamp. Reflection lookups and aggregate counts
+are observable.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
