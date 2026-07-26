@@ -8,6 +8,8 @@ import com.nutsnews.app.data.network.OkHttpTransport
 import java.io.IOException
 import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 data class NutsNewsEndpoints(
@@ -57,26 +59,84 @@ class NutsNewsApiClient(
     suspend fun fetchArticles(
         page: Int = 0,
         category: String? = null,
+    ): ArticlesResponse =
+        executeAndDecode(
+            articleRequest(page = page, category = category),
+        )
+
+    suspend fun searchArticles(
+        query: String,
+        page: Int = 0,
+        limit: Int = ArchiveSearchRequest.DefaultPageSize,
     ): ArticlesResponse {
-        val request = articleRequest(page = page, category = category)
-        val response =
-            try {
-                transport.execute(request)
-            } catch (error: SocketTimeoutException) {
-                throw NutsNewsApiException.Timeout(error)
-            } catch (error: InterruptedIOException) {
-                throw NutsNewsApiException.Timeout(error)
-            } catch (error: IOException) {
-                throw NutsNewsApiException.Network(error)
+        val request = ArchiveSearchRequest.create(query = query, page = page, limit = limit)
+        if (!request.meetsMinimum) {
+            return ArticlesResponse(articles = emptyList(), nextPage = null)
+        }
+
+        return executeAndDecode(searchRequest(request))
+    }
+
+    fun searchOutcomes(
+        query: String,
+        page: Int = 0,
+        limit: Int = ArchiveSearchRequest.DefaultPageSize,
+    ): Flow<ArchiveSearchOutcome> =
+        flow {
+            val request = ArchiveSearchRequest.create(query = query, page = page, limit = limit)
+            if (!request.meetsMinimum) {
+                emit(
+                    ArchiveSearchOutcome.Empty(
+                        query = request.query,
+                        page = request.page,
+                        limit = request.limit,
+                        reason = ArchiveSearchOutcome.EmptyReason.QueryTooShort,
+                    ),
+                )
+                return@flow
             }
 
-        validate(response)
-        return try {
-            ArticleJsonDecoder.decodeResponse(response.body!!)
-        } catch (error: ArticleDecodingException) {
-            throw NutsNewsApiException.Decoding(error)
+            emit(
+                ArchiveSearchOutcome.Loading(
+                    query = request.query,
+                    page = request.page,
+                    limit = request.limit,
+                ),
+            )
+
+            try {
+                val response = executeAndDecode(searchRequest(request))
+                if (response.articles.isEmpty()) {
+                    emit(
+                        ArchiveSearchOutcome.Empty(
+                            query = request.query,
+                            page = request.page,
+                            limit = request.limit,
+                            reason = ArchiveSearchOutcome.EmptyReason.NoMatches,
+                        ),
+                    )
+                } else {
+                    emit(
+                        ArchiveSearchOutcome.Page(
+                            query = request.query,
+                            page = request.page,
+                            limit = request.limit,
+                            articles = response.articles,
+                            nextPage = response.nextPage,
+                        ),
+                    )
+                }
+            } catch (error: NutsNewsApiException) {
+                emit(
+                    ArchiveSearchOutcome.Failure(
+                        query = request.query,
+                        page = request.page,
+                        limit = request.limit,
+                        error = error,
+                    ),
+                )
+            }
         }
-    }
 
     private fun articleRequest(
         page: Int,
@@ -100,6 +160,44 @@ class NutsNewsApiClient(
             url = url.toUri(),
             headers = mapOf("Accept" to "application/json"),
         )
+    }
+
+    private fun searchRequest(request: ArchiveSearchRequest): HttpRequest {
+        val baseUrl =
+            endpoints.archiveSearch.toHttpUrlOrNull()
+                ?: throw NutsNewsApiException.InvalidUrl()
+        val url =
+            baseUrl
+                .newBuilder()
+                .addQueryParameter("q", request.query)
+                .addQueryParameter("page", request.page.toString())
+                .addQueryParameter("limit", request.limit.toString())
+                .build()
+
+        return HttpRequest(
+            url = url.toUri(),
+            headers = mapOf("Accept" to "application/json"),
+        )
+    }
+
+    private suspend fun executeAndDecode(request: HttpRequest): ArticlesResponse {
+        val response =
+            try {
+                transport.execute(request)
+            } catch (error: SocketTimeoutException) {
+                throw NutsNewsApiException.Timeout(error)
+            } catch (error: InterruptedIOException) {
+                throw NutsNewsApiException.Timeout(error)
+            } catch (error: IOException) {
+                throw NutsNewsApiException.Network(error)
+            }
+
+        validate(response)
+        return try {
+            ArticleJsonDecoder.decodeResponse(response.body!!)
+        } catch (error: ArticleDecodingException) {
+            throw NutsNewsApiException.Decoding(error)
+        }
     }
 
     private fun validate(response: HttpResponse) {
