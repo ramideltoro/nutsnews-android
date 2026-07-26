@@ -1,10 +1,14 @@
 package com.nutsnews.app
 
+import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
@@ -20,6 +24,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -38,10 +44,15 @@ import com.nutsnews.app.feature.splash.StartupSplashUiState
 import com.nutsnews.app.feature.splash.StartupSplashViewModel
 import com.nutsnews.app.navigation.AppDestination
 import com.nutsnews.app.navigation.AppNavigator
+import com.nutsnews.app.reminder.DailyReminderContract
+import com.nutsnews.app.reminder.ReminderScheduleResult
 
 class MainActivity : ComponentActivity() {
     private val appNavigator: AppNavigator
         get() = (application as NutsNewsApplication).container.navigator
+
+    private val dailyReminderManager
+        get() = (application as NutsNewsApplication).container.dailyReminderManager
 
     private val bootstrapViewModel: BootstrapViewModel by viewModels {
         BootstrapViewModel.Factory(
@@ -71,6 +82,45 @@ class MainActivity : ComponentActivity() {
                 startupSplashViewModel.uiState.collectAsStateWithLifecycle()
             val personalizationUiState by
                 personalizationViewModel.uiState.collectAsStateWithLifecycle()
+            val pendingPermissionSaveMode =
+                remember { mutableStateOf<PersonalizationMode?>(null) }
+            val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
+                val reminderEnabled =
+                    personalizationViewModel.uiState.value.reminderEnabled
+                val reminderHour =
+                    personalizationViewModel.uiState.value.reminderHour
+                personalizationViewModel.save(
+                    onSaved = {
+                        if (reminderEnabled) {
+                            if (
+                                dailyReminderManager.schedule(reminderHour) ==
+                                ReminderScheduleResult.PermissionDenied
+                            ) {
+                                personalizationViewModel
+                                    .onNotificationPermissionDenied()
+                            }
+                        } else {
+                            dailyReminderManager.cancel()
+                        }
+                        if (mode == PersonalizationMode.Editor) {
+                            bootstrapViewModel.onNavigateUp()
+                        }
+                    },
+                )
+            }
+            val notificationPermissionLauncher =
+                rememberLauncherForActivityResult(
+                    ActivityResultContracts.RequestPermission(),
+                ) { isGranted ->
+                    val pendingMode =
+                        pendingPermissionSaveMode.value
+                            ?: return@rememberLauncherForActivityResult
+                    pendingPermissionSaveMode.value = null
+                    if (!isGranted || !dailyReminderManager.canPostNotifications) {
+                        personalizationViewModel.onNotificationPermissionDenied()
+                    }
+                    savePersonalization(pendingMode)
+                }
             NutsNewsApp(
                 uiState = uiState,
                 splashUiState = splashUiState,
@@ -98,13 +148,24 @@ class MainActivity : ComponentActivity() {
                                 onReminderHourSelected =
                                     personalizationViewModel::onReminderHourSelected,
                                 onSave = {
-                                    personalizationViewModel.save(
-                                        onSaved = {
-                                            if (mode == PersonalizationMode.Editor) {
-                                                bootstrapViewModel.onNavigateUp()
-                                            }
-                                        },
-                                    )
+                                    when {
+                                        personalizationUiState.reminderEnabled &&
+                                            dailyReminderManager.requiresRuntimePermission -> {
+                                            pendingPermissionSaveMode.value = mode
+                                            notificationPermissionLauncher.launch(
+                                                Manifest.permission.POST_NOTIFICATIONS,
+                                            )
+                                        }
+
+                                        personalizationUiState.reminderEnabled &&
+                                            !dailyReminderManager.canPostNotifications -> {
+                                            personalizationViewModel
+                                                .onNotificationPermissionDenied()
+                                            savePersonalization(mode)
+                                        }
+
+                                        else -> savePersonalization(mode)
+                                    }
                                 },
                                 onClose = {
                                     personalizationViewModel.discardChanges()
@@ -118,6 +179,13 @@ class MainActivity : ComponentActivity() {
                 },
             )
         }
+        handleLaunchIntent(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleLaunchIntent(intent)
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
@@ -127,6 +195,12 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val NavigationStateKey = "nutsnews.navigation.backStack"
+    }
+
+    private fun handleLaunchIntent(intent: Intent?) {
+        if (intent?.action != DailyReminderContract.ActionOpenDailyDigest) return
+        intent.action = null
+        bootstrapViewModel.onDailyReminderNotificationOpened()
     }
 }
 

@@ -87,6 +87,15 @@ class PersonalizationViewModel(
         }
     }
 
+    fun onNotificationPermissionDenied() {
+        onReminderEnabledChanged(false)
+        mutableUiState.update { current ->
+            current.copy(
+                statusText = "Notification permission denied. Reminder is off.",
+            )
+        }
+    }
+
     fun discardChanges() {
         mutableUiState.value =
             PersonalizationUiState.fromPreferences(persistedPreferences)

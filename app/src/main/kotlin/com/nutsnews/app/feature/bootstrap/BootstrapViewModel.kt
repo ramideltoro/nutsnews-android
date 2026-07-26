@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class BootstrapViewModel(
@@ -65,6 +66,18 @@ class BootstrapViewModel(
 
     fun onHomeRequested() {
         navigator.resetTo(AppDestination.Feed)
+    }
+
+    fun onDailyReminderNotificationOpened() {
+        viewModelScope.launch {
+            val resolvedDestination =
+                uiState.first { state ->
+                    state.destination != AppDestination.Startup
+                }.destination
+            if (resolvedDestination != AppDestination.Onboarding) {
+                navigator.navigate(AppDestination.DailyDigest)
+            }
+        }
     }
 
     private fun toUiState(

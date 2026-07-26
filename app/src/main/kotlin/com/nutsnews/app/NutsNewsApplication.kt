@@ -11,6 +11,7 @@ import com.nutsnews.app.data.story.RoomStoryNoteRepository
 import com.nutsnews.app.data.story.RoomStoryReflectionRepository
 import com.nutsnews.app.di.AppContainer
 import com.nutsnews.app.di.DefaultAppContainer
+import com.nutsnews.app.reminder.AndroidDailyReminderManager
 
 class NutsNewsApplication : Application() {
     lateinit var container: AppContainer
@@ -19,6 +20,10 @@ class NutsNewsApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         val database = NutsNewsDatabase.create(this)
+        val dailyReminderManager =
+            AndroidDailyReminderManager.create(this).also { manager ->
+                manager.createNotificationChannel()
+            }
         container =
             DefaultAppContainer(
                 readingStatsRepository =
@@ -37,6 +42,7 @@ class NutsNewsApplication : Application() {
                     ),
                 userPreferencesRepository =
                     DataStoreUserPreferencesRepository(nutsNewsPreferencesDataStore),
+                dailyReminderManager = dailyReminderManager,
             )
     }
 }

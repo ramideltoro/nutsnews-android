@@ -79,4 +79,45 @@ class BootstrapViewModelTest {
                 viewModel.uiState.first { it.destination == AppDestination.Feed }.destination,
             )
         }
+
+    @Test
+    fun reminderNotificationTapOpensDailyDigestAfterStartupResolves() =
+        runBlocking {
+            val navigator = DefaultAppNavigator()
+            val preferences =
+                InMemoryUserPreferencesRepository(
+                    UserPreferences(hasCompletedOnboarding = true),
+                )
+            val viewModel = BootstrapViewModel(navigator, preferences)
+
+            viewModel.onDailyReminderNotificationOpened()
+
+            val openedState =
+                viewModel.uiState.first { state ->
+                    state.destination == AppDestination.DailyDigest
+                }
+            assertEquals(AppDestination.DailyDigest, openedState.destination)
+            assertEquals(AppDestination.Feed, openedState.returnDestination)
+        }
+
+    @Test
+    fun reminderNotificationTapDoesNotBypassFirstRunOnboarding() =
+        runBlocking {
+            val navigator = DefaultAppNavigator()
+            val viewModel =
+                BootstrapViewModel(
+                    navigator = navigator,
+                    userPreferencesRepository = InMemoryUserPreferencesRepository(),
+                )
+
+            viewModel.onDailyReminderNotificationOpened()
+
+            viewModel.uiState.first { state ->
+                state.destination == AppDestination.Onboarding
+            }
+            assertEquals(
+                listOf(AppDestination.Onboarding),
+                navigator.backStack.value,
+            )
+        }
 }
