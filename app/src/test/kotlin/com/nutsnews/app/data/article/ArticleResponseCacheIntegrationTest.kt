@@ -84,13 +84,19 @@ class ArticleResponseCacheIntegrationTest {
     fun staleFeedFallsBackAfterNetworkFailure() =
         runBlocking {
             serverRule.server.enqueue(MockResponse(body = fixture("articles-camel.json")))
-            val expected = client().fetchArticles()
+            val expected = client().fetchFeedPage()
+            assertEquals(ArticleFetchSource.Network, expected.source)
+            val freshCache = client().fetchFeedPage()
+            assertEquals(expected.response, freshCache.response)
+            assertEquals(ArticleFetchSource.FreshCache, freshCache.source)
             clock.advance(Duration.ofMinutes(16))
             serverRule.server.enqueue(MockResponse(code = 503, body = """{"error":"offline"}"""))
 
-            val offline = client().fetchArticles()
+            val offline = client().fetchFeedPage()
 
-            assertEquals(expected, offline)
+            assertEquals(expected.response, offline.response)
+            assertEquals(ArticleFetchSource.StaleCache, offline.source)
+            assertEquals(true, offline.isStale)
             assertEquals(2, serverRule.server.requestCount)
         }
 

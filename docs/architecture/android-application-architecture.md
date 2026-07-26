@@ -65,6 +65,13 @@ application-scoped dependencies owned by this container. Tests replace the
 transport, cache, clock, and preferences repository without changing production
 URLs or feature code.
 
+`ArticleFeedViewModel` orchestrates first load, category replacement, forced
+refresh, pagination, and retry through the injected `FeedArticleSource`.
+Immutable state separates initial loading, content refresh, and pagination,
+retains non-blocking errors and stale-content provenance, and accumulates
+case-insensitively unique category labels. A request generation invalidates
+late refresh or pagination results whenever a newer full refresh begins.
+
 User-owned story records use Room with separate DAO boundaries for saved-story
 snapshots, notes, reflections, and reading activity. Stable article IDs are
 primary keys (or part of the per-day composite key), legacy API IDs and sort
