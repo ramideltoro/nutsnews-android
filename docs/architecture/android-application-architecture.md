@@ -122,3 +122,11 @@ roles, and returns up to 10 rows excluding the featured and quick-read IDs.
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
+
+The application shell uses a typed, restorable `AppDestination` back stack.
+DataStore onboarding state resolves the Startup root to Welcome or Feed;
+full-screen feature destinations, settings-stack children, and article sheets
+share Android back behavior. The Activity persists route strings in its saved
+instance state, including URL-safe story IDs. Help links push their target
+above Help so closing nested destinations returns through the linked feature
+and then to Help.
