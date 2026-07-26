@@ -5,6 +5,7 @@ import com.nutsnews.app.data.article.DiskArticleResponseCache
 import com.nutsnews.app.data.database.NutsNewsDatabase
 import com.nutsnews.app.data.preferences.DataStoreUserPreferencesRepository
 import com.nutsnews.app.data.preferences.nutsNewsPreferencesDataStore
+import com.nutsnews.app.data.story.RoomReadingStatsRepository
 import com.nutsnews.app.data.story.RoomSavedStoryRepository
 import com.nutsnews.app.data.story.RoomStoryNoteRepository
 import com.nutsnews.app.data.story.RoomStoryReflectionRepository
@@ -20,6 +21,8 @@ class NutsNewsApplication : Application() {
         val database = NutsNewsDatabase.create(this)
         container =
             DefaultAppContainer(
+                readingStatsRepository =
+                    RoomReadingStatsRepository(database.readingActivityDao()),
                 savedStoryRepository =
                     RoomSavedStoryRepository(database.savedStoryDao()),
                 storyNoteRepository =
