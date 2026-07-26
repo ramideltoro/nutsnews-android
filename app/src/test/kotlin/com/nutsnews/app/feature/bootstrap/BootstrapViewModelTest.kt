@@ -2,6 +2,7 @@ package com.nutsnews.app.feature.bootstrap
 
 import com.nutsnews.app.data.preferences.InMemoryUserPreferencesRepository
 import com.nutsnews.app.data.preferences.UserPreferences
+import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import com.nutsnews.app.navigation.AppDestination
 import com.nutsnews.app.navigation.AppPresentation
 import com.nutsnews.app.navigation.DefaultAppNavigator
@@ -50,7 +51,10 @@ class BootstrapViewModelTest {
             navigator.navigate(AppDestination.ThemePicker)
             val preferences =
                 InMemoryUserPreferencesRepository(
-                    UserPreferences(hasCompletedOnboarding = true),
+                    UserPreferences(
+                        hasCompletedOnboarding = true,
+                        theme = NutsNewsAppTheme.Friday,
+                    ),
                 )
             val viewModel = BootstrapViewModel(navigator, preferences)
 
@@ -61,6 +65,7 @@ class BootstrapViewModelTest {
             assertTrue(restoredState.canNavigateUp)
             assertEquals(AppPresentation.Stack, restoredState.presentation)
             assertEquals(AppDestination.Settings, restoredState.returnDestination)
+            assertEquals(NutsNewsAppTheme.Friday, restoredState.theme)
 
             assertTrue(viewModel.onNavigateUp())
             assertEquals(

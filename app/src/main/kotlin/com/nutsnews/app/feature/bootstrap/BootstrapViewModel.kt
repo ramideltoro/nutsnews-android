@@ -4,35 +4,55 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.nutsnews.app.data.preferences.UserPreferencesRepository
+import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import com.nutsnews.app.navigation.AppDestination
 import com.nutsnews.app.navigation.AppNavigator
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
 class BootstrapViewModel(
     private val navigator: AppNavigator,
     userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
+    private var selectedTheme = NutsNewsAppTheme.Default
+    private val mutableUiState =
+        MutableStateFlow(
+            toUiState(
+                backStack = navigator.backStack.value,
+                theme = selectedTheme,
+            ),
+        )
+    val uiState: StateFlow<BootstrapUiState> = mutableUiState.asStateFlow()
+
     init {
         viewModelScope.launch {
-            userPreferencesRepository.hasCompletedOnboarding
+            navigator.backStack.collect { backStack ->
+                mutableUiState.value =
+                    toUiState(
+                        backStack = backStack,
+                        theme = selectedTheme,
+                    )
+            }
+        }
+        viewModelScope.launch {
+            userPreferencesRepository.preferences
                 .distinctUntilChanged()
-                .collect(navigator::applyOnboardingStatus)
+                .collect { preferences ->
+                    selectedTheme = preferences.theme
+                    navigator.applyOnboardingStatus(
+                        preferences.hasCompletedOnboarding,
+                    )
+                    mutableUiState.value =
+                        toUiState(
+                            backStack = navigator.backStack.value,
+                            theme = selectedTheme,
+                        )
+                }
         }
     }
-
-    val uiState: StateFlow<BootstrapUiState> =
-        navigator.backStack
-            .map(::toUiState)
-            .stateIn(
-                scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(stopTimeoutMillis = 5_000),
-                initialValue = toUiState(navigator.backStack.value),
-            )
 
     fun onDestinationRequested(destination: AppDestination) {
         navigator.navigate(destination)
@@ -47,12 +67,16 @@ class BootstrapViewModel(
         navigator.resetTo(AppDestination.Feed)
     }
 
-    private fun toUiState(backStack: List<AppDestination>): BootstrapUiState =
+    private fun toUiState(
+        backStack: List<AppDestination>,
+        theme: NutsNewsAppTheme,
+    ): BootstrapUiState =
         BootstrapUiState(
             destination = backStack.last(),
             canNavigateUp = backStack.size > 1,
             presentation = backStack.last().presentation,
             returnDestination = backStack.dropLast(1).lastOrNull(),
+            theme = theme,
         )
 
     class Factory(

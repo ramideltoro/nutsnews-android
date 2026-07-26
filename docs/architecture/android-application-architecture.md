@@ -108,6 +108,13 @@ matches, title tie-breaking, feed-order fallback filling, result limits, and
 the iOS-compatible personalization summary. Preference validation derives its
 valid IDs and defaults from the same catalog.
 
+`PersonalizationViewModel` owns the shared first-run and later-edit draft.
+Topics and reminder time commit with the explicit save action, while mood,
+daily goal, and reminder enabled mirror the iOS `@AppStorage` bindings by
+persisting as they change. The editor can discard its remaining draft and
+reload the latest persisted values. Its Compose screen is exercised on the JVM
+with Robolectric's Compose UI test host.
+
 `GoodMoodRecommendationEngine` separately preserves the Good Mood screen's
 Calm, Hopeful, Inspired, and Curious definitions and field-specific weights.
 It excludes unsafe cards, selects one featured result plus ordered remaining
