@@ -29,6 +29,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.personalization.PersonalizationMode
+import com.nutsnews.app.feature.personalization.PersonalizationScreen
+import com.nutsnews.app.feature.personalization.PersonalizationViewModel
 import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
@@ -50,6 +53,13 @@ class MainActivity : ComponentActivity() {
 
     private val startupSplashViewModel: StartupSplashViewModel by viewModels()
 
+    private val personalizationViewModel: PersonalizationViewModel by viewModels {
+        PersonalizationViewModel.Factory(
+            userPreferencesRepository =
+                (application as NutsNewsApplication).container.userPreferencesRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -59,10 +69,53 @@ class MainActivity : ComponentActivity() {
             val uiState by bootstrapViewModel.uiState.collectAsStateWithLifecycle()
             val splashUiState by
                 startupSplashViewModel.uiState.collectAsStateWithLifecycle()
+            val personalizationUiState by
+                personalizationViewModel.uiState.collectAsStateWithLifecycle()
             NutsNewsApp(
                 uiState = uiState,
                 splashUiState = splashUiState,
                 onNavigateUp = bootstrapViewModel::onNavigateUp,
+                destinationContent = { destination ->
+                    when (destination) {
+                        AppDestination.Onboarding,
+                        AppDestination.Personalization,
+                        -> {
+                            val mode =
+                                if (destination == AppDestination.Onboarding) {
+                                    PersonalizationMode.FirstRun
+                                } else {
+                                    PersonalizationMode.Editor
+                                }
+                            PersonalizationScreen(
+                                uiState = personalizationUiState,
+                                mode = mode,
+                                onTopicToggled = personalizationViewModel::onTopicToggled,
+                                onMoodSelected = personalizationViewModel::onMoodSelected,
+                                onDailyGoalChanged =
+                                    personalizationViewModel::onDailyGoalChanged,
+                                onReminderEnabledChanged =
+                                    personalizationViewModel::onReminderEnabledChanged,
+                                onReminderHourSelected =
+                                    personalizationViewModel::onReminderHourSelected,
+                                onSave = {
+                                    personalizationViewModel.save(
+                                        onSaved = {
+                                            if (mode == PersonalizationMode.Editor) {
+                                                bootstrapViewModel.onNavigateUp()
+                                            }
+                                        },
+                                    )
+                                },
+                                onClose = {
+                                    personalizationViewModel.discardChanges()
+                                    bootstrapViewModel.onNavigateUp()
+                                },
+                            )
+                        }
+
+                        else -> NutsNewsDestinationPlaceholder(destination)
+                    }
+                },
             )
         }
     }
@@ -87,7 +140,7 @@ internal fun NutsNewsApp(
         NutsNewsDestinationPlaceholder(it)
     },
 ) {
-    NutsNewsTheme {
+    NutsNewsTheme(theme = uiState.theme) {
         BackHandler(
             enabled = !splashUiState.isShowingSplash && uiState.canNavigateUp,
         ) {
