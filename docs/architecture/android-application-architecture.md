@@ -65,6 +65,19 @@ application-scoped dependencies owned by this container. Tests replace the
 transport, cache, clock, and preferences repository without changing production
 URLs or feature code.
 
+User-owned story records use Room with separate DAO boundaries for saved-story
+snapshots, notes, reflections, and reading activity. Stable article IDs are
+primary keys (or part of the per-day composite key), legacy API IDs and sort
+fields are indexed, and all record timestamps use epoch milliseconds. DAOs
+expose `Flow` reads and suspending writes so database work never requires
+main-thread access.
+
+Room exports versioned schemas to `app/schemas`. Every schema increment must add
+an explicit entry to `NutsNewsDatabaseMigrations`; the production builder
+registers the complete list and never enables destructive migration fallback.
+The debug source set packages the schemas solely for the host-side migration
+harness.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
