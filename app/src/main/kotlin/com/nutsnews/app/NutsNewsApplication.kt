@@ -2,8 +2,10 @@ package com.nutsnews.app
 
 import android.app.Application
 import com.nutsnews.app.data.article.DiskArticleResponseCache
+import com.nutsnews.app.data.database.NutsNewsDatabase
 import com.nutsnews.app.data.preferences.DataStoreUserPreferencesRepository
 import com.nutsnews.app.data.preferences.nutsNewsPreferencesDataStore
+import com.nutsnews.app.data.story.RoomSavedStoryRepository
 import com.nutsnews.app.di.AppContainer
 import com.nutsnews.app.di.DefaultAppContainer
 
@@ -13,8 +15,11 @@ class NutsNewsApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        val database = NutsNewsDatabase.create(this)
         container =
             DefaultAppContainer(
+                savedStoryRepository =
+                    RoomSavedStoryRepository(database.savedStoryDao()),
                 responseCache =
                     DiskArticleResponseCache(
                         cacheDir
