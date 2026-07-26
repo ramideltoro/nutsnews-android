@@ -59,16 +59,49 @@ enum class NutsNewsFetchPolicy {
     ReloadIgnoringCache,
 }
 
+enum class ArticleFetchSource {
+    Network,
+    FreshCache,
+    StaleCache,
+}
+
+data class ArticleFetchResult(
+    val response: ArticlesResponse,
+    val source: ArticleFetchSource,
+) {
+    val isStale: Boolean
+        get() = source == ArticleFetchSource.StaleCache
+}
+
+interface FeedArticleSource {
+    suspend fun fetchFeedPage(
+        page: Int = 0,
+        category: String? = null,
+        fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
+    ): ArticleFetchResult
+}
+
 class NutsNewsApiClient(
     private val endpoints: NutsNewsEndpoints = NutsNewsEndpoints.Production,
     private val transport: HttpTransport = OkHttpTransport(),
     private val responseCache: ArticleResponseCache = EmptyArticleResponseCache,
-) {
+) : FeedArticleSource {
     suspend fun fetchArticles(
         page: Int = 0,
         category: String? = null,
         fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
-    ): ArticlesResponse {
+    ): ArticlesResponse =
+        fetchFeedPage(
+            page = page,
+            category = category,
+            fetchPolicy = fetchPolicy,
+        ).response
+
+    override suspend fun fetchFeedPage(
+        page: Int,
+        category: String?,
+        fetchPolicy: NutsNewsFetchPolicy,
+    ): ArticleFetchResult {
         val request = articleRequest(page = page, category = category)
         return fetchWithCache(
             request = request,
@@ -94,7 +127,7 @@ class NutsNewsApiClient(
             cacheKey = searchCacheKey(request),
             freshness = SearchFreshness,
             fetchPolicy = fetchPolicy,
-        )
+        ).response
     }
 
     fun searchOutcomes(
@@ -212,17 +245,30 @@ class NutsNewsApiClient(
         cacheKey: String,
         freshness: Duration,
         fetchPolicy: NutsNewsFetchPolicy,
-    ): ArticlesResponse {
+    ): ArticleFetchResult {
         if (fetchPolicy == NutsNewsFetchPolicy.UseCache) {
-            decodeCachedResponse(cacheKey = cacheKey, maxAge = freshness)?.let { return it }
+            decodeCachedResponse(cacheKey = cacheKey, maxAge = freshness)?.let { response ->
+                return ArticleFetchResult(
+                    response = response,
+                    source = ArticleFetchSource.FreshCache,
+                )
+            }
         }
 
         return try {
             val freshResponse = fetchFreshResponse(request)
             responseCache.write(key = cacheKey, response = freshResponse)
-            decodeResponse(freshResponse)
+            ArticleFetchResult(
+                response = decodeResponse(freshResponse),
+                source = ArticleFetchSource.Network,
+            )
         } catch (error: NutsNewsApiException) {
-            decodeCachedResponse(cacheKey = cacheKey, maxAge = null)?.let { return it }
+            decodeCachedResponse(cacheKey = cacheKey, maxAge = null)?.let { response ->
+                return ArticleFetchResult(
+                    response = response,
+                    source = ArticleFetchSource.StaleCache,
+                )
+            }
             throw error
         }
     }
