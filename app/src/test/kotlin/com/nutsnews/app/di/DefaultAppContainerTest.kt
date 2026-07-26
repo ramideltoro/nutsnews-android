@@ -9,5 +9,6 @@ class DefaultAppContainerTest {
         val container = DefaultAppContainer()
 
         assertSame(container.navigator, container.navigator)
+        assertSame(container.articleApiClient, container.articleApiClient)
     }
 }

@@ -59,9 +59,12 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.coroutines)
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 
     testImplementation(libs.junit4)
     testImplementation(libs.kotlin.test)
+    testImplementation(libs.okhttp.mockwebserver.junit4)
 }
