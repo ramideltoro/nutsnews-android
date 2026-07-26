@@ -114,6 +114,11 @@ It excludes unsafe cards, selects one featured result plus ordered remaining
 matches, caps positive results at 16, and falls back to the first 12 safe feed
 items only when no article scores positively.
 
+`DailyDigestEngine` derives Today's Picks from the first 24 safe feed cards. It
+calculates story/source/saved/category metrics, applies the frozen digest score
+and display-date tie-break, selects featured, quick-read, and worth-saving
+roles, and returns up to 10 rows excluding the featured and quick-read IDs.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
