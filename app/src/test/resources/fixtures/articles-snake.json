@@ -1,0 +1,22 @@
+{
+  "articles": [
+    {
+      "id": 42,
+      "title": "Numeric identity",
+      "ai_summary": "Snake AI summary",
+      "original_url": "https://example.com/snake",
+      "published_at": "2025-01-02T03:04:05Z",
+      "published_on_site_at": "2025-01-03T03:04:05Z",
+      "thumbnail_url": "https://images.example.com/thumbnail-snake.jpg",
+      "category": " Uplifting "
+    },
+    {
+      "id": -9,
+      "title": "Snake created and image",
+      "created_at": "2024-02-29T18:00:00.987654Z",
+      "image_url": "https://images.example.com/image-snake.jpg",
+      "categories": []
+    }
+  ],
+  "next_page": 3
+}
