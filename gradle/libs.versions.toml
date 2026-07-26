@@ -3,6 +3,8 @@ agp = "9.3.0"
 kotlin = "2.3.21"
 composeBom = "2026.06.00"
 activityCompose = "1.13.0"
+# Lifecycle 2.11 requires compileSdk 37; NutsNews is locked to API 36.
+lifecycle = "2.10.0"
 junit4 = "4.13.2"
 
 [libraries]
@@ -12,6 +14,8 @@ androidx-compose-material3 = { module = "androidx.compose.material3:material3" }
 androidx-compose-ui = { module = "androidx.compose.ui:ui" }
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 junit4 = { module = "junit:junit", version.ref = "junit4" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
 
