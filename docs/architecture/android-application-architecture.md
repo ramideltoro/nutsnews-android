@@ -78,6 +78,12 @@ registers the complete list and never enables destructive migration fallback.
 The debug source set packages the schemas solely for the host-side migration
 harness.
 
+`RoomSavedStoryRepository` is the application-scoped owner of liked/saved
+stories. One stable article ID maps to one full snapshot, so liking and saving
+are the same upsert, unliking is the same delete, and saved-library observers
+always receive newest-first records and counts. An injected clock makes saved
+timestamps deterministic in tests.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
