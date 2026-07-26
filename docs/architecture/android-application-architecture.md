@@ -108,6 +108,12 @@ matches, title tie-breaking, feed-order fallback filling, result limits, and
 the iOS-compatible personalization summary. Preference validation derives its
 valid IDs and defaults from the same catalog.
 
+`GoodMoodRecommendationEngine` separately preserves the Good Mood screen's
+Calm, Hopeful, Inspired, and Curious definitions and field-specific weights.
+It excludes unsafe cards, selects one featured result plus ordered remaining
+matches, caps positive results at 16, and falls back to the first 12 safe feed
+items only when no article scores positively.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
