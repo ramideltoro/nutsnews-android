@@ -55,6 +55,9 @@ jobs:
       - name: Validate brand assets
         run: ./scripts/validate-brand-assets.sh
 
+      - name: Validate design-system previews
+        run: ./scripts/validate-theme-previews.sh
+
       - name: Compile, lint, test, and assemble debug APK
         shell: bash
         run: |
