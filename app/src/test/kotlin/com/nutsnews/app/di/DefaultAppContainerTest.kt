@@ -4,8 +4,11 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.core.model.StoryNote
+import com.nutsnews.app.core.model.StoryReflection
+import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
+import com.nutsnews.app.data.story.StoryReflectionRepository
 import kotlin.test.assertSame
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -16,10 +19,12 @@ class DefaultAppContainerTest {
     fun applicationDependenciesAreStableForTheContainerLifetime() {
         val savedStoryRepository = EmptySavedStoryRepository
         val storyNoteRepository = EmptyStoryNoteRepository
+        val storyReflectionRepository = EmptyStoryReflectionRepository
         val container =
             DefaultAppContainer(
                 savedStoryRepository = savedStoryRepository,
                 storyNoteRepository = storyNoteRepository,
+                storyReflectionRepository = storyReflectionRepository,
             )
 
         assertSame(container.navigator, container.navigator)
@@ -27,6 +32,7 @@ class DefaultAppContainerTest {
         assertSame(container.userPreferencesRepository, container.userPreferencesRepository)
         assertSame(savedStoryRepository, container.savedStoryRepository)
         assertSame(storyNoteRepository, container.storyNoteRepository)
+        assertSame(storyReflectionRepository, container.storyReflectionRepository)
     }
 }
 
@@ -61,4 +67,17 @@ private object EmptyStoryNoteRepository : StoryNoteRepository {
     ) = Unit
 
     override suspend fun clearNote(article: Article) = Unit
+}
+
+private object EmptyStoryReflectionRepository : StoryReflectionRepository {
+    override val count: Flow<Int> = emptyFlow()
+
+    override fun observeReflection(article: Article): Flow<StoryReflection?> = emptyFlow()
+
+    override suspend fun findReflection(article: Article): StoryReflection? = null
+
+    override suspend fun setReaction(
+        article: Article,
+        reaction: StoryReflectionReaction,
+    ) = Unit
 }
