@@ -6,6 +6,7 @@ import com.nutsnews.app.data.article.NutsNewsApiClient
 import com.nutsnews.app.data.preferences.InMemoryUserPreferencesRepository
 import com.nutsnews.app.data.preferences.UserPreferencesRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
+import com.nutsnews.app.data.story.StoryNoteRepository
 import com.nutsnews.app.navigation.AppNavigator
 import com.nutsnews.app.navigation.DefaultAppNavigator
 
@@ -14,10 +15,12 @@ interface AppContainer {
     val articleApiClient: NutsNewsApiClient
     val userPreferencesRepository: UserPreferencesRepository
     val savedStoryRepository: SavedStoryRepository
+    val storyNoteRepository: StoryNoteRepository
 }
 
 class DefaultAppContainer(
     override val savedStoryRepository: SavedStoryRepository,
+    override val storyNoteRepository: StoryNoteRepository,
     private val responseCache: ArticleResponseCache = EmptyArticleResponseCache,
     override val userPreferencesRepository: UserPreferencesRepository =
         InMemoryUserPreferencesRepository(),

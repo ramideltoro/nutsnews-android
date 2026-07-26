@@ -84,6 +84,12 @@ are the same upsert, unliking is the same delete, and saved-library observers
 always receive newest-first records and counts. An injected clock makes saved
 timestamps deterministic in tests.
 
+`RoomStoryNoteRepository` owns private note normalization and identity repair.
+Reads prefer the stable story ID and retain the frozen API-ID fallback. A
+nonblank write transaction removes the old legacy-keyed row before upserting
+the stable row; a blank write deletes both identities. Notes and counts are
+observable, and an injected clock supplies `updatedAt`.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
