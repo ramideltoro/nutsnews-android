@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.NutsNews.Starting" parent="android:style/Theme.Material.Light.NoActionBar">
+        <item name="android:navigationBarColor">@color/splash_system_bar</item>
+        <item name="android:statusBarColor">@color/splash_system_bar</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
+        <item name="android:windowSplashScreenBackground">@color/splash_gradient_center</item>
+        <item name="android:windowSplashScreenIconBackgroundColor">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

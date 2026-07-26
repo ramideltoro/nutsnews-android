@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
