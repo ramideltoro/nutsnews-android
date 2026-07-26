@@ -102,6 +102,12 @@ increment independently. Its observable projection supplies today's counts,
 all-time unique stories, a today-anchored streak, and 1–30 recent days with
 explicit zero-count entries.
 
+`NutsNewsPersonalization` is the frozen topic/mood catalog and deterministic
+For You ranker. It applies category bonuses, weighted topic and mood keyword
+matches, title tie-breaking, feed-order fallback filling, result limits, and
+the iOS-compatible personalization summary. Preference validation derives its
+valid IDs and defaults from the same catalog.
+
 Tests construct ViewModels and domain services with fakes implementing the same
 interfaces. `DefaultAppNavigatorTest` is the initial navigation smoke test and
 protects the invariant that the back stack is never empty.
