@@ -2,6 +2,8 @@ package com.nutsnews.app
 
 import android.app.Application
 import com.nutsnews.app.data.article.DiskArticleResponseCache
+import com.nutsnews.app.data.preferences.DataStoreUserPreferencesRepository
+import com.nutsnews.app.data.preferences.nutsNewsPreferencesDataStore
 import com.nutsnews.app.di.AppContainer
 import com.nutsnews.app.di.DefaultAppContainer
 
@@ -19,6 +21,8 @@ class NutsNewsApplication : Application() {
                             .toPath()
                             .resolve(DiskArticleResponseCache.DirectoryName),
                     ),
+                userPreferencesRepository =
+                    DataStoreUserPreferencesRepository(nutsNewsPreferencesDataStore),
             )
     }
 }
