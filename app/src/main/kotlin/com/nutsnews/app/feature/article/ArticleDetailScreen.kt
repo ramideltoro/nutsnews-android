@@ -5,6 +5,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -51,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -78,6 +81,15 @@ fun ArticleDetailScreen(
     isLiked: Boolean = false,
     onToggleLiked: (Article) -> Unit = {},
     onArticleShown: (Article) -> Unit = {},
+    onOpenOriginalStory: (Article, OriginalStoryColors) -> OriginalStoryOpenResult =
+        { selectedArticle, _ ->
+            if (selectedArticle.originalUrl == null) {
+                OriginalStoryOpenResult.MissingUrl
+            } else {
+                OriginalStoryOpenResult.BrowserUnavailable
+            }
+        },
+    onOriginalStoryOpened: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val isTabletLandscape =
@@ -98,6 +110,21 @@ fun ArticleDetailScreen(
             mutableIntStateOf(0)
         }
     val likeGlow = remember(article.stableId.value) { Animatable(0f) }
+    var originalStoryStatus by
+        remember(article.stableId.value) {
+            mutableStateOf<String?>(null)
+        }
+    val originalStoryColors =
+        OriginalStoryColors(
+            toolbar = palette.cardBackgroundStrong.toArgb(),
+            navigationBar = palette.backgroundGradient.last().toArgb(),
+            isDark = NutsNewsTheme.appTheme.isDark,
+        )
+    val openOriginalStory = {
+        val result = onOpenOriginalStory(article, originalStoryColors)
+        if (result.didOpen) onOriginalStoryOpened()
+        originalStoryStatus = result.userFacingMessage()
+    }
 
     LaunchedEffect(isLiked) {
         if (lastExternalLiked != isLiked) {
@@ -173,6 +200,8 @@ fun ArticleDetailScreen(
                     article = article,
                     brief = brief,
                     heroImageModel = heroImageModel,
+                    onOpenOriginalStory = openOriginalStory,
+                    originalStoryStatus = originalStoryStatus,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -183,6 +212,8 @@ fun ArticleDetailScreen(
                     article = article,
                     brief = brief,
                     heroImageModel = heroImageModel,
+                    onOpenOriginalStory = openOriginalStory,
+                    originalStoryStatus = originalStoryStatus,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -309,6 +340,8 @@ private fun RegularArticleDetail(
     article: Article,
     brief: ArticleBriefContent,
     heroImageModel: Any?,
+    onOpenOriginalStory: () -> Unit,
+    originalStoryStatus: String?,
     modifier: Modifier,
 ) {
     Column(
@@ -337,6 +370,12 @@ private fun RegularArticleDetail(
             article = article,
             compact = false,
         )
+        OriginalStoryButton(
+            article = article,
+            compact = false,
+            status = originalStoryStatus,
+            onClick = onOpenOriginalStory,
+        )
     }
 }
 
@@ -345,6 +384,8 @@ private fun CompactLandscapeArticleDetail(
     article: Article,
     brief: ArticleBriefContent,
     heroImageModel: Any?,
+    onOpenOriginalStory: () -> Unit,
+    originalStoryStatus: String?,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -389,6 +430,12 @@ private fun CompactLandscapeArticleDetail(
                     compact = true,
                 )
                 Spacer(modifier = Modifier.weight(1f))
+                OriginalStoryButton(
+                    article = article,
+                    compact = true,
+                    status = originalStoryStatus,
+                    onClick = onOpenOriginalStory,
+                )
             }
         }
     }
@@ -810,6 +857,69 @@ private fun ArticleDetailSource(
 }
 
 @Composable
+private fun OriginalStoryButton(
+    article: Article,
+    compact: Boolean,
+    status: String?,
+    onClick: () -> Unit,
+) {
+    val enabled = article.originalUrl != null
+    val cleanSource = article.source.trim()
+    Column(
+        verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
+    ) {
+        Row(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+                    .clip(RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius))
+                    .background(NutsNewsTheme.colors.badgeBackground)
+                    .clickable(
+                        enabled = enabled,
+                        onClick = onClick,
+                    )
+                    .testTag("article_detail_open_original")
+                    .padding(
+                        horizontal = NutsNewsTheme.spacing.medium,
+                        vertical = if (compact) 11.dp else 14.dp,
+                    ),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.OpenInBrowser,
+                contentDescription = null,
+                modifier = Modifier.size(if (compact) 17.dp else 19.dp),
+                tint = NutsNewsTheme.colors.primaryText,
+            )
+            Text(
+                text = if (cleanSource.isEmpty()) "Source" else "Source - $cleanSource",
+                modifier = Modifier.padding(start = NutsNewsTheme.spacing.xs),
+                color = NutsNewsTheme.colors.primaryText,
+                style =
+                    if (compact) {
+                        NutsNewsTheme.typography.subheadline
+                    } else {
+                        NutsNewsTheme.typography.headline
+                    },
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        (status ?: if (!enabled) "Original story link unavailable." else null)?.let { message ->
+            Text(
+                text = message,
+                modifier = Modifier.testTag("article_detail_browser_status"),
+                color = NutsNewsTheme.colors.mutedText,
+                style = NutsNewsTheme.typography.caption,
+            )
+        }
+    }
+}
+
+@Composable
 private fun DetailInfoCard(
     label: String,
     compact: Boolean,
@@ -970,6 +1080,18 @@ internal fun deriveArticleBrief(article: Article): ArticleBriefContent {
         takeaway = takeaway,
     )
 }
+
+private fun OriginalStoryOpenResult.userFacingMessage(): String? =
+    when (this) {
+        OriginalStoryOpenResult.OpenedCustomTab,
+        OriginalStoryOpenResult.OpenedFallbackBrowser,
+        -> null
+
+        OriginalStoryOpenResult.MissingUrl -> "Original story link unavailable."
+        OriginalStoryOpenResult.InvalidUrl -> "This story does not have a valid web address."
+        OriginalStoryOpenResult.BrowserUnavailable -> "No browser is available on this device."
+        OriginalStoryOpenResult.Failed -> "The original story could not be opened."
+    }
 
 internal fun shouldUseWideDetailHeroCrop(
     pixelWidth: Int,
