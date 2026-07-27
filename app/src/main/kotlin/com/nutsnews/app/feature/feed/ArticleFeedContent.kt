@@ -1,6 +1,7 @@
 package com.nutsnews.app.feature.feed
 
 import android.content.res.Configuration
+import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -34,12 +35,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 
@@ -50,6 +53,9 @@ fun ArticleFeedContent(
     onRetry: () -> Unit,
     onLoadMore: (Article) -> Unit,
     onOpenArticle: (Article) -> Unit,
+    likedStoryIds: Set<StoryId> = emptySet(),
+    hapticsEnabled: Boolean = true,
+    onToggleLiked: (Article) -> Unit = {},
     dashboard: @Composable () -> Unit,
     modifier: Modifier = Modifier,
     listState: LazyListState = rememberLazyListState(),
@@ -75,6 +81,9 @@ fun ArticleFeedContent(
                 onRetry = onRetry,
                 onLoadMore = onLoadMore,
                 onOpenArticle = onOpenArticle,
+                likedStoryIds = likedStoryIds,
+                hapticsEnabled = hapticsEnabled,
+                onToggleLiked = onToggleLiked,
                 dashboard = dashboard,
                 listState = listState,
                 modifier = modifier,
@@ -169,6 +178,9 @@ private fun PopulatedFeed(
     onRetry: () -> Unit,
     onLoadMore: (Article) -> Unit,
     onOpenArticle: (Article) -> Unit,
+    likedStoryIds: Set<StoryId>,
+    hapticsEnabled: Boolean,
+    onToggleLiked: (Article) -> Unit,
     dashboard: @Composable () -> Unit,
     listState: LazyListState,
     modifier: Modifier,
@@ -176,6 +188,7 @@ private fun PopulatedFeed(
     val pullState = rememberPullToRefreshState()
     val palette = NutsNewsTheme.colors
     val configuration = LocalConfiguration.current
+    val view = LocalView.current
     val cardLayout =
         if (
             configuration.smallestScreenWidthDp >= TabletMinimumWidthDp &&
@@ -258,7 +271,15 @@ private fun PopulatedFeed(
                     ArticleCard(
                         article = article,
                         layout = cardLayout,
+                        isLiked = article.stableId in likedStoryIds,
                         onReadStory = onOpenArticle,
+                        onLikeStory = onToggleLiked,
+                        hapticsEnabled = hapticsEnabled,
+                        onLikeHaptic = {
+                            view.performHapticFeedback(
+                                HapticFeedbackConstants.CONTEXT_CLICK,
+                            )
+                        },
                     )
                 }
                 if (index == uiState.articles.lastIndex) {

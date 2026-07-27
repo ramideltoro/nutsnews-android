@@ -1,5 +1,7 @@
 package com.nutsnews.app.feature.feed
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -14,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,14 +32,18 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -50,6 +57,9 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 enum class ArticleCardLayout {
     Regular,
@@ -63,42 +73,167 @@ fun ArticleCard(
     isLiked: Boolean = false,
     onReadStory: (Article) -> Unit,
     onLikeStory: (Article) -> Unit = {},
+    hapticsEnabled: Boolean = true,
+    onLikeHaptic: () -> Boolean = { false },
     modifier: Modifier = Modifier,
 ) {
     val palette = NutsNewsTheme.colors
     val isCompact = layout == ArticleCardLayout.TabletLandscapeCompact
     val cardShape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius)
+    var displayedLiked by
+        remember(article.stableId.value) {
+            mutableStateOf(isLiked)
+        }
+    var lastExternalLiked by
+        remember(article.stableId.value) {
+            mutableStateOf(isLiked)
+        }
+    var animationToken by
+        rememberSaveable(article.stableId.value) {
+            mutableIntStateOf(0)
+        }
+    var animationIsLike by
+        remember(article.stableId.value) {
+            mutableStateOf(false)
+        }
+    val heartGlow = remember(article.stableId.value) { Animatable(0f) }
+    val cardGlow = remember(article.stableId.value) { Animatable(0f) }
+    val celebrationProgress = remember(article.stableId.value) { Animatable(1f) }
 
-    Surface(
+    LaunchedEffect(isLiked) {
+        if (isLiked != lastExternalLiked) {
+            lastExternalLiked = isLiked
+            displayedLiked = isLiked
+        }
+    }
+    LaunchedEffect(animationToken) {
+        if (animationToken == 0) return@LaunchedEffect
+        if (animationIsLike) {
+            heartGlow.snapTo(1f)
+            cardGlow.snapTo(1f)
+            celebrationProgress.snapTo(0f)
+            coroutineScope {
+                launch {
+                    heartGlow.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = GlowDurationMillis),
+                    )
+                }
+                launch {
+                    delay(CardGlowHoldMillis)
+                    cardGlow.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = CardGlowFadeMillis),
+                    )
+                }
+                launch {
+                    celebrationProgress.animateTo(
+                        targetValue = 1f,
+                        animationSpec = tween(durationMillis = CelebrationDurationMillis),
+                    )
+                }
+            }
+        } else {
+            heartGlow.snapTo(1f)
+            celebrationProgress.snapTo(1f)
+            coroutineScope {
+                launch {
+                    heartGlow.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = GlowDurationMillis),
+                    )
+                }
+                launch {
+                    cardGlow.animateTo(
+                        targetValue = 0f,
+                        animationSpec = tween(durationMillis = UnlikeFadeMillis),
+                    )
+                }
+            }
+        }
+    }
+
+    val showLikedStyling = displayedLiked || cardGlow.value > 0f
+    val cardBorderColor =
+        if (showLikedStyling) palette.likedCardBorder else palette.cardBorder
+    val cardBorderWidth =
+        if (showLikedStyling) NutsNewsTheme.borders.selected else 1.25.dp
+    val baseShadow = if (isCompact) 10f else 16f
+    val shadowElevation = (baseShadow + (18f * cardGlow.value)).dp
+    val shadowColor =
+        if (cardGlow.value > 0f) palette.likedCardGlow else palette.accentGlow
+    val toggleLike: (Article) -> Unit = { selectedArticle ->
+        val willLike = !displayedLiked
+        displayedLiked = willLike
+        animationIsLike = willLike
+        animationToken += 1
+        performLikeHapticIfEnabled(
+            enabled = hapticsEnabled,
+            performer = onLikeHaptic,
+        )
+        onLikeStory(selectedArticle)
+    }
+
+    Box(
         modifier =
             modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = if (isCompact) 10.dp else 16.dp,
+                    elevation = shadowElevation,
                     shape = cardShape,
-                    ambientColor = palette.accentGlow,
-                    spotColor = palette.accentGlow,
+                    ambientColor = shadowColor,
+                    spotColor = shadowColor,
                 )
+                .clip(cardShape)
                 .testTag("feed_story_${article.id}"),
-        shape = cardShape,
-        color = palette.cardBackgroundStrong,
-        border = BorderStroke(1.25.dp, palette.cardBorder),
+        contentAlignment = Alignment.BottomEnd,
     ) {
-        if (isCompact) {
-            CompactArticleCardContent(
-                article = article,
-                isLiked = isLiked,
-                onReadStory = onReadStory,
-                onLikeStory = onLikeStory,
-                modifier = Modifier.padding(12.dp),
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = cardShape,
+            color = palette.cardBackgroundStrong,
+            border = BorderStroke(cardBorderWidth, cardBorderColor),
+        ) {
+            if (isCompact) {
+                CompactArticleCardContent(
+                    article = article,
+                    isLiked = displayedLiked,
+                    heartGlow = heartGlow.value,
+                    onReadStory = onReadStory,
+                    onLikeStory = toggleLike,
+                    modifier = Modifier.padding(12.dp),
+                )
+            } else {
+                RegularArticleCardContent(
+                    article = article,
+                    isLiked = displayedLiked,
+                    heartGlow = heartGlow.value,
+                    onReadStory = onReadStory,
+                    onLikeStory = toggleLike,
+                    modifier = Modifier.padding(NutsNewsTheme.dimensions.cardPadding),
+                )
+            }
+        }
+        if (cardGlow.value > 0f) {
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .border(
+                            width = NutsNewsTheme.borders.glow,
+                            color = palette.likedCardGlow.copy(alpha = cardGlow.value),
+                            shape = cardShape,
+                        )
+                        .testTag("article_card_glow"),
             )
-        } else {
-            RegularArticleCardContent(
-                article = article,
-                isLiked = isLiked,
-                onReadStory = onReadStory,
-                onLikeStory = onLikeStory,
-                modifier = Modifier.padding(NutsNewsTheme.dimensions.cardPadding),
+        }
+        if (animationIsLike && celebrationProgress.value < 1f) {
+            CelebrationBurst(
+                progress = celebrationProgress.value,
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 22.dp, bottom = 26.dp),
             )
         }
     }
@@ -108,6 +243,7 @@ fun ArticleCard(
 private fun RegularArticleCardContent(
     article: Article,
     isLiked: Boolean,
+    heartGlow: Float,
     onReadStory: (Article) -> Unit,
     onLikeStory: (Article) -> Unit,
     modifier: Modifier,
@@ -129,6 +265,7 @@ private fun RegularArticleCardContent(
         ArticleCardFooter(
             article = article,
             isLiked = isLiked,
+            heartGlow = heartGlow,
             onReadStory = onReadStory,
             onLikeStory = onLikeStory,
         )
@@ -139,6 +276,7 @@ private fun RegularArticleCardContent(
 private fun CompactArticleCardContent(
     article: Article,
     isLiked: Boolean,
+    heartGlow: Float,
     onReadStory: (Article) -> Unit,
     onLikeStory: (Article) -> Unit,
     modifier: Modifier,
@@ -169,6 +307,7 @@ private fun CompactArticleCardContent(
             ArticleCardFooter(
                 article = article,
                 isLiked = isLiked,
+                heartGlow = heartGlow,
                 onReadStory = onReadStory,
                 onLikeStory = onLikeStory,
             )
@@ -372,6 +511,7 @@ private fun ArticleSummary(
 private fun ArticleCardFooter(
     article: Article,
     isLiked: Boolean,
+    heartGlow: Float,
     onReadStory: (Article) -> Unit,
     onLikeStory: (Article) -> Unit,
 ) {
@@ -389,6 +529,7 @@ private fun ArticleCardFooter(
             )
             LikeStoryButton(
                 isLiked = isLiked,
+                glow = heartGlow,
                 onClick = { onLikeStory(article) },
                 modifier = Modifier.align(Alignment.CenterEnd),
             )
@@ -453,6 +594,7 @@ private fun ReadStoryButton(
 @Composable
 private fun LikeStoryButton(
     isLiked: Boolean,
+    glow: Float,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -462,6 +604,16 @@ private fun LikeStoryButton(
         modifier =
             modifier
                 .size(38.dp)
+                .shadow(
+                    elevation = (22f * glow).dp,
+                    shape = CircleShape,
+                    ambientColor = palette.accentHighlight.copy(alpha = glow * 0.72f),
+                    spotColor = palette.accentGlow.copy(alpha = glow * 0.55f),
+                )
+                .graphicsLayer {
+                    scaleX = 1f + (glow * 0.035f)
+                    scaleY = 1f + (glow * 0.035f)
+                }
                 .clip(CircleShape)
                 .background(palette.badgeBackground)
                 .border(NutsNewsTheme.borders.hairline, borderColor, CircleShape)
@@ -483,8 +635,96 @@ private fun LikeStoryButton(
             modifier = Modifier.size(16.dp),
             tint = if (isLiked) palette.likedCardAccent else palette.accentHighlight,
         )
+        if (glow > 0f) {
+            Box(
+                modifier =
+                    Modifier
+                        .matchParentSize()
+                        .border(
+                            width = 2.dp,
+                            color = palette.accentHighlight.copy(alpha = glow * 0.86f),
+                            shape = CircleShape,
+                        )
+                        .testTag("article_heart_glow"),
+            )
+        }
     }
 }
+
+@Composable
+private fun CelebrationBurst(
+    progress: Float,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier =
+            modifier
+                .size(1.dp)
+                .testTag("article_celebration"),
+    ) {
+        CelebrationParticles.forEach { particle ->
+            Text(
+                text = particle.emoji,
+                modifier =
+                    Modifier
+                        .offset(
+                            x = (particle.xOffset * progress).dp,
+                            y = (particle.yOffset * progress).dp,
+                        )
+                        .graphicsLayer {
+                            val scale =
+                                0.55f + ((particle.endScale - 0.55f) * progress)
+                            scaleX = scale
+                            scaleY = scale
+                            rotationZ = particle.rotation * progress
+                            alpha = 1f - progress
+                        }
+                        .testTag("article_celebration_particle_${particle.id}"),
+                fontSize = particle.size.sp,
+            )
+        }
+    }
+}
+
+internal fun performLikeHapticIfEnabled(
+    enabled: Boolean,
+    performer: () -> Boolean,
+): Boolean {
+    if (!enabled) return false
+    return runCatching(performer).getOrDefault(false)
+}
+
+private data class CelebrationParticle(
+    val id: Int,
+    val emoji: String,
+    val xOffset: Float,
+    val yOffset: Float,
+    val rotation: Float,
+    val size: Int,
+    val endScale: Float,
+)
+
+private val CelebrationParticles =
+    listOf(
+        CelebrationParticle(0, "❤️", -38f, -54f, -16f, 28, 1.20f),
+        CelebrationParticle(1, "✨", -88f, -76f, 22f, 28, 1.35f),
+        CelebrationParticle(2, "🎉", -136f, -48f, -28f, 30, 1.18f),
+        CelebrationParticle(3, "❤️", -184f, -104f, 18f, 26, 1.25f),
+        CelebrationParticle(4, "✨", -232f, -138f, -12f, 27, 1.35f),
+        CelebrationParticle(5, "🎉", -282f, -84f, 30f, 29, 1.16f),
+        CelebrationParticle(6, "❤️", -68f, -152f, 12f, 25, 1.18f),
+        CelebrationParticle(7, "✨", -126f, -194f, -22f, 28, 1.32f),
+        CelebrationParticle(8, "🎉", -196f, -226f, 24f, 30, 1.18f),
+        CelebrationParticle(9, "❤️", -254f, -176f, -18f, 25, 1.25f),
+        CelebrationParticle(10, "✨", -326f, -142f, 18f, 28, 1.35f),
+        CelebrationParticle(11, "🎉", -362f, -232f, -32f, 30, 1.15f),
+        CelebrationParticle(12, "❤️", -96f, -270f, 20f, 25, 1.22f),
+        CelebrationParticle(13, "✨", -168f, -316f, -18f, 27, 1.36f),
+        CelebrationParticle(14, "🎉", -256f, -304f, 28f, 29, 1.16f),
+        CelebrationParticle(15, "❤️", -342f, -342f, -20f, 25, 1.24f),
+        CelebrationParticle(16, "✨", -36f, -236f, 20f, 26, 1.33f),
+        CelebrationParticle(17, "🎉", -304f, -32f, -24f, 28, 1.18f),
+    )
 
 private enum class ThumbnailLoadState {
     Missing,
@@ -495,3 +735,8 @@ private enum class ThumbnailLoadState {
 
 private const val ThumbnailAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 6
+private const val GlowDurationMillis = 1_000
+private const val CardGlowHoldMillis = 650L
+private const val CardGlowFadeMillis = 350
+private const val UnlikeFadeMillis = 250
+private const val CelebrationDurationMillis = 2_000

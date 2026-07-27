@@ -26,6 +26,7 @@ import java.net.URI
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -164,6 +165,98 @@ class ArticleCardTest {
         composeRule.onAllNodesWithTag("article_categories").assertCountEquals(0)
     }
 
+    @Test
+    fun likeAndUnlikeUpdateHeartGlowCardGlowAndCelebrationFeedback() {
+        composeRule.mainClock.autoAdvance = false
+        val article = representativeArticle()
+        setCard(
+            article = article,
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+        )
+
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.mainClock.advanceTimeBy(32)
+
+        composeRule
+            .onNodeWithTag("article_like_story")
+            .assertContentDescriptionEquals("Liked")
+        composeRule
+            .onNodeWithTag("article_heart_glow", useUnmergedTree = true)
+            .fetchSemanticsNode()
+        composeRule
+            .onNodeWithTag("article_card_glow", useUnmergedTree = true)
+            .fetchSemanticsNode()
+        composeRule
+            .onNodeWithTag("article_celebration", useUnmergedTree = true)
+            .fetchSemanticsNode()
+        composeRule
+            .onAllNodesWithTag("article_celebration_particle_0", useUnmergedTree = true)
+            .assertCountEquals(1)
+
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.mainClock.advanceTimeBy(32)
+
+        composeRule
+            .onNodeWithTag("article_like_story")
+            .assertContentDescriptionEquals("Like story")
+        composeRule
+            .onAllNodesWithTag("article_celebration", useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun aNewLikeCelebrationIsNotClearedByAnOlderInterruptedAnimation() {
+        composeRule.mainClock.autoAdvance = false
+        setCard(
+            article = representativeArticle(),
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+        )
+
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.mainClock.advanceTimeBy(500)
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.mainClock.advanceTimeBy(1_600)
+
+        composeRule
+            .onNodeWithTag("article_celebration", useUnmergedTree = true)
+            .fetchSemanticsNode()
+
+        composeRule.mainClock.advanceTimeBy(500)
+        composeRule
+            .onAllNodesWithTag("article_celebration", useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
+    @Test
+    fun disabledOrUnavailableHapticsNeverBlockLikeInteraction() {
+        var disabledHapticCalls = 0
+        composeRule.mainClock.autoAdvance = false
+        setCard(
+            article = representativeArticle(),
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+            hapticsEnabled = false,
+            onLikeHaptic = {
+                disabledHapticCalls += 1
+                error("Disabled haptics must not invoke the performer")
+            },
+        )
+
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule
+            .onNodeWithTag("article_like_story")
+            .assertContentDescriptionEquals("Liked")
+        assertEquals(0, disabledHapticCalls)
+        assertFalse(performLikeHapticIfEnabled(enabled = true) { false })
+        assertFalse(performLikeHapticIfEnabled(enabled = true) { error("No vibrator") })
+    }
+
     private fun setCard(
         article: Article,
         layout: ArticleCardLayout,
@@ -171,6 +264,8 @@ class ArticleCardTest {
         isLiked: Boolean = false,
         onReadStory: (Article) -> Unit = {},
         onLikeStory: (Article) -> Unit = {},
+        hapticsEnabled: Boolean = true,
+        onLikeHaptic: () -> Boolean = { false },
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -184,6 +279,8 @@ class ArticleCardTest {
                         isLiked = isLiked,
                         onReadStory = onReadStory,
                         onLikeStory = onLikeStory,
+                        hapticsEnabled = hapticsEnabled,
+                        onLikeHaptic = onLikeHaptic,
                         modifier =
                             Modifier
                                 .width(widthDp.dp)
