@@ -55,6 +55,8 @@ import com.nutsnews.app.feature.home.HomeDashboardViewModel
 import com.nutsnews.app.feature.personalization.PersonalizationMode
 import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationViewModel
+import com.nutsnews.app.feature.saved.SavedStoriesScreen
+import com.nutsnews.app.feature.saved.SavedStoriesViewModel
 import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
@@ -139,6 +141,13 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val savedStoriesViewModel: SavedStoriesViewModel by viewModels {
+        SavedStoriesViewModel.Factory(
+            savedStoryRepository =
+                (application as NutsNewsApplication).container.savedStoryRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -161,6 +170,8 @@ class MainActivity : ComponentActivity() {
                 articleShareCardController.uiState.collectAsStateWithLifecycle()
             val homeDashboardUiState by
                 homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
+            val savedStoriesUiState by
+                savedStoriesViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
                 remember { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
@@ -411,6 +422,20 @@ class MainActivity : ComponentActivity() {
                                     personalizationViewModel.discardChanges()
                                     bootstrapViewModel.onNavigateUp()
                                 },
+                            )
+                        }
+
+                        AppDestination.SavedStories -> {
+                            SavedStoriesScreen(
+                                uiState = savedStoriesUiState,
+                                onQueryChanged = savedStoriesViewModel::onQueryChanged,
+                                onOpenStory = { story ->
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.ArticleDetail(story.id),
+                                    )
+                                },
+                                onRemoveStory = savedStoriesViewModel::remove,
+                                onClose = bootstrapViewModel::onNavigateUp,
                             )
                         }
 
