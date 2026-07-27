@@ -32,6 +32,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
 
@@ -99,84 +100,86 @@ private fun PreferenceSettingsScreen(
                 .fillMaxSize()
                 .testTag("preference_settings_screen"),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding(),
-        ) {
-            PreferenceSettingsTopBar(
-                title = title,
-                onBack = onBack,
-                onGoHome = onGoHome,
-            )
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(NutsNewsTheme.spacing.medium),
-                verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+        NutsNewsAdaptivePane {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
             ) {
-                item(key = "preference") {
-                    Surface(
-                        modifier =
-                            Modifier
-                                .fillMaxWidth()
-                                .testTag("${switchTestTag}_card"),
-                        shape =
-                            RoundedCornerShape(
-                                NutsNewsTheme.dimensions.cardCornerRadius,
-                            ),
-                        color = NutsNewsTheme.colors.cardBackgroundStrong,
-                        border =
-                            BorderStroke(
-                                NutsNewsTheme.borders.hairline,
-                                NutsNewsTheme.colors.cardBorder,
-                            ),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(NutsNewsTheme.spacing.medium),
-                            horizontalArrangement =
-                                Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
-                            verticalAlignment = Alignment.CenterVertically,
+                PreferenceSettingsTopBar(
+                    title = title,
+                    onBack = onBack,
+                    onGoHome = onGoHome,
+                )
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(NutsNewsTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                ) {
+                    item(key = "preference") {
+                        Surface(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .testTag("${switchTestTag}_card"),
+                            shape =
+                                RoundedCornerShape(
+                                    NutsNewsTheme.dimensions.cardCornerRadius,
+                                ),
+                            color = NutsNewsTheme.colors.cardBackgroundStrong,
+                            border =
+                                BorderStroke(
+                                    NutsNewsTheme.borders.hairline,
+                                    NutsNewsTheme.colors.cardBorder,
+                                ),
                         ) {
-                            Column(
-                                modifier = Modifier.weight(1f),
-                                verticalArrangement =
-                                    Arrangement.spacedBy(
-                                        NutsNewsTheme.spacing.xxs,
-                                    ),
+                            Row(
+                                modifier = Modifier.padding(NutsNewsTheme.spacing.medium),
+                                horizontalArrangement =
+                                    Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
-                                    text = controlTitle,
-                                    color = NutsNewsTheme.colors.primaryText,
-                                    style = NutsNewsTheme.typography.headline,
-                                )
-                                Text(
-                                    text = controlSubtitle,
-                                    color = NutsNewsTheme.colors.secondaryText,
-                                    style = NutsNewsTheme.typography.subheadline,
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement =
+                                        Arrangement.spacedBy(
+                                            NutsNewsTheme.spacing.xxs,
+                                        ),
+                                ) {
+                                    Text(
+                                        text = controlTitle,
+                                        color = NutsNewsTheme.colors.primaryText,
+                                        style = NutsNewsTheme.typography.headline,
+                                    )
+                                    Text(
+                                        text = controlSubtitle,
+                                        color = NutsNewsTheme.colors.secondaryText,
+                                        style = NutsNewsTheme.typography.subheadline,
+                                    )
+                                }
+                                Switch(
+                                    checked = checked,
+                                    onCheckedChange = onCheckedChange,
+                                    modifier = Modifier.testTag(switchTestTag),
+                                    colors =
+                                        SwitchDefaults.colors(
+                                            checkedThumbColor =
+                                                NutsNewsTheme.colors.buttonText,
+                                            checkedTrackColor =
+                                                NutsNewsTheme.colors.accent,
+                                            checkedBorderColor =
+                                                NutsNewsTheme.colors.accent,
+                                            uncheckedThumbColor =
+                                                NutsNewsTheme.colors.secondaryText,
+                                            uncheckedTrackColor =
+                                                NutsNewsTheme.colors.badgeBackground,
+                                            uncheckedBorderColor =
+                                                NutsNewsTheme.colors.cardBorder,
+                                        ),
                                 )
                             }
-                            Switch(
-                                checked = checked,
-                                onCheckedChange = onCheckedChange,
-                                modifier = Modifier.testTag(switchTestTag),
-                                colors =
-                                    SwitchDefaults.colors(
-                                        checkedThumbColor =
-                                            NutsNewsTheme.colors.buttonText,
-                                        checkedTrackColor =
-                                            NutsNewsTheme.colors.accent,
-                                        checkedBorderColor =
-                                            NutsNewsTheme.colors.accent,
-                                        uncheckedThumbColor =
-                                            NutsNewsTheme.colors.secondaryText,
-                                        uncheckedTrackColor =
-                                            NutsNewsTheme.colors.badgeBackground,
-                                        uncheckedBorderColor =
-                                            NutsNewsTheme.colors.cardBorder,
-                                    ),
-                            )
                         }
                     }
                 }

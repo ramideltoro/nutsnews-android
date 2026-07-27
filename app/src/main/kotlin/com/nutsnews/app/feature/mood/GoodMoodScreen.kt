@@ -71,6 +71,7 @@ import com.nutsnews.app.data.article.GoodMood
 import com.nutsnews.app.data.article.GoodMoodRecommendationEngine
 import com.nutsnews.app.data.article.GoodMoodRecommendations
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
@@ -109,15 +110,17 @@ fun GoodMoodScreen(
                 .fillMaxSize()
                 .testTag("good_mood_screen"),
     ) {
-        GoodMoodContent(
-            selectedMood = selectedMood,
-            recommendations = recommendations,
-            savedStoryIds = savedStoryIds,
-            onMoodSelected = { mood -> selectedMoodId = mood.id },
-            onToggleSaved = toggleSaved,
-            onOpenArticle = onOpenArticle,
-            onClose = onClose,
-        )
+        NutsNewsAdaptivePane {
+            GoodMoodContent(
+                selectedMood = selectedMood,
+                recommendations = recommendations,
+                savedStoryIds = savedStoryIds,
+                onMoodSelected = { mood -> selectedMoodId = mood.id },
+                onToggleSaved = toggleSaved,
+                onOpenArticle = onOpenArticle,
+                onClose = onClose,
+            )
+        }
     }
 }
 

@@ -1,6 +1,5 @@
 package com.nutsnews.app.feature.feed
 
-import android.content.res.Configuration
 import android.view.HapticFeedbackConstants
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,7 +33,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -44,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 
 @Composable
@@ -187,13 +186,10 @@ private fun PopulatedFeed(
 ) {
     val pullState = rememberPullToRefreshState()
     val palette = NutsNewsTheme.colors
-    val configuration = LocalConfiguration.current
+    val windowInfo = LocalNutsNewsWindowInfo.current
     val view = LocalView.current
     val cardLayout =
-        if (
-            configuration.smallestScreenWidthDp >= TabletMinimumWidthDp &&
-            configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-        ) {
+        if (windowInfo.usesCompactLandscapeLayout) {
             ArticleCardLayout.TabletLandscapeCompact
         } else {
             ArticleCardLayout.Regular
@@ -438,5 +434,4 @@ private const val LatestStoriesKey = "feed-latest-stories"
 private const val StaleBannerKey = "feed-stale-banner"
 private const val PaginationProgressKey = "feed-pagination-progress"
 private const val ErrorBannerKey = "feed-error-banner"
-private const val TabletMinimumWidthDp = 600
 private val TabletContentMaximumWidth = 860.dp

@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nutsnews.app.core.model.ReadingStatsDay
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -60,28 +61,30 @@ fun ReadingStatsScreen(
                 .fillMaxSize()
                 .testTag("reading_stats_screen"),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding(),
-        ) {
-            ReadingStatsTopBar(onClose = onClose)
-            if (uiState.isLoading) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .testTag("reading_stats_loading"),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        color = NutsNewsTheme.colors.accent,
-                    )
+        NutsNewsAdaptivePane {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
+            ) {
+                ReadingStatsTopBar(onClose = onClose)
+                if (uiState.isLoading) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .testTag("reading_stats_loading"),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            color = NutsNewsTheme.colors.accent,
+                        )
+                    }
+                } else {
+                    ReadingStatsContent(uiState = uiState)
                 }
-            } else {
-                ReadingStatsContent(uiState = uiState)
             }
         }
     }

@@ -58,6 +58,7 @@ import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
@@ -82,18 +83,20 @@ fun SavedStoriesScreen(
                 .fillMaxSize()
                 .testTag("saved_stories_screen"),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            SavedStoriesTopBar(onClose = onClose)
-            when {
-                uiState.isLoading -> SavedStoriesLoading()
-                uiState.stories.isEmpty() -> EmptySavedStories()
-                else ->
-                    SavedStoriesLibrary(
-                        uiState = uiState,
-                        onQueryChanged = onQueryChanged,
-                        onOpenStory = onOpenStory,
-                        onRemoveStory = onRemoveStory,
-                    )
+        NutsNewsAdaptivePane {
+            Column(modifier = Modifier.fillMaxSize()) {
+                SavedStoriesTopBar(onClose = onClose)
+                when {
+                    uiState.isLoading -> SavedStoriesLoading()
+                    uiState.stories.isEmpty() -> EmptySavedStories()
+                    else ->
+                        SavedStoriesLibrary(
+                            uiState = uiState,
+                            onQueryChanged = onQueryChanged,
+                            onOpenStory = onOpenStory,
+                            onRemoveStory = onRemoveStory,
+                        )
+                }
             }
         }
     }
