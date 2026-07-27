@@ -12,6 +12,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -28,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.nutsnews.app.designsystem.NutsNewsAdaptiveWindow
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsPane
 import com.nutsnews.app.feature.article.AndroidArticleShareLauncher
@@ -761,7 +762,27 @@ internal fun NutsNewsApp(
                 )
 
             Box(modifier = modifier.fillMaxSize()) {
-                key(uiState.destination) {
+                Crossfade(
+                    targetState = uiState.destination,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer {
+                                alpha = contentProgress
+                                scaleX = 0.99f + (0.01f * contentProgress)
+                                scaleY = 0.99f + (0.01f * contentProgress)
+                            },
+                    animationSpec =
+                        if (NutsNewsTheme.reducedMotion) {
+                            snap()
+                        } else {
+                            tween(
+                                durationMillis = NutsNewsMotion.RouteFadeMillis,
+                                easing = FastOutSlowInEasing,
+                            )
+                        },
+                    label = "NutsNews destination",
+                ) { destination ->
                     Surface(
                         modifier =
                             Modifier
@@ -770,16 +791,11 @@ internal fun NutsNewsApp(
                                     if (showSplash) {
                                         Modifier.clearAndSetSemantics { }
                                     } else {
-                                        Modifier.nutsNewsPane(uiState.destination.shellTitle)
+                                        Modifier.nutsNewsPane(destination.shellTitle)
                                     },
                                 )
-                                .graphicsLayer {
-                                    alpha = contentProgress
-                                    scaleX = 0.99f + (0.01f * contentProgress)
-                                    scaleY = 0.99f + (0.01f * contentProgress)
-                                },
                     ) {
-                        destinationContent(uiState.destination)
+                        destinationContent(destination)
                     }
                 }
 

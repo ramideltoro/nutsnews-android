@@ -76,6 +76,7 @@ import com.nutsnews.app.data.article.GoodMoodRecommendationEngine
 import com.nutsnews.app.data.article.GoodMoodRecommendations
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
@@ -295,7 +296,10 @@ private fun GoodMoodChoice(
                 if (NutsNewsTheme.reducedMotion) {
                     snap()
                 } else {
-                    spring(dampingRatio = 0.84f, stiffness = 480f)
+                    spring(
+                        dampingRatio = NutsNewsMotion.MoodSpringDamping,
+                        stiffness = 480f,
+                    )
                 },
             label = "${mood.title} mood selection",
         )

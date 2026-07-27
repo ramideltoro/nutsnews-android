@@ -3,6 +3,7 @@ package com.nutsnews.app.feature.splash
 import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -57,12 +58,12 @@ enum class StartupSplashStage {
 }
 
 internal object StartupSplashTiming {
-    const val ElementAnimationMillis = 350
-    const val ContentTransitionMillis = 450
+    const val ElementAnimationMillis = NutsNewsMotion.SplashElementMillis
+    const val ContentTransitionMillis = NutsNewsMotion.SplashContentRevealMillis
 
-    const val InitialDelayMillis = 500L
-    const val StageDelayMillis = 500L
-    const val FullyVisibleHoldMillis = 1_000L
+    const val InitialDelayMillis = NutsNewsMotion.SplashInitialDelayMillis
+    const val StageDelayMillis = NutsNewsMotion.SplashStageDelayMillis
+    const val FullyVisibleHoldMillis = NutsNewsMotion.SplashVisibleHoldMillis
 }
 
 internal fun interface StartupSplashPlayer {

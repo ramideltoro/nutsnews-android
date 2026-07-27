@@ -360,9 +360,9 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T52 — Animation and visual polish
 
-- [ ] P-T52-01 Spacing, type, crops, borders, gradients, shadows, and glows match.
-- [ ] P-T52-02 M01–M13 timing is tuned side-by-side.
-- [ ] P-T52-03 Only unavoidable Android-owned differences are documented.
+- [x] P-T52-01 Spacing, type, crops, borders, gradients, shadows, and glows match.
+- [x] P-T52-02 M01–M13 timing is tuned side-by-side.
+- [x] P-T52-03 Only unavoidable Android-owned differences are documented.
 
 ## Automated verification
 

@@ -35,6 +35,7 @@ import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
 import kotlin.math.abs
@@ -190,7 +191,7 @@ class ArticleCardTest {
         )
 
         composeRule.onNodeWithTag("article_like_story").performClick()
-        composeRule.mainClock.advanceTimeBy(32)
+        composeRule.mainClock.advanceTimeBy(200)
 
         composeRule
             .onNodeWithTag("article_like_story")
@@ -220,6 +221,31 @@ class ArticleCardTest {
     }
 
     @Test
+    fun readStoryWaitsForTheIosActionGlowBeforeOpening() {
+        composeRule.mainClock.autoAdvance = false
+        val article = representativeArticle()
+        val opened = mutableListOf<Article>()
+        setCard(
+            article = article,
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+            onReadStory = opened::add,
+        )
+
+        composeRule.onNodeWithTag("article_read_story").performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+        assertTrue(opened.isEmpty())
+        composeRule.mainClock.advanceTimeBy(
+            NutsNewsMotion.ActionOpenDelayMillis - 32L,
+        )
+        assertTrue(opened.isEmpty())
+        composeRule.mainClock.advanceTimeBy(32L)
+        composeRule.runOnIdle {
+            assertEquals(listOf(article), opened)
+        }
+    }
+
+    @Test
     fun aNewLikeCelebrationIsNotClearedByAnOlderInterruptedAnimation() {
         composeRule.mainClock.autoAdvance = false
         setCard(
@@ -229,7 +255,7 @@ class ArticleCardTest {
         )
 
         composeRule.onNodeWithTag("article_like_story").performClick()
-        composeRule.mainClock.advanceTimeBy(500)
+        composeRule.mainClock.advanceTimeBy(600)
         composeRule.onNodeWithTag("article_like_story").performClick()
         composeRule.mainClock.advanceTimeByFrame()
         composeRule.onNodeWithTag("article_like_story").performClick()
@@ -239,7 +265,7 @@ class ArticleCardTest {
             .onNodeWithTag("article_celebration", useUnmergedTree = true)
             .fetchSemanticsNode()
 
-        composeRule.mainClock.advanceTimeBy(500)
+        composeRule.mainClock.advanceTimeBy(600)
         composeRule
             .onAllNodesWithTag("article_celebration", useUnmergedTree = true)
             .assertCountEquals(0)

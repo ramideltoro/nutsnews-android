@@ -27,6 +27,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.navigation.AppDestination
 import kotlin.math.max
 import kotlin.test.assertEquals
@@ -106,6 +107,9 @@ class FeedScreenTest {
                 .onNodeWithTag("feed_menu_${entry.destination.route}")
                 .assertIsDisplayed()
                 .performClick()
+            if (entry.destination == AppDestination.Settings) {
+                composeRule.mainClock.advanceTimeBy(NutsNewsMotion.ActionOpenDelayMillis + 16L)
+            }
             assertEquals(entry.destination, navigated[index])
         }
     }

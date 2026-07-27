@@ -1,5 +1,8 @@
 package com.nutsnews.app.feature.feed
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -39,12 +42,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -57,12 +63,15 @@ import androidx.compose.ui.unit.sp
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import com.nutsnews.app.navigation.AppDestination
 import java.util.Locale
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun FeedScreen(
@@ -167,7 +176,44 @@ private fun FeedOverflowMenu(
     modifier: Modifier = Modifier,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var settingsPending by remember { mutableStateOf(false) }
     val palette = NutsNewsTheme.colors
+    val reducedMotion = NutsNewsTheme.reducedMotion
+    val settingsGlow = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val openDestination: (AppDestination) -> Unit = { destination ->
+        if (
+            destination != AppDestination.Settings ||
+            reducedMotion
+        ) {
+            expanded = false
+            onDestinationSelected(destination)
+        } else if (!settingsPending) {
+            settingsPending = true
+            scope.launch {
+                settingsGlow.snapTo(1f)
+                launch {
+                    settingsGlow.animateTo(
+                        targetValue = 0f,
+                        animationSpec =
+                            tween(
+                                durationMillis = NutsNewsMotion.ActionGlowMillis,
+                                easing = FastOutSlowInEasing,
+                            ),
+                    )
+                }
+                delay(NutsNewsMotion.ActionOpenDelayMillis)
+                expanded = false
+                onDestinationSelected(destination)
+                delay(
+                    NutsNewsMotion.ActionGlowResetMillis -
+                        NutsNewsMotion.ActionOpenDelayMillis,
+                )
+                settingsGlow.snapTo(0f)
+                settingsPending = false
+            }
+        }
+    }
 
     Box(modifier = modifier) {
         IconButton(
@@ -213,14 +259,48 @@ private fun FeedOverflowMenu(
                     modifier = Modifier.testTag("feed_menu_${entry.destination.route}"),
                     text = { Text(entry.label) },
                     onClick = {
-                        expanded = false
-                        onDestinationSelected(entry.destination)
+                        openDestination(entry.destination)
                     },
                     leadingIcon = {
-                        Icon(
-                            imageVector = entry.icon,
-                            contentDescription = null,
-                        )
+                        if (entry.destination == AppDestination.Settings) {
+                            val glow = settingsGlow.value
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .size(32.dp)
+                                        .shadow(
+                                            elevation =
+                                                (
+                                                    NutsNewsMotion.ActionGlowRadiusDp *
+                                                        glow
+                                                ).dp,
+                                            shape = CircleShape,
+                                            ambientColor =
+                                                palette.accentHighlight.copy(
+                                                    alpha = glow * 0.72f,
+                                                ),
+                                            spotColor =
+                                                palette.accentGlow.copy(
+                                                    alpha = glow * 0.55f,
+                                                ),
+                                        ).graphicsLayer {
+                                            scaleX = 1f + (glow * 0.035f)
+                                            scaleY = 1f + (glow * 0.035f)
+                                        }.testTag("feed_settings_glow"),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = entry.icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(24.dp),
+                                )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = entry.icon,
+                                contentDescription = null,
+                            )
+                        }
                     },
                 )
             }

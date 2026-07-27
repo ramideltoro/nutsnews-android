@@ -20,6 +20,7 @@ import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeDown
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
 import kotlin.test.assertEquals
@@ -107,6 +108,7 @@ class ArticleFeedContentTest {
         composeRule
             .onNodeWithTag("article_read_story")
             .performClick()
+        composeRule.mainClock.advanceTimeBy(NutsNewsMotion.ActionOpenDelayMillis + 16L)
         assertEquals(listOf(article), opened)
 
         composeRule

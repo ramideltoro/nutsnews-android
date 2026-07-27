@@ -3,14 +3,18 @@ package com.nutsnews.app.feature.article
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -76,6 +80,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -111,6 +116,7 @@ import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import com.nutsnews.app.designsystem.nutsNewsHeading
@@ -124,6 +130,7 @@ import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.sin
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,7 +190,21 @@ fun ArticleDetailScreen(
         remember(article.stableId.value) {
             mutableIntStateOf(0)
         }
+    var listenGlowToken by
+        remember(article.stableId.value) {
+            mutableIntStateOf(0)
+        }
+    var pageGlowToken by
+        remember(article.stableId.value) {
+            mutableIntStateOf(0)
+        }
+    var pageGlowDuration by
+        remember(article.stableId.value) {
+            mutableIntStateOf(NutsNewsMotion.ActionGlowMillis)
+        }
     val likeGlow = remember(article.stableId.value) { Animatable(0f) }
+    val listenGlow = remember(article.stableId.value) { Animatable(0f) }
+    val pageGlow = remember(article.stableId.value) { Animatable(0f) }
     var originalStoryStatus by
         remember(article.stableId.value) {
             mutableStateOf<String?>(null)
@@ -215,7 +236,31 @@ fun ArticleDetailScreen(
         likeGlow.snapTo(1f)
         likeGlow.animateTo(
             targetValue = 0f,
-            animationSpec = tween(durationMillis = LikeGlowDurationMillis),
+            animationSpec = tween(durationMillis = NutsNewsMotion.ActionGlowMillis),
+        )
+    }
+    LaunchedEffect(listenGlowToken) {
+        if (listenGlowToken == 0) return@LaunchedEffect
+        if (reducedMotion) {
+            listenGlow.snapTo(0f)
+            return@LaunchedEffect
+        }
+        listenGlow.snapTo(1f)
+        listenGlow.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = NutsNewsMotion.ActionGlowMillis),
+        )
+    }
+    LaunchedEffect(pageGlowToken) {
+        if (pageGlowToken == 0) return@LaunchedEffect
+        if (reducedMotion) {
+            pageGlow.snapTo(0f)
+            return@LaunchedEffect
+        }
+        pageGlow.snapTo(1f)
+        pageGlow.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = pageGlowDuration),
         )
     }
     LaunchedEffect(article.stableId) {
@@ -227,7 +272,7 @@ fun ArticleDetailScreen(
             listenUiState.playbackState != ArticleListenPlaybackState.Reading &&
             listenUiState.playbackState != ArticleListenPlaybackState.Paused
         ) {
-            delay(ListenAutoStartDelayMillis)
+            delay(NutsNewsMotion.ListenAutoStartDelayMillis)
             onToggleListening(listenScript)
         }
     }
@@ -276,7 +321,11 @@ fun ArticleDetailScreen(
                         actions = {
                             ArticleListenToolbarButton(
                                 isActive = listenUiState.isActive,
-                                onClick = { isShowingListenMode = true },
+                                glow = listenGlow.value,
+                                onClick = {
+                                    listenGlowToken += 1
+                                    isShowingListenMode = true
+                                },
                             )
                             ArticleDetailLikeButton(
                                 isLiked = displayedLiked,
@@ -284,6 +333,8 @@ fun ArticleDetailScreen(
                                 onClick = {
                                     displayedLiked = !displayedLiked
                                     likeAnimationToken += 1
+                                    pageGlowDuration = NutsNewsMotion.ActionGlowMillis
+                                    pageGlowToken += 1
                                     onToggleLiked(article)
                                 },
                             )
@@ -314,9 +365,14 @@ fun ArticleDetailScreen(
                         reflection = reflection,
                         isReflectionLoading = isReflectionLoading,
                         reflectionStatusMessage = reflectionStatusMessage,
-                        onReflectionSelected = onReflectionSelected,
+                        onReflectionSelected = { reaction ->
+                            pageGlowDuration = NutsNewsMotion.ReflectionGlowMillis
+                            pageGlowToken += 1
+                            onReflectionSelected(reaction)
+                        },
                         shareCardUiState = shareCardUiState,
                         onShareCard = onShareCard,
+                        pageGlow = pageGlow.value,
                         modifier =
                             Modifier
                                 .fillMaxSize()
@@ -339,9 +395,14 @@ fun ArticleDetailScreen(
                         reflection = reflection,
                         isReflectionLoading = isReflectionLoading,
                         reflectionStatusMessage = reflectionStatusMessage,
-                        onReflectionSelected = onReflectionSelected,
+                        onReflectionSelected = { reaction ->
+                            pageGlowDuration = NutsNewsMotion.ReflectionGlowMillis
+                            pageGlowToken += 1
+                            onReflectionSelected(reaction)
+                        },
                         shareCardUiState = shareCardUiState,
                         onShareCard = onShareCard,
+                        pageGlow = pageGlow.value,
                         modifier =
                             Modifier
                                 .fillMaxSize()
@@ -421,6 +482,7 @@ private fun ArticleDetailLikeButton(
 @Composable
 private fun ArticleListenToolbarButton(
     isActive: Boolean,
+    glow: Float,
     onClick: () -> Unit,
 ) {
     IconButton(
@@ -436,8 +498,31 @@ private fun ArticleListenToolbarButton(
             modifier =
                 Modifier
                     .size(38.dp)
+                    .shadow(
+                        elevation = (NutsNewsMotion.ActionGlowRadiusDp * glow).dp,
+                        shape = CircleShape,
+                        ambientColor =
+                            NutsNewsTheme.colors.accentHighlight.copy(
+                                alpha = glow * 0.72f,
+                            ),
+                        spotColor =
+                            NutsNewsTheme.colors.accentGlow.copy(
+                                alpha = glow * 0.55f,
+                            ),
+                    ).graphicsLayer {
+                        scaleX = 1f + (glow * 0.035f)
+                        scaleY = 1f + (glow * 0.035f)
+                    }
                     .clip(CircleShape)
-                    .background(NutsNewsTheme.colors.badgeBackground),
+                    .background(NutsNewsTheme.colors.badgeBackground)
+                    .border(
+                        width = if (glow > 0f) 2.dp else 0.dp,
+                        color =
+                            NutsNewsTheme.colors.accentHighlight.copy(
+                                alpha = glow * 0.86f,
+                            ),
+                        shape = CircleShape,
+                    ).testTag("article_detail_listen_surface"),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -872,6 +957,7 @@ private fun ListenWaveform(
     modifier: Modifier = Modifier,
 ) {
     val palette = NutsNewsTheme.colors
+    val reducedMotion = NutsNewsTheme.reducedMotion
     val infiniteTransition = rememberInfiniteTransition(label = "listen waveform")
     val animatedPhase by
         infiniteTransition.animateFloat(
@@ -879,7 +965,11 @@ private fun ListenWaveform(
             targetValue = WaveTwoPi,
             animationSpec =
                 infiniteRepeatable(
-                    animation = tween(durationMillis = 900, easing = LinearEasing),
+                    animation =
+                        tween(
+                            durationMillis = NutsNewsMotion.ListenWaveformCycleMillis,
+                            easing = LinearEasing,
+                        ),
                     repeatMode = RepeatMode.Restart,
                 ),
             label = "listen waveform phase",
@@ -887,50 +977,178 @@ private fun ListenWaveform(
     val isReading = uiState.playbackState == ArticleListenPlaybackState.Reading
     val isPaused = uiState.playbackState == ArticleListenPlaybackState.Paused
     val phase =
-        if (isReading && !NutsNewsTheme.reducedMotion) {
+        if (isReading && !reducedMotion) {
             animatedPhase
         } else {
             uiState.speechWaveSeed.toFloat()
         }
-    val level =
-        when {
-            isReading -> uiState.speechWaveLevel
-            isPaused -> 0.22f
-            else -> 0.18f
-        }
-    Canvas(modifier = modifier) {
-        val barCount = 22
-        val horizontalPadding = size.width * 0.08f
-        val usableWidth = size.width - (horizontalPadding * 2)
-        val step = usableWidth / (barCount - 1)
-        val strokeWidth = (step * 0.34f).coerceAtLeast(3f)
-        repeat(barCount) { index ->
-            val texture =
-                (
-                    (
-                        sin(
-                            (index * uiState.speechWaveFrequency + phase).toDouble(),
-                        ).toFloat() + 1f
-                    ) / 2f
-                )
-                    .coerceIn(0f, 1f)
-            val envelope = 1f - kotlin.math.abs((index - (barCount - 1) / 2f)) / barCount
-            val barHeight =
-                size.height *
-                    (0.16f + (texture * level * 0.66f * envelope))
-            val x = horizontalPadding + (index * step)
-            drawLine(
-                color =
-                    if (index % 3 == 0) {
-                        palette.accentHighlight
+    val level by
+        animateFloatAsState(
+            targetValue =
+                when {
+                    isReading -> uiState.speechWaveLevel
+                    isPaused -> 0.22f
+                    else -> 0.18f
+                },
+            animationSpec =
+                if (reducedMotion) {
+                    snap()
+                } else {
+                    tween(
+                        durationMillis =
+                            if (isPaused) {
+                                NutsNewsMotion.ListenPausedTransitionMillis
+                            } else {
+                                NutsNewsMotion.ListenReadingTransitionMillis
+                            },
+                    )
+                },
+            label = "listen waveform level",
+        )
+    val barOpacity by
+        animateFloatAsState(
+            targetValue = if (isPaused) 0.46f else 1f,
+            animationSpec =
+                if (reducedMotion) {
+                    snap()
+                } else {
+                    tween(durationMillis = NutsNewsMotion.ListenPausedTransitionMillis)
+                },
+            label = "listen waveform pause opacity",
+        )
+
+    Box(
+        modifier = modifier,
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val barWidth = 5.dp.toPx()
+            val barSpacing = 4.dp.toPx()
+            val totalWidth =
+                (ListenWaveformBars.size * barWidth) +
+                    ((ListenWaveformBars.size - 1) * barSpacing)
+            val startX = ((size.width - totalWidth) / 2f).coerceAtLeast(barWidth / 2f)
+            val baseHeight = 12.dp.toPx()
+            val restingRange = 14.dp.toPx()
+            val maximumHeight = 84.dp.toPx().coerceAtMost(size.height)
+            val gradient = Brush.verticalGradient(palette.buttonGradient)
+
+            ListenWaveformBars.forEachIndexed { index, restingScale ->
+                val restingHeight = baseHeight + (restingScale * restingRange)
+                val barHeight =
+                    if (isReading && !reducedMotion) {
+                        val wordAccent =
+                            (
+                                sin(
+                                    (
+                                        uiState.speechWaveSeed * 1.37 +
+                                            index
+                                    ) * 0.91,
+                                ) + 1
+                            ) / 2
+                        val syllablePulse =
+                            (
+                                sin(
+                                    (
+                                        uiState.speechWaveSeed +
+                                            index * 0.31
+                                    ) * 1.84,
+                                ) + 1
+                            ) / 2
+                        val wave =
+                            (
+                                sin(
+                                    (
+                                        phase +
+                                            index * 0.52 +
+                                            uiState.speechWaveSeed * 0.21
+                                    ),
+                                ) + 1
+                            ) / 2
+                        val fastWave =
+                            (
+                                sin(
+                                    (
+                                        phase * 1.7f +
+                                            index * 0.94f
+                                    ).toDouble(),
+                                ) + 1
+                            ) / 2
+                        val frequency =
+                            uiState.speechWaveFrequency
+                                .coerceIn(0.7f, 2.2f)
+                        val pulse =
+                            (restingScale * 0.18f) +
+                                (wave.toFloat() * 0.42f) +
+                                (fastWave.toFloat() * 0.18f) +
+                                (wordAccent.toFloat() * level * 0.16f) +
+                                (syllablePulse.toFloat() * frequency * 0.06f)
+                        val clamped =
+                            (
+                                pulse *
+                                    (0.72f + level.coerceIn(0.16f, 1f) * 0.56f)
+                            ).coerceIn(0.10f, 1f)
+                        baseHeight + ((maximumHeight - baseHeight) * clamped)
                     } else {
-                        palette.accent
-                    },
-                start = Offset(x, (size.height - barHeight) / 2f),
-                end = Offset(x, (size.height + barHeight) / 2f),
-                strokeWidth = strokeWidth,
-                cap = StrokeCap.Round,
-            )
+                        restingHeight
+                    }
+                val x = startX + (barWidth / 2f) + (index * (barWidth + barSpacing))
+                if (isReading && !reducedMotion) {
+                    drawLine(
+                        color = palette.accentGlow.copy(alpha = 0.42f * barOpacity),
+                        start = Offset(x, (size.height - barHeight) / 2f),
+                        end = Offset(x, (size.height + barHeight) / 2f),
+                        strokeWidth = barWidth + 8.dp.toPx(),
+                        cap = StrokeCap.Round,
+                    )
+                }
+                drawLine(
+                    brush = gradient,
+                    start = Offset(x, (size.height - barHeight) / 2f),
+                    end = Offset(x, (size.height + barHeight) / 2f),
+                    strokeWidth = barWidth,
+                    cap = StrokeCap.Round,
+                    alpha = barOpacity,
+                )
+            }
+        }
+
+        AnimatedVisibility(
+            visible = isPaused,
+            enter =
+                fadeIn(
+                    tween(NutsNewsMotion.ListenPausedTransitionMillis),
+                ) + scaleIn(
+                    tween(NutsNewsMotion.ListenPausedTransitionMillis),
+                ),
+            exit =
+                fadeOut(
+                    tween(NutsNewsMotion.ListenPausedTransitionMillis),
+                ) + scaleOut(
+                    tween(NutsNewsMotion.ListenPausedTransitionMillis),
+                ),
+        ) {
+            Box(
+                modifier =
+                    Modifier
+                        .size(58.dp)
+                        .shadow(
+                            elevation = 16.dp,
+                            shape = RoundedCornerShape(20.dp),
+                            ambientColor = palette.accentGlow,
+                            spotColor = palette.accentGlow,
+                        ).clip(RoundedCornerShape(20.dp))
+                        .background(nutsNewsButtonGradient())
+                        .testTag("listen_mode_paused_indicator"),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Pause,
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    tint = palette.buttonText,
+                )
+            }
         }
     }
 }
@@ -1027,13 +1245,32 @@ private fun RegularArticleDetail(
     onReflectionSelected: (StoryReflectionReaction) -> Unit,
     shareCardUiState: ArticleShareCardUiState,
     onShareCard: (Article) -> Unit,
+    pageGlow: Float,
     modifier: Modifier,
 ) {
+    val contentShape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius)
     Column(
         modifier =
             modifier
                 .verticalScroll(rememberScrollState())
                 .padding(NutsNewsTheme.spacing.medium)
+                .shadow(
+                    elevation = (18f * pageGlow).dp,
+                    shape = contentShape,
+                    clip = false,
+                    ambientColor =
+                        NutsNewsTheme.colors.accentHighlight.copy(alpha = pageGlow * 0.58f),
+                    spotColor =
+                        NutsNewsTheme.colors.accentHighlight.copy(alpha = pageGlow * 0.58f),
+                ).shadow(
+                    elevation = (27f * pageGlow).dp,
+                    shape = contentShape,
+                    clip = false,
+                    ambientColor =
+                        NutsNewsTheme.colors.accentGlow.copy(alpha = pageGlow * 0.45f),
+                    spotColor =
+                        NutsNewsTheme.colors.accentGlow.copy(alpha = pageGlow * 0.45f),
+                )
                 .testTag("article_detail_regular_content"),
         verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
     ) {
@@ -1107,6 +1344,7 @@ private fun CompactLandscapeArticleDetail(
     onReflectionSelected: (StoryReflectionReaction) -> Unit,
     shareCardUiState: ArticleShareCardUiState,
     onShareCard: (Article) -> Unit,
+    pageGlow: Float,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -1118,6 +1356,31 @@ private fun CompactLandscapeArticleDetail(
                     .padding(
                         horizontal = NutsNewsTheme.spacing.medium,
                         vertical = NutsNewsTheme.spacing.small,
+                    )
+                    .shadow(
+                        elevation = (18f * pageGlow).dp,
+                        shape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius),
+                        clip = false,
+                        ambientColor =
+                            NutsNewsTheme.colors.accentHighlight.copy(
+                                alpha = pageGlow * 0.58f,
+                            ),
+                        spotColor =
+                            NutsNewsTheme.colors.accentHighlight.copy(
+                                alpha = pageGlow * 0.58f,
+                            ),
+                    ).shadow(
+                        elevation = (27f * pageGlow).dp,
+                        shape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius),
+                        clip = false,
+                        ambientColor =
+                            NutsNewsTheme.colors.accentGlow.copy(
+                                alpha = pageGlow * 0.45f,
+                            ),
+                        spotColor =
+                            NutsNewsTheme.colors.accentGlow.copy(
+                                alpha = pageGlow * 0.45f,
+                            ),
                     )
                     .testTag("article_detail_compact_content"),
             horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
@@ -1605,17 +1868,72 @@ private fun ShareCardButton(
     onClick: () -> Unit,
 ) {
     val shape = RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius)
+    val reducedMotion = NutsNewsTheme.reducedMotion
+    val glow = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var glowRunning by remember { mutableStateOf(false) }
+    val trigger: () -> Unit = {
+        if (!isCreating && !glowRunning) {
+            onClick()
+            if (!reducedMotion) {
+                glowRunning = true
+                scope.launch {
+                    glow.snapTo(1f)
+                    glow.animateTo(
+                        targetValue = 0f,
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.ShareGlowMillis),
+                    )
+                    delay(
+                        NutsNewsMotion.ActionGlowResetMillis -
+                            NutsNewsMotion.ShareGlowMillis,
+                    )
+                    glow.snapTo(0f)
+                    glowRunning = false
+                }
+            }
+        }
+    }
+    val glowProgress = glow.value
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .heightIn(min = 48.dp)
+                .shadow(
+                    elevation =
+                        (
+                            NutsNewsMotion.ActionGlowRadiusDp *
+                                glowProgress
+                        ).dp,
+                    shape = shape,
+                    ambientColor =
+                        NutsNewsTheme.colors.accentHighlight.copy(
+                            alpha = glowProgress * 0.72f,
+                        ),
+                    spotColor =
+                        NutsNewsTheme.colors.accentGlow.copy(
+                            alpha = glowProgress * 0.55f,
+                        ),
+                ).graphicsLayer {
+                    alpha = if (isCreating) 0.75f else 1f
+                    scaleX = 1f + (glowProgress * 0.03f)
+                    scaleY = 1f + (glowProgress * 0.03f)
+                }
                 .clip(shape)
                 .background(nutsNewsButtonGradient())
+                .border(
+                    width = if (glowProgress > 0f) 2.dp else 0.dp,
+                    color =
+                        NutsNewsTheme.colors.accentHighlight.copy(
+                            alpha = glowProgress * 0.86f,
+                        ),
+                    shape = shape,
+                )
                 .clickable(
                     enabled = !isCreating,
                     role = Role.Button,
-                    onClick = onClick,
+                    onClick = trigger,
                 ).semantics {
                     stateDescription =
                         if (isCreating) "Creating share card" else "Ready to share"
@@ -2179,8 +2497,18 @@ private fun ArticleNoteSection(
             }
             AnimatedVisibility(
                 visible = !statusMessage.isNullOrEmpty(),
-                enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { -it / 2 },
-                exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { -it / 2 },
+                enter =
+                    fadeIn(
+                        tween(NutsNewsMotion.StatusEnterMillis),
+                    ) + slideInVertically(
+                        tween(NutsNewsMotion.StatusEnterMillis),
+                    ) { -it / 2 },
+                exit =
+                    fadeOut(
+                        tween(NutsNewsMotion.StatusExitMillis),
+                    ) + slideOutVertically(
+                        tween(NutsNewsMotion.StatusExitMillis),
+                    ) { -it / 2 },
             ) {
                 Text(
                     text = displayedStatus,
@@ -2332,6 +2660,42 @@ private fun OriginalStoryButton(
 ) {
     val enabled = article.originalUrl != null
     val cleanSource = article.source.trim()
+    val reducedMotion = NutsNewsTheme.reducedMotion
+    val glow = remember(article.stableId.value) { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var isPending by
+        remember(article.stableId.value) {
+            mutableStateOf(false)
+        }
+    val trigger: () -> Unit = {
+        if (enabled && !isPending) {
+            if (reducedMotion) {
+                onClick()
+            } else {
+                isPending = true
+                scope.launch {
+                    glow.snapTo(1f)
+                    launch {
+                        glow.animateTo(
+                            targetValue = 0f,
+                            animationSpec =
+                                tween(durationMillis = NutsNewsMotion.ActionGlowMillis),
+                        )
+                    }
+                    delay(NutsNewsMotion.ActionOpenDelayMillis)
+                    onClick()
+                    delay(
+                        NutsNewsMotion.ActionGlowResetMillis -
+                            NutsNewsMotion.ActionOpenDelayMillis,
+                    )
+                    glow.snapTo(0f)
+                    isPending = false
+                }
+            }
+        }
+    }
+    val glowProgress = glow.value
+    val shape = RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius)
     Column(
         verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
     ) {
@@ -2340,12 +2704,40 @@ private fun OriginalStoryButton(
                 Modifier
                     .fillMaxWidth()
                     .heightIn(min = 48.dp)
-                    .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
-                    .clip(RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius))
+                    .shadow(
+                        elevation =
+                            (
+                                NutsNewsMotion.ActionGlowRadiusDp *
+                                    glowProgress
+                            ).dp,
+                        shape = shape,
+                        ambientColor =
+                            NutsNewsTheme.colors.accentHighlight.copy(
+                                alpha = glowProgress * 0.72f,
+                            ),
+                        spotColor =
+                            NutsNewsTheme.colors.accentGlow.copy(
+                                alpha = glowProgress * 0.55f,
+                            ),
+                    )
+                    .graphicsLayer {
+                        alpha = if (enabled) 1f else 0.55f
+                        scaleX = 1f + (glowProgress * 0.03f)
+                        scaleY = 1f + (glowProgress * 0.03f)
+                    }
+                    .clip(shape)
                     .background(NutsNewsTheme.colors.badgeBackground)
+                    .border(
+                        width = if (glowProgress > 0f) 2.dp else 0.dp,
+                        color =
+                            NutsNewsTheme.colors.accentHighlight.copy(
+                                alpha = glowProgress * 0.86f,
+                            ),
+                        shape = shape,
+                    )
                     .clickable(
                         enabled = enabled,
-                        onClick = onClick,
+                        onClick = trigger,
                     )
                     .testTag("article_detail_open_original")
                     .padding(
@@ -2588,6 +2980,37 @@ private const val WideThumbnailCropAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 8
 private const val WordsPerMinute = 180.0
 private val WhitespacePattern = Regex("\\s+")
-private const val LikeGlowDurationMillis = 1_000
-private const val ListenAutoStartDelayMillis = 180L
+private val ListenWaveformBars =
+    listOf(
+        0.28f,
+        0.56f,
+        0.38f,
+        0.74f,
+        0.46f,
+        0.92f,
+        0.52f,
+        0.82f,
+        0.34f,
+        0.68f,
+        0.42f,
+        0.88f,
+        0.60f,
+        0.76f,
+        0.32f,
+        0.70f,
+        0.50f,
+        0.96f,
+        0.44f,
+        0.78f,
+        0.36f,
+        0.64f,
+        0.58f,
+        0.84f,
+        0.40f,
+        0.72f,
+        0.48f,
+        0.90f,
+    ).also { bars ->
+        check(bars.size == NutsNewsMotion.ListenWaveformBarCount)
+    }
 private const val WaveTwoPi = 6.2831855f

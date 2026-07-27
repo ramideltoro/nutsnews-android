@@ -18,6 +18,7 @@ import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
 import com.nutsnews.app.data.story.StoryReflectionRepository
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.widget.NoOpWidgetRefreshRequester
 import com.nutsnews.app.widget.WidgetRefreshRequester
 import kotlinx.coroutines.Job
@@ -468,5 +469,5 @@ private data class ArticleReflectionEditorState(
 
 private const val NoteSavedMessage = "Note saved on this device"
 private const val NoteClearedMessage = "Note cleared"
-private const val NoteStatusDurationMillis = 1_800L
-private const val ReflectionStatusDurationMillis = 1_800L
+private const val NoteStatusDurationMillis = NutsNewsMotion.StatusHoldMillis
+private const val ReflectionStatusDurationMillis = NutsNewsMotion.StatusHoldMillis
