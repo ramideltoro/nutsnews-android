@@ -63,6 +63,8 @@ import com.nutsnews.app.feature.saved.SavedStoriesScreen
 import com.nutsnews.app.feature.saved.SavedStoriesViewModel
 import com.nutsnews.app.feature.search.ArchiveSearchScreen
 import com.nutsnews.app.feature.search.ArchiveSearchViewModel
+import com.nutsnews.app.feature.settings.SettingsScreen
+import com.nutsnews.app.feature.settings.SettingsViewModel
 import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
@@ -174,6 +176,13 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val settingsViewModel: SettingsViewModel by viewModels {
+        SettingsViewModel.Factory(
+            userPreferencesRepository =
+                (application as NutsNewsApplication).container.userPreferencesRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -202,6 +211,8 @@ class MainActivity : ComponentActivity() {
                 archiveSearchViewModel.uiState.collectAsStateWithLifecycle()
             val readingStatsUiState by
                 readingStatsViewModel.uiState.collectAsStateWithLifecycle()
+            val settingsUiState by
+                settingsViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
                 remember { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
@@ -550,6 +561,28 @@ class MainActivity : ComponentActivity() {
                             ReadingStatsScreen(
                                 uiState = readingStatsUiState,
                                 onClose = bootstrapViewModel::onNavigateUp,
+                            )
+                        }
+
+                        AppDestination.Settings -> {
+                            SettingsScreen(
+                                uiState = settingsUiState,
+                                onAppearance = {
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.ThemePicker,
+                                    )
+                                },
+                                onHaptics = {
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.HapticsSettings,
+                                    )
+                                },
+                                onWidget = {
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.WidgetSettings,
+                                    )
+                                },
+                                onGoHome = bootstrapViewModel::onHomeRequested,
                             )
                         }
 
