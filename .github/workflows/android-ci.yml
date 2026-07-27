@@ -6,6 +6,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      exercise_emulator_failure:
+        description: Capture and validate a real emulator failure-artifact bundle
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -83,4 +89,143 @@ jobs:
             app/build/test-results
             app/build/outputs/logs
           if-no-files-found: ignore
+          retention-days: 14
+
+  emulator-matrix:
+    name: Emulator (${{ matrix.label }})
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - id: phone-api26
+            label: phone API 26
+            api-level: 26
+            target: google_apis
+            arch: x86_64
+            profile: pixel_2
+            form-factor: phone
+            video-size: 720x1280
+          - id: phone-api36
+            label: phone API 36
+            api-level: 36
+            target: google_apis
+            arch: x86_64
+            profile: pixel_2
+            form-factor: phone
+            video-size: 720x1280
+          - id: tablet-api36
+            label: tablet API 36
+            api-level: 36
+            target: google_apis
+            arch: x86_64
+            profile: pixel_c
+            form-factor: tablet
+            video-size: 1280x800
+
+    steps:
+      - name: Check out repository
+        if: github.event_name != 'workflow_dispatch' || inputs.exercise_emulator_failure != true || matrix.id == 'phone-api36'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Enable KVM
+        if: github.event_name != 'workflow_dispatch' || inputs.exercise_emulator_failure != true || matrix.id == 'phone-api36'
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Set up JDK 17
+        if: github.event_name != 'workflow_dispatch' || inputs.exercise_emulator_failure != true || matrix.id == 'phone-api36'
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle caching
+        if: github.event_name != 'workflow_dispatch' || inputs.exercise_emulator_failure != true || matrix.id == 'phone-api36'
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          cache-cleanup: on-success
+
+      - name: Restore AVD snapshot
+        if: github.event_name != 'workflow_dispatch' || inputs.exercise_emulator_failure != true || matrix.id == 'phone-api36'
+        id: avd-cache
+        uses: actions/cache/restore@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.android/avd
+          key: avd-${{ runner.os }}-${{ matrix.id }}-${{ matrix.target }}-${{ matrix.arch }}-v1
+
+      - name: Generate clean AVD snapshot
+        if: >
+          (github.event_name != 'workflow_dispatch' ||
+          inputs.exercise_emulator_failure != true ||
+          matrix.id == 'phone-api36') &&
+          steps.avd-cache.outputs.cache-hit != 'true'
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          avd-name: nutsnews-${{ matrix.id }}
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: echo "Generated ${{ matrix.label }} AVD snapshot."
+
+      - name: Save AVD snapshot
+        if: >
+          github.event_name != 'pull_request' &&
+          (github.event_name != 'workflow_dispatch' ||
+          inputs.exercise_emulator_failure != true ||
+          matrix.id == 'phone-api36') &&
+          steps.avd-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
+        with:
+          path: ~/.android/avd
+          key: ${{ steps.avd-cache.outputs.cache-primary-key }}
+
+      - name: Run device checks
+        if: github.event_name != 'workflow_dispatch' || inputs.exercise_emulator_failure != true || matrix.id == 'phone-api36'
+        id: device-tests
+        continue-on-error: ${{ github.event_name == 'workflow_dispatch' && inputs.exercise_emulator_failure == true }}
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        env:
+          NUTSNEWS_EMULATOR_CONTROLLED_FAILURE: ${{ github.event_name == 'workflow_dispatch' && inputs.exercise_emulator_failure == true }}
+        with:
+          api-level: ${{ matrix.api-level }}
+          target: ${{ matrix.target }}
+          arch: ${{ matrix.arch }}
+          profile: ${{ matrix.profile }}
+          avd-name: nutsnews-${{ matrix.id }}
+          force-avd-creation: false
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: ./scripts/run-emulator-tests.sh "${{ matrix.id }}" "${{ matrix.form-factor }}" "${{ matrix.video-size }}"
+
+      - name: Validate controlled failure artifacts
+        if: github.event_name == 'workflow_dispatch' && inputs.exercise_emulator_failure == true && matrix.id == 'phone-api36'
+        env:
+          DEVICE_TEST_OUTCOME: ${{ steps.device-tests.outcome }}
+        run: ./scripts/validate-emulator-failure-artifacts.sh "artifacts/emulator/${{ matrix.id }}"
+
+      - name: Upload emulator failure diagnostics
+        if: ${{ failure() || (github.event_name == 'workflow_dispatch' && inputs.exercise_emulator_failure == true && matrix.id == 'phone-api36') }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: emulator-${{ matrix.id }}-failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            artifacts/emulator/${{ matrix.id }}
+            build-logs
+            app/build/reports/androidTests
+            app/build/reports/screenshot-parity
+            app/build/test-results
+            app/build/outputs/androidTest-results
+            app/build/outputs/connected_android_test_additional_output
+          if-no-files-found: warn
           retention-days: 14
