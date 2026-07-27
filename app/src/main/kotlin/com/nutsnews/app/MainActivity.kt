@@ -48,6 +48,7 @@ import com.nutsnews.app.feature.article.ArticleShareCardController
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.digest.DailyDigestScreen
 import com.nutsnews.app.feature.feed.ArticleCardInteractionViewModel
 import com.nutsnews.app.feature.feed.ArticleFeedContent
 import com.nutsnews.app.feature.feed.ArticleFeedViewModel
@@ -486,6 +487,30 @@ class MainActivity : ComponentActivity() {
                         AppDestination.GoodMood -> {
                             val view = LocalView.current
                             GoodMoodScreen(
+                                articles = feedUiState.articles,
+                                savedStoryIds =
+                                    articleCardInteractionUiState.likedStoryIds,
+                                hapticsEnabled =
+                                    articleCardInteractionUiState.hapticsEnabled,
+                                onToggleSaved =
+                                    articleCardInteractionViewModel::toggleLiked,
+                                onSaveHaptic = {
+                                    view.performHapticFeedback(
+                                        HapticFeedbackConstants.CONTEXT_CLICK,
+                                    )
+                                },
+                                onOpenArticle = { article ->
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.ArticleDetail(article.stableId),
+                                    )
+                                },
+                                onClose = bootstrapViewModel::onNavigateUp,
+                            )
+                        }
+
+                        AppDestination.DailyDigest -> {
+                            val view = LocalView.current
+                            DailyDigestScreen(
                                 articles = feedUiState.articles,
                                 savedStoryIds =
                                     articleCardInteractionUiState.likedStoryIds,
