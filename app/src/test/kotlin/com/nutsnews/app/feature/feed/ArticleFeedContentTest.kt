@@ -104,6 +104,8 @@ class ArticleFeedContentTest {
         composeRule
             .onNodeWithTag("feed_story_story-1")
             .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_read_story")
             .performClick()
         assertEquals(listOf(article), opened)
 
@@ -199,6 +201,12 @@ class ArticleFeedContentTest {
         composeRule
             .onNodeWithTag("feed_article_list")
             .performScrollToNode(hasTestTag("feed_story_story-20"))
+        composeRule.waitUntil(timeoutMillis = 2_000) {
+            paginationRequests.size == 1
+        }
+        composeRule
+            .onNodeWithTag("feed_article_list")
+            .performScrollToNode(hasTestTag("feed_load_more_progress"))
         composeRule.onNodeWithTag("feed_load_more_progress").assertIsDisplayed()
         assertEquals(listOf("story-20"), paginationRequests.map(Article::id))
         val indexBeforeAppend =
