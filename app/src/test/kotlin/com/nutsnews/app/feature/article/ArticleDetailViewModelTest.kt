@@ -11,6 +11,7 @@ import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
 import com.nutsnews.app.data.story.StoryReflectionRepository
+import com.nutsnews.app.widget.WidgetRefreshRequester
 import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -81,12 +82,18 @@ class ArticleDetailViewModelTest {
         runTest(dispatcher) {
             val article = detailArticle()
             val stats = DetailReadingStatsRepository()
+            var widgetRefreshCount = 0
             val viewModel =
                 ArticleDetailViewModel(
                     savedStoryRepository = DetailSavedStoryRepository(),
                     readingStatsRepository = stats,
                     storyNoteRepository = DetailStoryNoteRepository(),
                     storyReflectionRepository = DetailStoryReflectionRepository(),
+                    widgetRefreshRequester =
+                        WidgetRefreshRequester {
+                            widgetRefreshCount += 1
+                            true
+                        },
                 )
 
             viewModel.onArticleShown(article)
@@ -94,6 +101,7 @@ class ArticleDetailViewModelTest {
             advanceUntilIdle()
 
             assertEquals(2, stats.storyOpenCalls)
+            assertEquals(2, widgetRefreshCount)
             assertEquals(
                 1,
                 viewModel.uiState.first { it.readingStats?.todayStoryCount == 1 }

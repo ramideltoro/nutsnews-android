@@ -13,6 +13,8 @@ import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
 import com.nutsnews.app.data.story.StoryReflectionRepository
+import com.nutsnews.app.widget.NoOpWidgetRefreshRequester
+import com.nutsnews.app.widget.WidgetRefreshRequester
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,6 +47,8 @@ class ArticleDetailViewModel(
     private val readingStatsRepository: ReadingStatsRepository,
     private val storyNoteRepository: StoryNoteRepository,
     private val storyReflectionRepository: StoryReflectionRepository,
+    private val widgetRefreshRequester: WidgetRefreshRequester =
+        NoOpWidgetRefreshRequester,
 ) : ViewModel() {
     private val likeMutex = Mutex()
     private val noteMutex = Mutex()
@@ -88,6 +92,7 @@ class ArticleDetailViewModel(
         loadReflectionEditor(article)
         viewModelScope.launch {
             readingStatsRepository.recordStoryOpen(article)
+            widgetRefreshRequester.requestRefresh()
         }
     }
 
@@ -337,6 +342,8 @@ class ArticleDetailViewModel(
         private val readingStatsRepository: ReadingStatsRepository,
         private val storyNoteRepository: StoryNoteRepository,
         private val storyReflectionRepository: StoryReflectionRepository,
+        private val widgetRefreshRequester: WidgetRefreshRequester =
+            NoOpWidgetRefreshRequester,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -346,6 +353,7 @@ class ArticleDetailViewModel(
                 readingStatsRepository = readingStatsRepository,
                 storyNoteRepository = storyNoteRepository,
                 storyReflectionRepository = storyReflectionRepository,
+                widgetRefreshRequester = widgetRefreshRequester,
             ) as T
         }
     }

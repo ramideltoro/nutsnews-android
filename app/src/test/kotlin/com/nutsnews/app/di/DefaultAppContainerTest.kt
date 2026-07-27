@@ -39,6 +39,7 @@ class DefaultAppContainerTest {
         assertSame(savedStoryRepository, container.savedStoryRepository)
         assertSame(storyNoteRepository, container.storyNoteRepository)
         assertSame(storyReflectionRepository, container.storyReflectionRepository)
+        assertSame(container.widgetDataProvider, container.widgetDataProvider)
     }
 }
 
