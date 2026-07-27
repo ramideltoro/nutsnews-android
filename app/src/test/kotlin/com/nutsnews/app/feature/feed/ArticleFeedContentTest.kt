@@ -238,6 +238,52 @@ class ArticleFeedContentTest {
         assertTrue(listState.firstVisibleItemIndex > 0)
     }
 
+    @Test
+    fun hoistedFeedScrollSurvivesRapidNavigationAwayAndBack() {
+        var showFeed by mutableStateOf(true)
+        lateinit var listState: LazyListState
+        composeRule.setContent {
+            NutsNewsTheme(updateSystemBars = false) {
+                listState = rememberLazyListState()
+                if (showFeed) {
+                    ArticleFeedContent(
+                        uiState = ArticleFeedUiState(articles = articles(20)),
+                        onRefresh = {},
+                        onRetry = {},
+                        onLoadMore = {},
+                        onOpenArticle = {},
+                        dashboard = {
+                            Text(
+                                text = "Dashboard",
+                                modifier = Modifier.height(180.dp),
+                            )
+                        },
+                        listState = listState,
+                    )
+                } else {
+                    Text("Article detail")
+                }
+            }
+        }
+        composeRule
+            .onNodeWithTag("feed_article_list")
+            .performScrollToNode(hasTestTag("feed_story_story-12"))
+        val scrolledIndex =
+            composeRule.runOnIdle {
+                listState.firstVisibleItemIndex
+            }
+        assertTrue(scrolledIndex > 0)
+
+        composeRule.runOnIdle {
+            showFeed = false
+        }
+        composeRule.onNodeWithText("Article detail").assertIsDisplayed()
+        composeRule.runOnIdle {
+            showFeed = true
+        }
+        assertEquals(scrolledIndex, listState.firstVisibleItemIndex)
+    }
+
     private fun setContent(
         uiState: () -> ArticleFeedUiState,
         onRefresh: () -> Unit = {},

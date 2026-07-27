@@ -1,8 +1,11 @@
 package com.nutsnews.app.feature.personalization
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.nutsnews.app.data.preferences.UserPreferenceDefaults
 import com.nutsnews.app.data.preferences.UserPreferences
 import com.nutsnews.app.data.preferences.UserPreferencesRepository
@@ -18,8 +21,13 @@ class PersonalizationViewModel(
     private val userPreferencesRepository: UserPreferencesRepository,
     private val widgetRefreshRequester: WidgetRefreshRequester =
         NoOpWidgetRefreshRequester,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
-    private val mutableUiState = MutableStateFlow(PersonalizationUiState())
+    private val mutableUiState =
+        MutableStateFlow(
+            restorePersonalizationDraft(savedStateHandle)
+                ?: PersonalizationUiState(),
+        )
     val uiState: StateFlow<PersonalizationUiState> = mutableUiState.asStateFlow()
 
     private var persistedPreferences = UserPreferences()
@@ -103,6 +111,7 @@ class PersonalizationViewModel(
     fun discardChanges() {
         mutableUiState.value =
             PersonalizationUiState.fromPreferences(persistedPreferences)
+        clearSavedDraft()
     }
 
     fun save(onSaved: () -> Unit = {}) {
@@ -141,6 +150,7 @@ class PersonalizationViewModel(
                                     "Reminder off."
                                 },
                         )
+                clearSavedDraft()
                 onSaved()
             }.onFailure {
                 mutableUiState.value =
@@ -148,6 +158,7 @@ class PersonalizationViewModel(
                         isSaving = false,
                         statusText = "Couldn’t save personalization. Try again.",
                     )
+                persistDraft()
             }
         }
     }
@@ -165,6 +176,7 @@ class PersonalizationViewModel(
                 )
             }
         }
+        persistDraft()
     }
 
     private fun persistIosBoundEdit(
@@ -205,8 +217,94 @@ class PersonalizationViewModel(
                 widgetRefreshRequester = widgetRefreshRequester,
             ) as T
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            require(modelClass.isAssignableFrom(PersonalizationViewModel::class.java)) {
+                "Unknown ViewModel class: ${modelClass.name}"
+            }
+            return PersonalizationViewModel(
+                userPreferencesRepository = userPreferencesRepository,
+                widgetRefreshRequester = widgetRefreshRequester,
+                savedStateHandle = extras.createSavedStateHandle(),
+            ) as T
+        }
+    }
+
+    private fun persistDraft() {
+        val state = mutableUiState.value
+        if (!state.hasUnsavedChanges) {
+            clearSavedDraft()
+            return
+        }
+        savedStateHandle[PersonalizationHasDraftStateKey] = true
+        savedStateHandle[PersonalizationTopicsStateKey] = ArrayList(state.selectedTopicIds)
+        savedStateHandle[PersonalizationMoodStateKey] = state.selectedMoodId
+        savedStateHandle[PersonalizationGoalStateKey] = state.dailyGoal
+        savedStateHandle[PersonalizationReminderEnabledStateKey] = state.reminderEnabled
+        savedStateHandle[PersonalizationReminderHourStateKey] = state.reminderHour
+    }
+
+    private fun clearSavedDraft() {
+        savedStateHandle.remove<Boolean>(PersonalizationHasDraftStateKey)
+        savedStateHandle.remove<ArrayList<String>>(PersonalizationTopicsStateKey)
+        savedStateHandle.remove<String>(PersonalizationMoodStateKey)
+        savedStateHandle.remove<Int>(PersonalizationGoalStateKey)
+        savedStateHandle.remove<Boolean>(PersonalizationReminderEnabledStateKey)
+        savedStateHandle.remove<Int>(PersonalizationReminderHourStateKey)
     }
 }
+
+private fun restorePersonalizationDraft(
+    savedStateHandle: SavedStateHandle,
+): PersonalizationUiState? {
+    if (
+        savedStateHandle.get<Boolean>(PersonalizationHasDraftStateKey) != true
+    ) {
+        return null
+    }
+    val topics =
+        savedStateHandle
+            .get<ArrayList<String>>(PersonalizationTopicsStateKey)
+            ?.filterTo(linkedSetOf()) { topic ->
+                topic in UserPreferenceDefaults.ValidTopicIds
+            }.orEmpty()
+            .ifEmpty { UserPreferenceDefaults.DefaultTopicIds }
+    val mood =
+        savedStateHandle
+            .get<String>(PersonalizationMoodStateKey)
+            ?.takeIf(UserPreferenceDefaults.ValidMoodIds::contains)
+            ?: UserPreferenceDefaults.DefaultMoodId
+    val reminderHour =
+        savedStateHandle
+            .get<Int>(PersonalizationReminderHourStateKey)
+            ?.takeIf(UserPreferenceDefaults.ValidReminderHours::contains)
+            ?: UserPreferenceDefaults.DefaultReminderHour
+    return PersonalizationUiState(
+        isLoading = false,
+        selectedTopicIds = topics,
+        selectedMoodId = mood,
+        dailyGoal =
+            UserPreferenceDefaults.sanitizeDailyGoal(
+                savedStateHandle[PersonalizationGoalStateKey]
+                    ?: UserPreferenceDefaults.DefaultDailyGoal,
+            ),
+        reminderEnabled =
+            savedStateHandle[PersonalizationReminderEnabledStateKey] ?: false,
+        reminderHour = reminderHour,
+        hasUnsavedChanges = true,
+    )
+}
+
+internal const val PersonalizationHasDraftStateKey = "personalization.hasDraft"
+internal const val PersonalizationTopicsStateKey = "personalization.topics"
+internal const val PersonalizationMoodStateKey = "personalization.mood"
+internal const val PersonalizationGoalStateKey = "personalization.goal"
+internal const val PersonalizationReminderEnabledStateKey = "personalization.reminderEnabled"
+internal const val PersonalizationReminderHourStateKey = "personalization.reminderHour"
 
 internal data class ReminderTimeOption(
     val hour: Int,

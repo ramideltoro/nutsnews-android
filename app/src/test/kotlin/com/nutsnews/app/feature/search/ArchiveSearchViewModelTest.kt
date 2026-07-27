@@ -1,5 +1,6 @@
 package com.nutsnews.app.feature.search
 
+import androidx.lifecycle.SavedStateHandle
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.ArticlesResponse
 import com.nutsnews.app.core.model.SavedStory
@@ -133,6 +134,56 @@ class ArchiveSearchViewModelTest {
                     request.fetchPolicy == NutsNewsFetchPolicy.UseCache
                 },
             )
+        }
+
+    @Test
+    fun processRecreationRestoresQueryAndResultsWithoutRepeatingSearch() =
+        runTest(mainDispatcher) {
+            val result = searchArticle("offline-result")
+            val savedState = SavedStateHandle()
+            val firstSource =
+                FakeArchiveArticleSearchSource {
+                    ArticlesResponse(listOf(result), nextPage = 4)
+                }
+            val original =
+                ArchiveSearchViewModel(
+                    articleSearchSource = firstSource,
+                    savedStoryRepository = FakeSearchSavedStoryRepository(),
+                    savedStateHandle = savedState,
+                )
+            original.onQueryChanged("kind science")
+            original.submitSearch()
+            runCurrent()
+
+            val recreatedSource =
+                FakeArchiveArticleSearchSource {
+                    error("Restoring visible search results must not start a duplicate request.")
+                }
+            val recreated =
+                ArchiveSearchViewModel(
+                    articleSearchSource = recreatedSource,
+                    savedStoryRepository = FakeSearchSavedStoryRepository(),
+                    savedStateHandle =
+                        SavedStateHandle(
+                            mapOf(
+                                ArchiveSearchQueryStateKey to
+                                    savedState.get<String>(ArchiveSearchQueryStateKey),
+                                ArchiveSearchSearchedQueryStateKey to
+                                    savedState.get<String>(ArchiveSearchSearchedQueryStateKey),
+                                ArchiveSearchResponseStateKey to
+                                    savedState.get<String>(ArchiveSearchResponseStateKey),
+                                ArchiveSearchHasSearchedStateKey to
+                                    savedState.get<Boolean>(ArchiveSearchHasSearchedStateKey),
+                            ),
+                        ),
+                )
+
+            assertEquals("kind science", recreated.uiState.value.query)
+            assertEquals("kind science", recreated.uiState.value.searchedQuery)
+            assertEquals(listOf(result), recreated.uiState.value.articles)
+            assertEquals(4, recreated.uiState.value.nextPage)
+            assertTrue(recreated.uiState.value.hasSearched)
+            assertTrue(recreatedSource.requests.isEmpty())
         }
 
     @Test

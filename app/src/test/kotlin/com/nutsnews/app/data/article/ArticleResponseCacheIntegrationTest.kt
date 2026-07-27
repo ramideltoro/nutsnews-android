@@ -1,6 +1,7 @@
 package com.nutsnews.app.data.article
 
 import com.nutsnews.app.data.network.OkHttpTransport
+import java.io.IOException
 import java.time.Duration
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -97,6 +98,48 @@ class ArticleResponseCacheIntegrationTest {
             assertEquals(expected.response, offline.response)
             assertEquals(ArticleFetchSource.StaleCache, offline.source)
             assertEquals(true, offline.isStale)
+            assertEquals(2, serverRule.server.requestCount)
+        }
+
+    @Test
+    fun offlineProcessRestartReopensDiskCachedFeedAndSearch() =
+        runBlocking {
+            val directory =
+                temporaryFolder.root
+                    .toPath()
+                    .resolve("restart-cache")
+            val endpoints =
+                NutsNewsEndpoints(
+                    articles = serverRule.server.url("/api/articles").toString(),
+                    archiveSearch = serverRule.server.url("/api/search").toString(),
+                )
+            serverRule.server.enqueue(MockResponse(body = fixture("articles-camel.json")))
+            serverRule.server.enqueue(MockResponse(body = fixture("articles-snake.json")))
+            val online =
+                NutsNewsApiClient(
+                    endpoints = endpoints,
+                    transport = OkHttpTransport(),
+                    responseCache = DiskArticleResponseCache(directory, clock),
+                )
+            val expectedFeed = online.fetchFeedPage()
+            val expectedSearch = online.searchArticles(query = "community")
+            clock.advance(Duration.ofMinutes(20))
+
+            val restartedOffline =
+                NutsNewsApiClient(
+                    endpoints = endpoints,
+                    transport = {
+                        throw IOException("Device is offline after process restart.")
+                    },
+                    responseCache = DiskArticleResponseCache(directory, clock),
+                )
+
+            val restoredFeed = restartedOffline.fetchFeedPage()
+            val restoredSearch = restartedOffline.searchArticles(query = "community")
+
+            assertEquals(ArticleFetchSource.StaleCache, restoredFeed.source)
+            assertEquals(expectedFeed.response, restoredFeed.response)
+            assertEquals(expectedSearch, restoredSearch)
             assertEquals(2, serverRule.server.requestCount)
         }
 

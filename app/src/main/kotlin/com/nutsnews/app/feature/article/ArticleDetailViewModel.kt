@@ -1,14 +1,19 @@
 package com.nutsnews.app.feature.article
 
 import androidx.compose.runtime.Immutable
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.ArticlesResponse
 import com.nutsnews.app.core.model.ReadingStats
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.core.model.StoryReflection
 import com.nutsnews.app.core.model.StoryReflectionReaction
+import com.nutsnews.app.data.article.ArticleStateCodec
 import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
@@ -17,8 +22,8 @@ import com.nutsnews.app.widget.NoOpWidgetRefreshRequester
 import com.nutsnews.app.widget.WidgetRefreshRequester
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
@@ -29,6 +34,7 @@ import kotlinx.coroutines.sync.withLock
 
 @Immutable
 data class ArticleDetailUiState(
+    val activeArticle: Article? = null,
     val likedStoryIds: Set<StoryId> = emptySet(),
     val readingStats: ReadingStats? = null,
     val noteArticleId: StoryId? = null,
@@ -49,17 +55,30 @@ class ArticleDetailViewModel(
     private val storyReflectionRepository: StoryReflectionRepository,
     private val widgetRefreshRequester: WidgetRefreshRequester =
         NoOpWidgetRefreshRequester,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
     private val likeMutex = Mutex()
     private val noteMutex = Mutex()
     private val reflectionMutex = Mutex()
     private val noteEditorState = MutableStateFlow(ArticleNoteEditorState())
     private val reflectionEditorState = MutableStateFlow(ArticleReflectionEditorState())
+    private val activeArticleState =
+        MutableStateFlow(
+            ArticleStateCodec
+                .decodeOrNull(savedStateHandle[ActiveArticleStateKey])
+                ?.articles
+                ?.firstOrNull(),
+        )
     private var activeArticle: Article? = null
     private var noteObservationJob: Job? = null
     private var noteStatusJob: Job? = null
     private var reflectionObservationJob: Job? = null
     private var reflectionStatusJob: Job? = null
+    private val recordedStoryIds =
+        savedStateHandle
+            .get<ArrayList<String>>(RecordedStoryIdsStateKey)
+            ?.toCollection(linkedSetOf())
+            ?: linkedSetOf()
 
     val uiState: StateFlow<ArticleDetailUiState> =
         combine(
@@ -67,8 +86,10 @@ class ArticleDetailViewModel(
             readingStatsRepository.observeStats(),
             noteEditorState,
             reflectionEditorState,
-        ) { savedStories, stats, noteEditor, reflectionEditor ->
+            activeArticleState,
+        ) { savedStories, stats, noteEditor, reflectionEditor, activeArticle ->
             ArticleDetailUiState(
+                activeArticle = activeArticle,
                 likedStoryIds = savedStories.mapTo(linkedSetOf()) { story -> story.id },
                 readingStats = stats,
                 noteArticleId = noteEditor.articleId,
@@ -84,12 +105,25 @@ class ArticleDetailViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ArticleDetailUiState(),
+            initialValue =
+                ArticleDetailUiState(
+                    activeArticle = activeArticleState.value,
+                ),
         )
 
     fun onArticleShown(article: Article) {
+        activeArticleState.value = article
+        savedStateHandle[ActiveArticleStateKey] =
+            ArticleStateCodec.encode(
+                ArticlesResponse(
+                    articles = listOf(article),
+                    nextPage = null,
+                ),
+            )
         loadNoteEditor(article)
         loadReflectionEditor(article)
+        if (!recordedStoryIds.add(article.stableId.value)) return
+        savedStateHandle[RecordedStoryIdsStateKey] = ArrayList(recordedStoryIds)
         viewModelScope.launch {
             readingStatsRepository.recordStoryOpen(article)
             widgetRefreshRequester.requestRefresh()
@@ -128,6 +162,7 @@ class ArticleDetailViewModel(
                 )
             }
         }
+        persistNoteDraft()
     }
 
     fun saveNote(article: Article) {
@@ -160,6 +195,7 @@ class ArticleDetailViewModel(
                         )
                     }
                 }
+                persistNoteDraft()
                 showNoteStatus(
                     articleId = article.stableId,
                     message =
@@ -195,6 +231,7 @@ class ArticleDetailViewModel(
                         )
                     }
                 }
+                clearSavedNoteDraft()
                 showNoteStatus(
                     articleId = article.stableId,
                     message = NoteClearedMessage,
@@ -228,9 +265,24 @@ class ArticleDetailViewModel(
         activeArticle = article
         noteObservationJob?.cancel()
         noteStatusJob?.cancel()
+        val restoredDraft =
+            savedStateHandle
+                .get<String>(NoteDraftStateKey)
+                ?.takeIf {
+                    savedStateHandle.get<String>(NoteArticleIdStateKey) ==
+                        article.stableId.value
+                }
+        if (
+            savedStateHandle.get<String>(NoteArticleIdStateKey) != null &&
+            restoredDraft == null
+        ) {
+            clearSavedNoteDraft()
+        }
         noteEditorState.value =
             ArticleNoteEditorState(
                 articleId = article.stableId,
+                draft = restoredDraft.orEmpty(),
+                isDirty = restoredDraft != null,
                 isLoading = true,
             )
         noteObservationJob =
@@ -356,8 +408,45 @@ class ArticleDetailViewModel(
                 widgetRefreshRequester = widgetRefreshRequester,
             ) as T
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            require(modelClass.isAssignableFrom(ArticleDetailViewModel::class.java))
+            return ArticleDetailViewModel(
+                savedStoryRepository = savedStoryRepository,
+                readingStatsRepository = readingStatsRepository,
+                storyNoteRepository = storyNoteRepository,
+                storyReflectionRepository = storyReflectionRepository,
+                widgetRefreshRequester = widgetRefreshRequester,
+                savedStateHandle = extras.createSavedStateHandle(),
+            ) as T
+        }
+    }
+
+    private fun persistNoteDraft() {
+        val editor = noteEditorState.value
+        val articleId = editor.articleId
+        if (!editor.isDirty || articleId == null) {
+            clearSavedNoteDraft()
+            return
+        }
+        savedStateHandle[NoteArticleIdStateKey] = articleId.value
+        savedStateHandle[NoteDraftStateKey] = editor.draft
+    }
+
+    private fun clearSavedNoteDraft() {
+        savedStateHandle.remove<String>(NoteArticleIdStateKey)
+        savedStateHandle.remove<String>(NoteDraftStateKey)
     }
 }
+
+internal const val NoteArticleIdStateKey = "articleDetail.noteArticleId"
+internal const val NoteDraftStateKey = "articleDetail.noteDraft"
+internal const val RecordedStoryIdsStateKey = "articleDetail.recordedStoryIds"
+internal const val ActiveArticleStateKey = "articleDetail.activeArticle"
 
 @Immutable
 private data class ArticleNoteEditorState(

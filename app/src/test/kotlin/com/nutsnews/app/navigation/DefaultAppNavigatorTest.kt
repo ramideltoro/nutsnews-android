@@ -92,7 +92,7 @@ class DefaultAppNavigatorTest {
     }
 
     @Test
-    fun savedStateRestoresCompleteTypedStackAndUnicodeStoryIds() {
+    fun rotationAndProcessSavedStateRestoreCompleteTypedStackAndUnicodeStoryIds() {
         val storyId = StoryId("https://nutsnews.com/mañana/😊?value=one\ntwo")
         val original = DefaultAppNavigator(AppDestination.Feed)
         original.navigate(AppDestination.Help)
@@ -106,6 +106,36 @@ class DefaultAppNavigatorTest {
         assertTrue(restored.restoreState(savedState))
         assertEquals(original.backStack.value, restored.backStack.value)
         assertFalse(savedState.contains(storyId.value))
+    }
+
+    @Test
+    fun rapidNavigationKeepsOneOrderedStackAndRestoresTheLatestDestination() {
+        val navigator = DefaultAppNavigator(AppDestination.Feed)
+        repeat(25) { index ->
+            val destination =
+                AppDestination.ArticleDetail(
+                    StoryId("https://nutsnews.com/rapid-$index"),
+                )
+            navigator.navigate(AppDestination.ArchiveSearch)
+            navigator.navigate(destination)
+            navigator.navigate(destination)
+            assertTrue(navigator.navigateUp())
+            assertTrue(navigator.navigateUp())
+        }
+        navigator.navigate(AppDestination.SavedStories)
+        navigator.navigate(AppDestination.ArticleDetail(StoryId("final-story")))
+
+        val restored = DefaultAppNavigator()
+        assertTrue(restored.restoreState(navigator.saveState()))
+        assertEquals(navigator.backStack.value, restored.backStack.value)
+        assertEquals(
+            listOf(
+                AppDestination.Feed,
+                AppDestination.SavedStories,
+                AppDestination.ArticleDetail(StoryId("final-story")),
+            ),
+            restored.backStack.value,
+        )
     }
 
     @Test

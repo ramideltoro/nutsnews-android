@@ -75,7 +75,7 @@ class ArticleListenControllerTest {
     }
 
     @Test
-    fun stopAndShutdownCancelSpeechAndClearActiveState() {
+    fun backgroundStopIsIdempotentAndDestroyShutsDownSpeech() {
         val engine = FakeArticleSpeechEngine()
         val controller = ArticleListenController(engine)
         val script = buildArticleListenScript(listenArticle())
@@ -88,6 +88,10 @@ class ArticleListenControllerTest {
         assertFalse(controller.uiState.value.isActive)
         assertNull(controller.uiState.value.currentSegmentIndex)
         assertEquals(1, engine.stopCount)
+
+        controller.stop()
+        assertEquals(1, engine.stopCount)
+        assertEquals(listOf(0), engine.spokenStartIndices)
 
         controller.shutdown()
 
