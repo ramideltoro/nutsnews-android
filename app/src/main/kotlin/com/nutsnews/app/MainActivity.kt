@@ -37,6 +37,8 @@ import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.article.ArticleDetailScreen
 import com.nutsnews.app.feature.article.ArticleDetailViewModel
 import com.nutsnews.app.feature.article.AndroidOriginalStoryLauncher
+import com.nutsnews.app.feature.article.AndroidArticleSpeechEngine
+import com.nutsnews.app.feature.article.ArticleListenController
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
@@ -59,6 +61,10 @@ import com.nutsnews.app.reminder.DailyReminderContract
 import com.nutsnews.app.reminder.ReminderScheduleResult
 
 class MainActivity : ComponentActivity() {
+    private val articleListenController by lazy {
+        ArticleListenController(AndroidArticleSpeechEngine(applicationContext))
+    }
+
     private val originalStoryLauncher by lazy {
         AndroidOriginalStoryLauncher(this)
     }
@@ -137,6 +143,8 @@ class MainActivity : ComponentActivity() {
                 articleCardInteractionViewModel.uiState.collectAsStateWithLifecycle()
             val articleDetailUiState by
                 articleDetailViewModel.uiState.collectAsStateWithLifecycle()
+            val articleListenUiState by
+                articleListenController.uiState.collectAsStateWithLifecycle()
             val homeDashboardUiState by
                 homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
@@ -273,7 +281,10 @@ class MainActivity : ComponentActivity() {
                             } else {
                                 ArticleDetailScreen(
                                     article = article,
-                                    onClose = bootstrapViewModel::onNavigateUp,
+                                    onClose = {
+                                        articleListenController.stop()
+                                        bootstrapViewModel.onNavigateUp()
+                                    },
                                     isLiked =
                                         article.stableId in
                                             articleDetailUiState.likedStoryIds,
@@ -333,6 +344,9 @@ class MainActivity : ComponentActivity() {
                                             reaction = reaction,
                                         )
                                     },
+                                    listenUiState = articleListenUiState,
+                                    onToggleListening = articleListenController::toggle,
+                                    onStopListening = articleListenController::stop,
                                 )
                             }
                         }
@@ -390,6 +404,16 @@ class MainActivity : ComponentActivity() {
             )
         }
         handleLaunchIntent(intent)
+    }
+
+    override fun onStop() {
+        articleListenController.stop()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        articleListenController.shutdown()
+        super.onDestroy()
     }
 
     override fun onNewIntent(intent: Intent) {

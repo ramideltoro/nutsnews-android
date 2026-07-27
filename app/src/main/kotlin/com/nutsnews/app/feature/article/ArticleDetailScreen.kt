@@ -7,7 +7,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -41,20 +47,28 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -66,8 +80,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -77,6 +93,7 @@ import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -97,6 +114,8 @@ import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.sin
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -128,6 +147,9 @@ fun ArticleDetailScreen(
     isReflectionLoading: Boolean = false,
     reflectionStatusMessage: String? = null,
     onReflectionSelected: (StoryReflectionReaction) -> Unit = {},
+    listenUiState: ArticleListenUiState = ArticleListenUiState(),
+    onToggleListening: (ArticleListenScript) -> Unit = {},
+    onStopListening: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val isTabletLandscape =
@@ -135,6 +157,11 @@ fun ArticleDetailScreen(
             configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val palette = NutsNewsTheme.colors
     val brief = remember(article) { deriveArticleBrief(article) }
+    val listenScript = remember(article, brief) { buildArticleListenScript(article, brief) }
+    var isShowingListenMode by
+        remember(article.stableId.value) {
+            mutableStateOf(false)
+        }
     var displayedLiked by
         remember(article.stableId.value) {
             mutableStateOf(isLiked)
@@ -181,6 +208,21 @@ fun ArticleDetailScreen(
     LaunchedEffect(article.stableId) {
         onArticleShown(article)
     }
+    LaunchedEffect(isShowingListenMode) {
+        if (
+            isShowingListenMode &&
+            listenUiState.playbackState != ArticleListenPlaybackState.Reading &&
+            listenUiState.playbackState != ArticleListenPlaybackState.Paused
+        ) {
+            delay(ListenAutoStartDelayMillis)
+            onToggleListening(listenScript)
+        }
+    }
+    DisposableEffect(article.stableId) {
+        onDispose {
+            onStopListening()
+        }
+    }
 
     NutsNewsBackground(
         modifier =
@@ -204,7 +246,10 @@ fun ArticleDetailScreen(
                     },
                     navigationIcon = {
                         IconButton(
-                            onClick = onClose,
+                            onClick = {
+                                onStopListening()
+                                onClose()
+                            },
                             modifier = Modifier.testTag("article_detail_close"),
                         ) {
                             Icon(
@@ -215,6 +260,10 @@ fun ArticleDetailScreen(
                         }
                     },
                     actions = {
+                        ArticleListenToolbarButton(
+                            isActive = listenUiState.isActive,
+                            onClick = { isShowingListenMode = true },
+                        )
                         ArticleDetailLikeButton(
                             isLiked = displayedLiked,
                             glow = likeGlow.value,
@@ -283,6 +332,20 @@ fun ArticleDetailScreen(
             }
         }
     }
+
+    if (isShowingListenMode) {
+        ArticleListenModeSheet(
+            brief = brief,
+            script = listenScript,
+            uiState = listenUiState,
+            onToggle = { onToggleListening(listenScript) },
+            onStop = onStopListening,
+            onDismiss = {
+                onStopListening()
+                isShowingListenMode = false
+            },
+        )
+    }
 }
 
 @Composable
@@ -325,6 +388,490 @@ private fun ArticleDetailLikeButton(
                 contentDescription = if (isLiked) "Liked" else "Like story",
                 modifier = Modifier.size(16.dp),
                 tint = if (isLiked) palette.likedCardAccent else palette.accentHighlight,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArticleListenToolbarButton(
+    isActive: Boolean,
+    onClick: () -> Unit,
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.testTag("article_detail_listen"),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(38.dp)
+                    .clip(CircleShape)
+                    .background(NutsNewsTheme.colors.badgeBackground),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = if (isActive) Icons.Filled.GraphicEq else Icons.Filled.PlayArrow,
+                contentDescription =
+                    if (isActive) {
+                        "Open Listen Mode"
+                    } else {
+                        "Listen to story brief"
+                    },
+                modifier = Modifier.size(17.dp),
+                tint =
+                    if (isActive) {
+                        NutsNewsTheme.colors.accent
+                    } else {
+                        NutsNewsTheme.colors.accentHighlight
+                    },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ArticleListenModeSheet(
+    brief: ArticleBriefContent,
+    script: ArticleListenScript,
+    uiState: ArticleListenUiState,
+    onToggle: () -> Unit,
+    onStop: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.testTag("listen_mode_sheet"),
+        containerColor = NutsNewsTheme.colors.cardBackgroundStrong,
+        contentColor = NutsNewsTheme.colors.primaryText,
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .padding(
+                        start = NutsNewsTheme.spacing.medium,
+                        end = NutsNewsTheme.spacing.medium,
+                        bottom = 32.dp,
+                    ),
+            verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Listen Mode",
+                    modifier = Modifier.weight(1f),
+                    color = NutsNewsTheme.colors.primaryText,
+                    style = NutsNewsTheme.typography.title3,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Done",
+                    modifier =
+                        Modifier
+                            .clip(CircleShape)
+                            .clickable(
+                                role = Role.Button,
+                                onClick = onDismiss,
+                            ).testTag("listen_mode_done")
+                            .padding(
+                                horizontal = NutsNewsTheme.spacing.small,
+                                vertical = NutsNewsTheme.spacing.xs,
+                            ),
+                    color = NutsNewsTheme.colors.accent,
+                    style = NutsNewsTheme.typography.subheadline,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            DetailInfoCard(
+                label = "Audio Brief",
+                compact = false,
+                modifier = Modifier.testTag("listen_mode_hero"),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                    verticalAlignment = Alignment.Top,
+                ) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .size(58.dp)
+                                .shadow(
+                                    elevation =
+                                        if (
+                                            uiState.playbackState ==
+                                            ArticleListenPlaybackState.Reading
+                                        ) {
+                                            18.dp
+                                        } else {
+                                            8.dp
+                                        },
+                                    shape = CircleShape,
+                                    ambientColor = NutsNewsTheme.colors.accentGlow,
+                                    spotColor = NutsNewsTheme.colors.accentGlow,
+                                )
+                                .clip(CircleShape)
+                                .background(nutsNewsButtonGradient()),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector =
+                                when (uiState.playbackState) {
+                                    ArticleListenPlaybackState.Reading ->
+                                        Icons.Filled.VolumeUp
+
+                                    ArticleListenPlaybackState.Paused ->
+                                        Icons.Filled.Pause
+
+                                    ArticleListenPlaybackState.Failed ->
+                                        Icons.Filled.Headphones
+
+                                    ArticleListenPlaybackState.Idle ->
+                                        Icons.Filled.GraphicEq
+                                },
+                            contentDescription = null,
+                            modifier = Modifier.size(26.dp),
+                            tint = NutsNewsTheme.colors.buttonText,
+                        )
+                    }
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement =
+                            Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+                    ) {
+                        Text(
+                            text =
+                                when (uiState.playbackState) {
+                                    ArticleListenPlaybackState.Reading ->
+                                        "Playing your audio brief"
+
+                                    ArticleListenPlaybackState.Paused ->
+                                        "Audio brief paused"
+
+                                    ArticleListenPlaybackState.Failed ->
+                                        "Listen Mode needs attention"
+
+                                    ArticleListenPlaybackState.Idle ->
+                                        "Listen to this story"
+                                },
+                            color = NutsNewsTheme.colors.primaryText,
+                            style = NutsNewsTheme.typography.title3,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text =
+                                "A calm spoken version of the NutsNews Brief, read with " +
+                                    "on-device Android speech and natural pauses.",
+                            color = NutsNewsTheme.colors.secondaryText,
+                            style = NutsNewsTheme.typography.subheadline,
+                        )
+                        Text(
+                            text = uiState.statusMessage,
+                            modifier = Modifier.testTag("listen_mode_status"),
+                            color = NutsNewsTheme.colors.accent,
+                            style = NutsNewsTheme.typography.caption,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+            DetailInfoCard(
+                label = "Now Playing",
+                compact = false,
+                modifier = Modifier.testTag("listen_mode_now_playing"),
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                ) {
+                    ListenWaveform(
+                        uiState = uiState,
+                        modifier =
+                            Modifier
+                                .fillMaxWidth()
+                                .height(112.dp)
+                                .clip(
+                                    RoundedCornerShape(
+                                        NutsNewsTheme.dimensions.controlCornerRadius,
+                                    ),
+                                ).background(NutsNewsTheme.colors.badgeBackground)
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = onToggle,
+                                ).testTag("listen_mode_waveform")
+                                .padding(vertical = NutsNewsTheme.spacing.xs),
+                    )
+                    Row(
+                        horizontalArrangement =
+                            Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            imageVector =
+                                when (uiState.playbackState) {
+                                    ArticleListenPlaybackState.Reading ->
+                                        Icons.Filled.GraphicEq
+
+                                    ArticleListenPlaybackState.Paused ->
+                                        Icons.Filled.Pause
+
+                                    else -> Icons.Filled.VolumeUp
+                                },
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = NutsNewsTheme.colors.mutedText,
+                        )
+                        Text(
+                            text =
+                                when (uiState.playbackState) {
+                                    ArticleListenPlaybackState.Reading ->
+                                        "Tap waves to pause"
+
+                                    ArticleListenPlaybackState.Paused ->
+                                        "Paused — tap waves to resume"
+
+                                    else -> uiState.shortStatusMessage
+                                },
+                            modifier = Modifier.weight(1f),
+                            color = NutsNewsTheme.colors.mutedText,
+                            style = NutsNewsTheme.typography.caption,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                        Text(
+                            text = brief.estimatedReadTime,
+                            color = NutsNewsTheme.colors.mutedText,
+                            style = NutsNewsTheme.typography.caption,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+            ) {
+                ListenControlButton(
+                    label = uiState.primaryButtonTitle,
+                    primary = true,
+                    modifier = Modifier.weight(1f),
+                    icon =
+                        if (
+                            uiState.playbackState ==
+                            ArticleListenPlaybackState.Reading
+                        ) {
+                            Icons.Filled.Pause
+                        } else {
+                            Icons.Filled.PlayArrow
+                        },
+                    onClick = onToggle,
+                )
+                if (uiState.isActive) {
+                    ListenControlButton(
+                        label = "Stop",
+                        primary = false,
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Filled.Stop,
+                        onClick = onStop,
+                    )
+                }
+            }
+            DetailInfoCard(
+                label = "What you’ll hear",
+                compact = false,
+                modifier = Modifier.testTag("listen_mode_preview"),
+            ) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+                ) {
+                    script.segments.forEachIndexed { index, segment ->
+                        val isCurrent = uiState.currentSegmentIndex == index
+                        Row(
+                            modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .clip(
+                                        RoundedCornerShape(
+                                            NutsNewsTheme.dimensions.controlCornerRadius,
+                                        ),
+                                    ).background(
+                                        if (isCurrent) {
+                                            NutsNewsTheme.colors.badgeBackground
+                                        } else {
+                                            androidx.compose.ui.graphics.Color.Transparent
+                                        },
+                                    ).semantics {
+                                        selected = isCurrent
+                                    }.testTag("listen_mode_segment_${segment.id}")
+                                    .padding(NutsNewsTheme.spacing.small),
+                            horizontalArrangement =
+                                Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+                            verticalAlignment = Alignment.Top,
+                        ) {
+                            Box(
+                                modifier =
+                                    Modifier
+                                        .padding(top = 7.dp)
+                                        .size(NutsNewsTheme.spacing.xs)
+                                        .background(
+                                            color =
+                                                if (isCurrent) {
+                                                    NutsNewsTheme.colors.accentHighlight
+                                                } else {
+                                                    NutsNewsTheme.colors.accent
+                                                },
+                                            shape = CircleShape,
+                                        ),
+                            )
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement =
+                                    Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+                            ) {
+                                Text(
+                                    text = segment.label,
+                                    color =
+                                        if (isCurrent) {
+                                            NutsNewsTheme.colors.accent
+                                        } else {
+                                            NutsNewsTheme.colors.primaryText
+                                        },
+                                    style = NutsNewsTheme.typography.subheadline,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                                Text(
+                                    text = segment.text,
+                                    color = NutsNewsTheme.colors.secondaryText,
+                                    style = NutsNewsTheme.typography.subheadline,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ListenControlButton(
+    label: String,
+    primary: Boolean,
+    icon: ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius)
+    Row(
+        modifier =
+            modifier
+                .clip(shape)
+                .then(
+                    if (primary) {
+                        Modifier.background(nutsNewsButtonGradient())
+                    } else {
+                        Modifier.background(NutsNewsTheme.colors.badgeBackground)
+                    },
+                ).clickable(
+                    role = Role.Button,
+                    onClick = onClick,
+                ).testTag(
+                    if (primary) {
+                        "listen_mode_primary"
+                    } else {
+                        "listen_mode_stop"
+                    },
+                ).padding(vertical = 14.dp),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint =
+                if (primary) {
+                    NutsNewsTheme.colors.buttonText
+                } else {
+                    NutsNewsTheme.colors.primaryText
+                },
+        )
+        Text(
+            text = label,
+            modifier = Modifier.padding(start = NutsNewsTheme.spacing.xs),
+            color =
+                if (primary) {
+                    NutsNewsTheme.colors.buttonText
+                } else {
+                    NutsNewsTheme.colors.primaryText
+                },
+            style = NutsNewsTheme.typography.headline,
+            fontWeight = FontWeight.Bold,
+        )
+    }
+}
+
+@Composable
+private fun ListenWaveform(
+    uiState: ArticleListenUiState,
+    modifier: Modifier = Modifier,
+) {
+    val palette = NutsNewsTheme.colors
+    val infiniteTransition = rememberInfiniteTransition(label = "listen waveform")
+    val animatedPhase by
+        infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = WaveTwoPi,
+            animationSpec =
+                infiniteRepeatable(
+                    animation = tween(durationMillis = 900, easing = LinearEasing),
+                    repeatMode = RepeatMode.Restart,
+                ),
+            label = "listen waveform phase",
+        )
+    val isReading = uiState.playbackState == ArticleListenPlaybackState.Reading
+    val isPaused = uiState.playbackState == ArticleListenPlaybackState.Paused
+    val phase = if (isReading) animatedPhase else uiState.speechWaveSeed.toFloat()
+    val level =
+        when {
+            isReading -> uiState.speechWaveLevel
+            isPaused -> 0.22f
+            else -> 0.18f
+        }
+    Canvas(modifier = modifier) {
+        val barCount = 22
+        val horizontalPadding = size.width * 0.08f
+        val usableWidth = size.width - (horizontalPadding * 2)
+        val step = usableWidth / (barCount - 1)
+        val strokeWidth = (step * 0.34f).coerceAtLeast(3f)
+        repeat(barCount) { index ->
+            val texture =
+                (
+                    (
+                        sin(
+                            (index * uiState.speechWaveFrequency + phase).toDouble(),
+                        ).toFloat() + 1f
+                    ) / 2f
+                )
+                    .coerceIn(0f, 1f)
+            val envelope = 1f - kotlin.math.abs((index - (barCount - 1) / 2f)) / barCount
+            val barHeight =
+                size.height *
+                    (0.16f + (texture * level * 0.66f * envelope))
+            val x = horizontalPadding + (index * step)
+            drawLine(
+                color =
+                    if (index % 3 == 0) {
+                        palette.accentHighlight
+                    } else {
+                        palette.accent
+                    },
+                start = Offset(x, (size.height - barHeight) / 2f),
+                end = Offset(x, (size.height + barHeight) / 2f),
+                strokeWidth = strokeWidth,
+                cap = StrokeCap.Round,
             )
         }
     }
@@ -1727,3 +2274,5 @@ private const val MaximumVisibleCategories = 8
 private const val WordsPerMinute = 180.0
 private val WhitespacePattern = Regex("\\s+")
 private const val LikeGlowDurationMillis = 1_000
+private const val ListenAutoStartDelayMillis = 180L
+private const val WaveTwoPi = 6.2831855f
