@@ -70,6 +70,7 @@ jobs:
       - name: Build analyzed sources with strict dependency verification
         run: |
           ./gradlew \
+            --no-configuration-cache \
             --dependency-verification=strict \
             --stacktrace \
             --console=plain \

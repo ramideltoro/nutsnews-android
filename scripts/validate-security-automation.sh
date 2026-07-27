@@ -35,6 +35,7 @@ required_workflow_fragments=(
   "codeql-action/init@"
   "languages: java-kotlin"
   "build-mode: manual"
+  "--no-configuration-cache"
   "--dependency-verification=strict"
   "codeql-action/analyze@"
   "security-events: write"
