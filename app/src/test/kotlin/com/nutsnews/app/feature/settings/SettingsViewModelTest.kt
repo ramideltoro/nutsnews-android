@@ -3,6 +3,7 @@ package com.nutsnews.app.feature.settings
 import com.nutsnews.app.data.preferences.InMemoryUserPreferencesRepository
 import com.nutsnews.app.data.preferences.UserPreferences
 import com.nutsnews.app.designsystem.NutsNewsAppTheme
+import com.nutsnews.app.widget.WidgetRefreshRequester
 import kotlin.test.assertEquals
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -94,5 +95,41 @@ class SettingsViewModelTest {
                 NutsNewsAppTheme.Friday,
                 preferences.preferences.first().theme,
             )
+        }
+
+    @Test
+    fun hapticsAndWidgetTogglesPersistAcrossViewModelsAndRefreshOnlyWidget() =
+        runTest(mainDispatcher) {
+            val preferences = InMemoryUserPreferencesRepository()
+            var widgetRefreshCount = 0
+            val viewModel =
+                SettingsViewModel(
+                    userPreferencesRepository = preferences,
+                    widgetRefreshRequester =
+                        WidgetRefreshRequester {
+                            widgetRefreshCount += 1
+                            true
+                        },
+                )
+            viewModel.uiState.first { state -> !state.isLoading }
+
+            viewModel.setHapticsEnabled(false)
+            val hapticsOff =
+                viewModel.uiState.first { state -> !state.hapticsEnabled }
+            assertEquals("Off", hapticsOff.hapticsSubtitle)
+            assertEquals(0, widgetRefreshCount)
+
+            viewModel.setShowStatsOnLargeWidget(false)
+            val widgetOff =
+                viewModel.uiState.first { state -> !state.showStatsOnLargeWidget }
+            assertEquals("Large stats off", widgetOff.widgetSubtitle)
+            assertEquals(1, widgetRefreshCount)
+
+            val restarted =
+                SettingsViewModel(preferences)
+                    .uiState
+                    .first { state -> !state.isLoading }
+            assertEquals(false, restarted.hapticsEnabled)
+            assertEquals(false, restarted.showStatsOnLargeWidget)
         }
 }

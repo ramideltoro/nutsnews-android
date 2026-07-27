@@ -12,6 +12,7 @@ import com.nutsnews.app.data.story.RoomStoryReflectionRepository
 import com.nutsnews.app.di.AppContainer
 import com.nutsnews.app.di.DefaultAppContainer
 import com.nutsnews.app.reminder.AndroidDailyReminderManager
+import com.nutsnews.app.widget.AndroidWidgetRefreshRequester
 
 class NutsNewsApplication : Application() {
     lateinit var container: AppContainer
@@ -43,6 +44,7 @@ class NutsNewsApplication : Application() {
                 userPreferencesRepository =
                     DataStoreUserPreferencesRepository(nutsNewsPreferencesDataStore),
                 dailyReminderManager = dailyReminderManager,
+                widgetRefreshRequester = AndroidWidgetRefreshRequester(this),
             )
     }
 }

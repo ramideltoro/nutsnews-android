@@ -66,6 +66,8 @@ import com.nutsnews.app.feature.search.ArchiveSearchViewModel
 import com.nutsnews.app.feature.settings.SettingsScreen
 import com.nutsnews.app.feature.settings.SettingsViewModel
 import com.nutsnews.app.feature.settings.ThemeSettingsScreen
+import com.nutsnews.app.feature.settings.HapticsSettingsScreen
+import com.nutsnews.app.feature.settings.WidgetSettingsScreen
 import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
@@ -178,9 +180,10 @@ class MainActivity : ComponentActivity() {
     }
 
     private val settingsViewModel: SettingsViewModel by viewModels {
+        val container = (application as NutsNewsApplication).container
         SettingsViewModel.Factory(
-            userPreferencesRepository =
-                (application as NutsNewsApplication).container.userPreferencesRepository,
+            userPreferencesRepository = container.userPreferencesRepository,
+            widgetRefreshRequester = container.widgetRefreshRequester,
         )
     }
 
@@ -591,6 +594,27 @@ class MainActivity : ComponentActivity() {
                             ThemeSettingsScreen(
                                 selectedTheme = settingsUiState.theme,
                                 onThemeSelected = settingsViewModel::selectTheme,
+                                onBack = bootstrapViewModel::onNavigateUp,
+                                onGoHome = bootstrapViewModel::onHomeRequested,
+                            )
+                        }
+
+                        AppDestination.HapticsSettings -> {
+                            HapticsSettingsScreen(
+                                enabled = settingsUiState.hapticsEnabled,
+                                onEnabledChanged =
+                                    settingsViewModel::setHapticsEnabled,
+                                onBack = bootstrapViewModel::onNavigateUp,
+                                onGoHome = bootstrapViewModel::onHomeRequested,
+                            )
+                        }
+
+                        AppDestination.WidgetSettings -> {
+                            WidgetSettingsScreen(
+                                showStatsOnLargeWidget =
+                                    settingsUiState.showStatsOnLargeWidget,
+                                onShowStatsChanged =
+                                    settingsViewModel::setShowStatsOnLargeWidget,
                                 onBack = bootstrapViewModel::onNavigateUp,
                                 onGoHome = bootstrapViewModel::onHomeRequested,
                             )
