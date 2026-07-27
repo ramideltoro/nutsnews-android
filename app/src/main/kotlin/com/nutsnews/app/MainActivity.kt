@@ -57,6 +57,8 @@ import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationViewModel
 import com.nutsnews.app.feature.saved.SavedStoriesScreen
 import com.nutsnews.app.feature.saved.SavedStoriesViewModel
+import com.nutsnews.app.feature.search.ArchiveSearchScreen
+import com.nutsnews.app.feature.search.ArchiveSearchViewModel
 import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
@@ -148,6 +150,14 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val archiveSearchViewModel: ArchiveSearchViewModel by viewModels {
+        val container = (application as NutsNewsApplication).container
+        ArchiveSearchViewModel.Factory(
+            articleSearchSource = container.articleApiClient,
+            savedStoryRepository = container.savedStoryRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -172,6 +182,8 @@ class MainActivity : ComponentActivity() {
                 homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
             val savedStoriesUiState by
                 savedStoriesViewModel.uiState.collectAsStateWithLifecycle()
+            val archiveSearchUiState by
+                archiveSearchViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
                 remember { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
@@ -214,7 +226,12 @@ class MainActivity : ComponentActivity() {
             NutsNewsApp(
                 uiState = uiState,
                 splashUiState = splashUiState,
-                onNavigateUp = bootstrapViewModel::onNavigateUp,
+                onNavigateUp = {
+                    if (uiState.destination == AppDestination.ArchiveSearch) {
+                        archiveSearchViewModel.clearSearch()
+                    }
+                    bootstrapViewModel.onNavigateUp()
+                },
                 destinationContent = { destination ->
                     when (destination) {
                         AppDestination.Feed -> {
@@ -299,6 +316,9 @@ class MainActivity : ComponentActivity() {
                                     candidate.stableId == destination.storyId
                                 } ?: articleCardInteractionUiState
                                     .savedArticlesById[destination.storyId]
+                                ?: archiveSearchUiState.articles.firstOrNull { candidate ->
+                                    candidate.stableId == destination.storyId
+                                }
                             if (article == null) {
                                 UnavailableArticleDetailScreen(
                                     onClose = bootstrapViewModel::onNavigateUp,
@@ -436,6 +456,27 @@ class MainActivity : ComponentActivity() {
                                 },
                                 onRemoveStory = savedStoriesViewModel::remove,
                                 onClose = bootstrapViewModel::onNavigateUp,
+                            )
+                        }
+
+                        AppDestination.ArchiveSearch -> {
+                            ArchiveSearchScreen(
+                                uiState = archiveSearchUiState,
+                                onQueryChanged = archiveSearchViewModel::onQueryChanged,
+                                onSubmitSearch = archiveSearchViewModel::submitSearch,
+                                onClearSearch = archiveSearchViewModel::clearSearch,
+                                onRetry = archiveSearchViewModel::retry,
+                                onLoadMore = archiveSearchViewModel::loadMore,
+                                onToggleSaved = archiveSearchViewModel::toggleSaved,
+                                onOpenArticle = { article ->
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.ArticleDetail(article.stableId),
+                                    )
+                                },
+                                onClose = {
+                                    archiveSearchViewModel.clearSearch()
+                                    bootstrapViewModel.onNavigateUp()
+                                },
                             )
                         }
 

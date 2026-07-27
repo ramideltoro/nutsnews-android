@@ -85,7 +85,8 @@ class NutsNewsApiClient(
     private val endpoints: NutsNewsEndpoints = NutsNewsEndpoints.Production,
     private val transport: HttpTransport = OkHttpTransport(),
     private val responseCache: ArticleResponseCache = EmptyArticleResponseCache,
-) : FeedArticleSource {
+) : FeedArticleSource,
+    ArchiveArticleSearchSource {
     suspend fun fetchArticles(
         page: Int = 0,
         category: String? = null,
@@ -111,11 +112,11 @@ class NutsNewsApiClient(
         )
     }
 
-    suspend fun searchArticles(
+    override suspend fun searchArticles(
         query: String,
-        page: Int = 0,
-        limit: Int = ArchiveSearchRequest.DefaultPageSize,
-        fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
+        page: Int,
+        limit: Int,
+        fetchPolicy: NutsNewsFetchPolicy,
     ): ArticlesResponse {
         val request = ArchiveSearchRequest.create(query = query, page = page, limit = limit)
         if (!request.meetsMinimum) {
