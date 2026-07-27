@@ -408,9 +408,9 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T59 — Dependency and security automation
 
-- [ ] P-T59-01 Dependabot and dependency review are configured.
-- [ ] P-T59-02 CodeQL Java/Kotlin and Gradle dependency verification pass.
-- [ ] P-T59-03 Actions are pinned and secrets cannot enter artifacts.
+- [x] P-T59-01 Dependabot and dependency review are configured.
+- [x] P-T59-02 CodeQL Java/Kotlin and Gradle dependency verification pass.
+- [x] P-T59-03 Actions are pinned and secrets cannot enter artifacts.
 
 ### T60 — Branch protection
 

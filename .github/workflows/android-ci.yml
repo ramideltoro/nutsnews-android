@@ -70,6 +70,7 @@ jobs:
           mkdir -p build-logs
           set -o pipefail
           ./gradlew \
+            --dependency-verification=strict \
             --stacktrace \
             --console=plain \
             compileDebugKotlin \
