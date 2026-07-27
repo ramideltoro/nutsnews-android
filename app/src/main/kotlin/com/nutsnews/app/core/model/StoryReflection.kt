@@ -4,10 +4,28 @@ import java.time.Instant
 
 enum class StoryReflectionReaction(
     val id: String,
+    val title: String,
+    val shortTitle: String,
+    val savedTitle: String,
 ) {
-    Smile("smile"),
-    Hope("hope"),
-    Revisit("revisit"),
+    Smile(
+        id = "smile",
+        title = "Made me smile",
+        shortTitle = "Smile",
+        savedTitle = "This one made you smile",
+    ),
+    Hope(
+        id = "hope",
+        title = "Gave me hope",
+        shortTitle = "Hope",
+        savedTitle = "This one gave you hope",
+    ),
+    Revisit(
+        id = "revisit",
+        title = "Worth revisiting",
+        shortTitle = "Revisit",
+        savedTitle = "Saved as worth revisiting",
+    ),
     ;
 
     companion object {

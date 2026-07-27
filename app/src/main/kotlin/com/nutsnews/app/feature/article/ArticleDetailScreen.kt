@@ -12,6 +12,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
@@ -34,6 +35,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
@@ -42,6 +45,7 @@ import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.OpenInBrowser
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -65,6 +69,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
@@ -75,14 +80,20 @@ import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.StoryReflection
+import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
@@ -113,6 +124,10 @@ fun ArticleDetailScreen(
     onNoteDraftChanged: (String) -> Unit = {},
     onSaveNote: () -> Unit = {},
     onClearNote: () -> Unit = {},
+    reflection: StoryReflection? = null,
+    isReflectionLoading: Boolean = false,
+    reflectionStatusMessage: String? = null,
+    onReflectionSelected: (StoryReflectionReaction) -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val isTabletLandscape =
@@ -233,6 +248,10 @@ fun ArticleDetailScreen(
                     onNoteDraftChanged = onNoteDraftChanged,
                     onSaveNote = onSaveNote,
                     onClearNote = onClearNote,
+                    reflection = reflection,
+                    isReflectionLoading = isReflectionLoading,
+                    reflectionStatusMessage = reflectionStatusMessage,
+                    onReflectionSelected = onReflectionSelected,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -252,6 +271,10 @@ fun ArticleDetailScreen(
                     onNoteDraftChanged = onNoteDraftChanged,
                     onSaveNote = onSaveNote,
                     onClearNote = onClearNote,
+                    reflection = reflection,
+                    isReflectionLoading = isReflectionLoading,
+                    reflectionStatusMessage = reflectionStatusMessage,
+                    onReflectionSelected = onReflectionSelected,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -387,6 +410,10 @@ private fun RegularArticleDetail(
     onNoteDraftChanged: (String) -> Unit,
     onSaveNote: () -> Unit,
     onClearNote: () -> Unit,
+    reflection: StoryReflection?,
+    isReflectionLoading: Boolean,
+    reflectionStatusMessage: String?,
+    onReflectionSelected: (StoryReflectionReaction) -> Unit,
     modifier: Modifier,
 ) {
     Column(
@@ -407,6 +434,12 @@ private fun RegularArticleDetail(
             compact = false,
         )
         RegularArticleBrief(brief)
+        RegularArticleReflection(
+            reflection = reflection,
+            isLoading = isReflectionLoading,
+            statusMessage = reflectionStatusMessage,
+            onSelected = onReflectionSelected,
+        )
         ArticleDetailSummary(
             summary = article.summary,
             compact = false,
@@ -448,6 +481,10 @@ private fun CompactLandscapeArticleDetail(
     onNoteDraftChanged: (String) -> Unit,
     onSaveNote: () -> Unit,
     onClearNote: () -> Unit,
+    reflection: StoryReflection?,
+    isReflectionLoading: Boolean,
+    reflectionStatusMessage: String?,
+    onReflectionSelected: (StoryReflectionReaction) -> Unit,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -483,6 +520,11 @@ private fun CompactLandscapeArticleDetail(
                     compact = true,
                 )
                 CompactArticleBrief(brief)
+                CompactArticleReflection(
+                    selectedReaction = reflection?.reaction,
+                    isLoading = isReflectionLoading,
+                    onSelected = onReflectionSelected,
+                )
                 ArticleDetailSummary(
                     summary = article.summary,
                     compact = true,
@@ -776,6 +818,279 @@ private fun CompactArticleBrief(brief: ArticleBriefContent) {
         }
     }
 }
+
+@Composable
+private fun RegularArticleReflection(
+    reflection: StoryReflection?,
+    isLoading: Boolean,
+    statusMessage: String?,
+    onSelected: (StoryReflectionReaction) -> Unit,
+) {
+    val selectedReaction = reflection?.reaction
+    val title = selectedReaction?.savedTitle ?: "How did this story land?"
+    val subtitle =
+        if (reflection != null) {
+            "You marked this story as ${
+                reflection.reaction.title.lowercase(Locale.ROOT)
+            } on ${reflectionDisplayDate(reflection)}."
+        } else {
+            "Tap a quick reaction to make this story part of your private " +
+                "good-news habit. Saved only on this device."
+        }
+    val status =
+        statusMessage
+            ?: if (selectedReaction != null) {
+                "Reflection saved privately on this device"
+            } else {
+                "No account needed — this stays on your Android device"
+            }
+
+    DetailInfoCard(
+        label = "Daily Reflection",
+        compact = false,
+        modifier = Modifier.testTag("article_detail_reflection"),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+                verticalAlignment = Alignment.Top,
+            ) {
+                Box(
+                    modifier =
+                        Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(NutsNewsTheme.colors.badgeBackground),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = reflectionIcon(selectedReaction),
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = NutsNewsTheme.colors.accentHighlight,
+                    )
+                }
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement =
+                        Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+                ) {
+                    Text(
+                        text = title,
+                        modifier = Modifier.testTag("article_detail_reflection_title"),
+                        color = NutsNewsTheme.colors.primaryText,
+                        style = NutsNewsTheme.typography.headline,
+                    )
+                    Text(
+                        text = subtitle,
+                        modifier = Modifier.testTag("article_detail_reflection_subtitle"),
+                        color = NutsNewsTheme.colors.secondaryText,
+                        style = NutsNewsTheme.typography.subheadline,
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+            ) {
+                StoryReflectionReaction.entries.forEach { reaction ->
+                    ReflectionChoice(
+                        reaction = reaction,
+                        selected = reaction == selectedReaction,
+                        enabled = !isLoading,
+                        compact = false,
+                        modifier = Modifier.weight(1f),
+                        onClick = { onSelected(reaction) },
+                    )
+                }
+            }
+            Text(
+                text = status,
+                modifier = Modifier.testTag("article_detail_reflection_status"),
+                color = NutsNewsTheme.colors.mutedText,
+                style = NutsNewsTheme.typography.caption,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactArticleReflection(
+    selectedReaction: StoryReflectionReaction?,
+    isLoading: Boolean,
+    onSelected: (StoryReflectionReaction) -> Unit,
+) {
+    DetailInfoCard(
+        label = "Reflection",
+        compact = true,
+        modifier = Modifier.testTag("article_detail_reflection_compact"),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            StoryReflectionReaction.entries.forEach { reaction ->
+                ReflectionChoice(
+                    reaction = reaction,
+                    selected = reaction == selectedReaction,
+                    enabled = !isLoading,
+                    compact = true,
+                    onClick = { onSelected(reaction) },
+                )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+        }
+    }
+}
+
+@Composable
+private fun ReflectionChoice(
+    reaction: StoryReflectionReaction,
+    selected: Boolean,
+    enabled: Boolean,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    val shape =
+        if (compact) {
+            CircleShape
+        } else {
+            RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius)
+        }
+    val textColor =
+        if (selected) {
+            NutsNewsTheme.colors.buttonText
+        } else {
+            NutsNewsTheme.colors.primaryText
+        }
+    val selectionModifier =
+        if (selected) {
+            Modifier.background(nutsNewsButtonGradient())
+        } else {
+            Modifier.background(NutsNewsTheme.colors.badgeBackground)
+        }
+    val contentModifier =
+        if (compact) {
+            Modifier.padding(
+                horizontal = NutsNewsTheme.spacing.small,
+                vertical = 8.dp,
+            )
+        } else {
+            Modifier
+                .fillMaxWidth()
+                .height(74.dp)
+                .padding(horizontal = NutsNewsTheme.spacing.xs)
+        }
+
+    if (compact) {
+        Row(
+            modifier =
+                modifier
+                    .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+                    .clip(shape)
+                    .then(selectionModifier)
+                    .selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = onClick,
+                    )
+                    .testTag("article_detail_reflection_${reaction.id}")
+                    .then(contentModifier),
+            horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ReflectionChoiceContent(
+                reaction = reaction,
+                compact = true,
+                textColor = textColor,
+            )
+        }
+    } else {
+        Column(
+            modifier =
+                modifier
+                    .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+                    .clip(shape)
+                    .then(selectionModifier)
+                    .border(
+                        width = 1.dp,
+                        color =
+                            if (selected) {
+                                NutsNewsTheme.colors.accentHighlight.copy(alpha = 0.85f)
+                            } else {
+                                NutsNewsTheme.colors.cardBorder
+                            },
+                        shape = shape,
+                    )
+                    .selectable(
+                        selected = selected,
+                        enabled = enabled,
+                        role = Role.RadioButton,
+                        onClick = onClick,
+                    )
+                    .testTag("article_detail_reflection_${reaction.id}")
+                    .then(contentModifier),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            ReflectionChoiceContent(
+                reaction = reaction,
+                compact = false,
+                textColor = textColor,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReflectionChoiceContent(
+    reaction: StoryReflectionReaction,
+    compact: Boolean,
+    textColor: androidx.compose.ui.graphics.Color,
+) {
+    Icon(
+        imageVector = reflectionIcon(reaction),
+        contentDescription = null,
+        modifier = Modifier.size(if (compact) 14.dp else 17.dp),
+        tint = textColor,
+    )
+    Text(
+        text = if (compact) reaction.shortTitle else reaction.title,
+        modifier = if (compact) Modifier else Modifier.fillMaxWidth(),
+        color = textColor,
+        style = NutsNewsTheme.typography.caption,
+        fontWeight = FontWeight.Bold,
+        textAlign = if (compact) TextAlign.Start else TextAlign.Center,
+        maxLines = 2,
+        overflow = TextOverflow.Ellipsis,
+    )
+}
+
+private fun reflectionIcon(reaction: StoryReflectionReaction?): ImageVector =
+    when (reaction) {
+        StoryReflectionReaction.Smile -> Icons.Filled.SentimentSatisfiedAlt
+        StoryReflectionReaction.Hope,
+        null,
+        -> Icons.Filled.AutoAwesome
+
+        StoryReflectionReaction.Revisit -> Icons.Filled.Bookmark
+    }
+
+internal fun reflectionDisplayDate(
+    reflection: StoryReflection,
+    locale: Locale = Locale.getDefault(),
+    zoneId: ZoneId = ZoneId.systemDefault(),
+): String =
+    DateTimeFormatter
+        .ofLocalizedDate(FormatStyle.MEDIUM)
+        .withLocale(locale)
+        .format(reflection.createdAt.atZone(zoneId))
 
 @Composable
 private fun ArticleBriefMetric(

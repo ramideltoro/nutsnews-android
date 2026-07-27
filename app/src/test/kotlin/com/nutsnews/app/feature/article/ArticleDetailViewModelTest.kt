@@ -5,9 +5,12 @@ import com.nutsnews.app.core.model.ReadingStats
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.core.model.StoryNote
+import com.nutsnews.app.core.model.StoryReflection
+import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
+import com.nutsnews.app.data.story.StoryReflectionRepository
 import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -55,6 +58,7 @@ class ArticleDetailViewModelTest {
                     savedStoryRepository = saved,
                     readingStatsRepository = DetailReadingStatsRepository(),
                     storyNoteRepository = DetailStoryNoteRepository(),
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
                 )
 
             viewModel.toggleLiked(article)
@@ -82,6 +86,7 @@ class ArticleDetailViewModelTest {
                     savedStoryRepository = DetailSavedStoryRepository(),
                     readingStatsRepository = stats,
                     storyNoteRepository = DetailStoryNoteRepository(),
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
                 )
 
             viewModel.onArticleShown(article)
@@ -106,6 +111,7 @@ class ArticleDetailViewModelTest {
                     savedStoryRepository = DetailSavedStoryRepository(),
                     readingStatsRepository = stats,
                     storyNoteRepository = DetailStoryNoteRepository(),
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
                 )
 
             viewModel.onOriginalStoryOpened()
@@ -132,6 +138,7 @@ class ArticleDetailViewModelTest {
                     savedStoryRepository = DetailSavedStoryRepository(),
                     readingStatsRepository = DetailReadingStatsRepository(),
                     storyNoteRepository = notes,
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
                 )
             viewModel.uiState.launchIn(backgroundScope)
 
@@ -183,6 +190,7 @@ class ArticleDetailViewModelTest {
                     savedStoryRepository = DetailSavedStoryRepository(),
                     readingStatsRepository = DetailReadingStatsRepository(),
                     storyNoteRepository = notes,
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
                 )
             viewModel.uiState.launchIn(backgroundScope)
             val routeArticles =
@@ -204,6 +212,63 @@ class ArticleDetailViewModelTest {
                     viewModel.uiState.value.noteDraft,
                 )
             }
+        }
+
+    @Test
+    fun reflectionSelectionReplacesOneRecordAndRestoresForTheStableStory() =
+        runTest(dispatcher) {
+            val article = detailArticle()
+            val reflections = DetailStoryReflectionRepository()
+            val viewModel =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = DetailReadingStatsRepository(),
+                    storyNoteRepository = DetailStoryNoteRepository(),
+                    storyReflectionRepository = reflections,
+                )
+            viewModel.uiState.launchIn(backgroundScope)
+            viewModel.onArticleShown(article)
+            runCurrent()
+
+            viewModel.saveReflection(article, StoryReflectionReaction.Smile)
+            runCurrent()
+            assertEquals(
+                StoryReflectionReaction.Smile,
+                viewModel.uiState.value.reflection?.reaction,
+            )
+            assertEquals(
+                "Saved: Made me smile",
+                viewModel.uiState.value.reflectionStatusMessage,
+            )
+
+            viewModel.saveReflection(article, StoryReflectionReaction.Hope)
+            runCurrent()
+            assertEquals(
+                StoryReflectionReaction.Hope,
+                viewModel.uiState.value.reflection?.reaction,
+            )
+            assertEquals(1, reflections.reflectionCount)
+            assertEquals(
+                "Saved: Gave me hope",
+                viewModel.uiState.value.reflectionStatusMessage,
+            )
+
+            val savedRouteArticle =
+                article.copy(
+                    id = "saved-route-id",
+                    title = "The same story from the saved route",
+                )
+            viewModel.onArticleShown(savedRouteArticle)
+            runCurrent()
+            assertEquals(
+                StoryReflectionReaction.Hope,
+                viewModel.uiState.value.reflection?.reaction,
+            )
+            assertEquals(article.stableId, viewModel.uiState.value.reflectionArticleId)
+
+            advanceTimeBy(1_800)
+            runCurrent()
+            assertEquals(null, viewModel.uiState.value.reflectionStatusMessage)
         }
 }
 
@@ -309,6 +374,41 @@ private class DetailStoryNoteRepository : StoryNoteRepository {
 
     override suspend fun clearNote(article: Article) {
         notes.value = notes.value - article.stableId
+    }
+}
+
+private class DetailStoryReflectionRepository : StoryReflectionRepository {
+    private val reflections = MutableStateFlow<Map<StoryId, StoryReflection>>(emptyMap())
+    private var timestamp = Instant.parse("2026-07-26T12:00:00Z")
+
+    val reflectionCount: Int
+        get() = reflections.value.size
+
+    override val count: Flow<Int> = reflections.map { it.size }
+
+    override fun observeReflection(article: Article): Flow<StoryReflection?> =
+        reflections.map { storedReflections -> storedReflections[article.stableId] }
+
+    override suspend fun findReflection(article: Article): StoryReflection? =
+        reflections.value[article.stableId]
+
+    override suspend fun setReaction(
+        article: Article,
+        reaction: StoryReflectionReaction,
+    ) {
+        reflections.value =
+            reflections.value +
+                (
+                    article.stableId to
+                        StoryReflection(
+                            articleId = article.stableId,
+                            articleTitle = article.title,
+                            articleSource = article.source,
+                            reaction = reaction,
+                            createdAt = timestamp,
+                        )
+                )
+        timestamp = timestamp.plusSeconds(1)
     }
 }
 

@@ -7,9 +7,12 @@ import androidx.lifecycle.viewModelScope
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.ReadingStats
 import com.nutsnews.app.core.model.StoryId
+import com.nutsnews.app.core.model.StoryReflection
+import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
 import com.nutsnews.app.data.story.StoryNoteRepository
+import com.nutsnews.app.data.story.StoryReflectionRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,26 +34,36 @@ data class ArticleDetailUiState(
     val hasSavedNote: Boolean = false,
     val isNoteLoading: Boolean = false,
     val noteStatusMessage: String? = null,
+    val reflectionArticleId: StoryId? = null,
+    val reflection: StoryReflection? = null,
+    val isReflectionLoading: Boolean = false,
+    val reflectionStatusMessage: String? = null,
 )
 
 class ArticleDetailViewModel(
     private val savedStoryRepository: SavedStoryRepository,
     private val readingStatsRepository: ReadingStatsRepository,
     private val storyNoteRepository: StoryNoteRepository,
+    private val storyReflectionRepository: StoryReflectionRepository,
 ) : ViewModel() {
     private val likeMutex = Mutex()
     private val noteMutex = Mutex()
+    private val reflectionMutex = Mutex()
     private val noteEditorState = MutableStateFlow(ArticleNoteEditorState())
+    private val reflectionEditorState = MutableStateFlow(ArticleReflectionEditorState())
     private var activeArticle: Article? = null
     private var noteObservationJob: Job? = null
     private var noteStatusJob: Job? = null
+    private var reflectionObservationJob: Job? = null
+    private var reflectionStatusJob: Job? = null
 
     val uiState: StateFlow<ArticleDetailUiState> =
         combine(
             savedStoryRepository.stories,
             readingStatsRepository.observeStats(),
             noteEditorState,
-        ) { savedStories, stats, noteEditor ->
+            reflectionEditorState,
+        ) { savedStories, stats, noteEditor, reflectionEditor ->
             ArticleDetailUiState(
                 likedStoryIds = savedStories.mapTo(linkedSetOf()) { story -> story.id },
                 readingStats = stats,
@@ -59,6 +72,10 @@ class ArticleDetailViewModel(
                 hasSavedNote = noteEditor.hasSavedNote,
                 isNoteLoading = noteEditor.isLoading,
                 noteStatusMessage = noteEditor.statusMessage,
+                reflectionArticleId = reflectionEditor.articleId,
+                reflection = reflectionEditor.reflection,
+                isReflectionLoading = reflectionEditor.isLoading,
+                reflectionStatusMessage = reflectionEditor.statusMessage,
             )
         }.stateIn(
             scope = viewModelScope,
@@ -68,6 +85,7 @@ class ArticleDetailViewModel(
 
     fun onArticleShown(article: Article) {
         loadNoteEditor(article)
+        loadReflectionEditor(article)
         viewModelScope.launch {
             readingStatsRepository.recordStoryOpen(article)
         }
@@ -180,6 +198,27 @@ class ArticleDetailViewModel(
         }
     }
 
+    fun saveReflection(
+        article: Article,
+        reaction: StoryReflectionReaction,
+    ) {
+        viewModelScope.launch {
+            reflectionMutex.withLock {
+                if (
+                    reflectionEditorState.value.articleId != article.stableId ||
+                    activeArticle?.stableId != article.stableId
+                ) {
+                    return@withLock
+                }
+                storyReflectionRepository.setReaction(article, reaction)
+                showReflectionStatus(
+                    articleId = article.stableId,
+                    message = "Saved: ${reaction.title}",
+                )
+            }
+        }
+    }
+
     private fun loadNoteEditor(article: Article) {
         activeArticle = article
         noteObservationJob?.cancel()
@@ -240,10 +279,64 @@ class ArticleDetailViewModel(
             }
     }
 
+    private fun loadReflectionEditor(article: Article) {
+        reflectionObservationJob?.cancel()
+        reflectionStatusJob?.cancel()
+        reflectionEditorState.value =
+            ArticleReflectionEditorState(
+                articleId = article.stableId,
+                isLoading = true,
+            )
+        reflectionObservationJob =
+            viewModelScope.launch {
+                storyReflectionRepository.observeReflection(article).collect { reflection ->
+                    reflectionEditorState.update { current ->
+                        if (current.articleId == article.stableId) {
+                            current.copy(
+                                reflection = reflection,
+                                isLoading = false,
+                            )
+                        } else {
+                            current
+                        }
+                    }
+                }
+            }
+    }
+
+    private fun showReflectionStatus(
+        articleId: StoryId,
+        message: String,
+    ) {
+        reflectionStatusJob?.cancel()
+        reflectionEditorState.update { current ->
+            if (current.articleId == articleId) {
+                current.copy(statusMessage = message)
+            } else {
+                current
+            }
+        }
+        reflectionStatusJob =
+            viewModelScope.launch {
+                delay(ReflectionStatusDurationMillis)
+                reflectionEditorState.update { current ->
+                    if (
+                        current.articleId == articleId &&
+                        current.statusMessage == message
+                    ) {
+                        current.copy(statusMessage = null)
+                    } else {
+                        current
+                    }
+                }
+            }
+    }
+
     class Factory(
         private val savedStoryRepository: SavedStoryRepository,
         private val readingStatsRepository: ReadingStatsRepository,
         private val storyNoteRepository: StoryNoteRepository,
+        private val storyReflectionRepository: StoryReflectionRepository,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -252,6 +345,7 @@ class ArticleDetailViewModel(
                 savedStoryRepository = savedStoryRepository,
                 readingStatsRepository = readingStatsRepository,
                 storyNoteRepository = storyNoteRepository,
+                storyReflectionRepository = storyReflectionRepository,
             ) as T
         }
     }
@@ -267,6 +361,15 @@ private data class ArticleNoteEditorState(
     val statusMessage: String? = null,
 )
 
+@Immutable
+private data class ArticleReflectionEditorState(
+    val articleId: StoryId? = null,
+    val reflection: StoryReflection? = null,
+    val isLoading: Boolean = false,
+    val statusMessage: String? = null,
+)
+
 private const val NoteSavedMessage = "Note saved on this device"
 private const val NoteClearedMessage = "Note cleared"
 private const val NoteStatusDurationMillis = 1_800L
+private const val ReflectionStatusDurationMillis = 1_800L

@@ -12,6 +12,8 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -29,8 +31,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.StoryReflection
+import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
+import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.test.assertEquals
@@ -179,6 +184,10 @@ abstract class ArticleDetailScreenshotContract(
         onNoteDraftChanged: (String) -> Unit = {},
         onSaveNote: () -> Unit = {},
         onClearNote: () -> Unit = {},
+        reflection: StoryReflection? = null,
+        isReflectionLoading: Boolean = false,
+        reflectionStatusMessage: String? = null,
+        onReflectionSelected: (StoryReflectionReaction) -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -198,6 +207,10 @@ abstract class ArticleDetailScreenshotContract(
                     onNoteDraftChanged = onNoteDraftChanged,
                     onSaveNote = onSaveNote,
                     onClearNote = onClearNote,
+                    reflection = reflection,
+                    isReflectionLoading = isReflectionLoading,
+                    reflectionStatusMessage = reflectionStatusMessage,
+                    onReflectionSelected = onReflectionSelected,
                 )
             }
         }
@@ -572,6 +585,88 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
         assertEquals(1, clearCount)
         assertEquals(feedArticle.stableId, routeArticle.value.stableId)
     }
+
+    @Test
+    fun reflectionUiSelectsReplacesAndShowsTheDatedConfirmation() {
+        val article = contentArticle()
+        val selected = mutableStateOf<StoryReflection?>(null)
+        val status = mutableStateOf<String?>(null)
+        val selections = mutableListOf<StoryReflectionReaction>()
+        val createdAt = Instant.parse("2026-07-26T12:00:00Z")
+        composeRule.setContent {
+            NutsNewsTheme(updateSystemBars = false) {
+                ArticleDetailScreen(
+                    article = article,
+                    onClose = {},
+                    heroImageModel = null,
+                    reflection = selected.value,
+                    reflectionStatusMessage = status.value,
+                    onReflectionSelected = { reaction ->
+                        selections += reaction
+                        selected.value =
+                            StoryReflection(
+                                articleId = article.stableId,
+                                articleTitle = article.title,
+                                articleSource = article.source,
+                                reaction = reaction,
+                                createdAt = createdAt,
+                            )
+                        status.value = "Saved: ${reaction.title}"
+                    },
+                )
+            }
+        }
+
+        composeRule
+            .onNodeWithTag("article_detail_reflection")
+            .performScrollTo()
+        composeRule.onNodeWithText("DAILY REFLECTION").assertIsDisplayed()
+        composeRule.onNodeWithText("How did this story land?").assertIsDisplayed()
+        composeRule.onNodeWithText("Made me smile").assertIsDisplayed()
+        composeRule.onNodeWithText("Gave me hope").assertIsDisplayed()
+        composeRule.onNodeWithText("Worth revisiting").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_reflection_smile")
+            .assertIsNotSelected()
+            .performClick()
+
+        composeRule
+            .onNodeWithTag("article_detail_reflection_smile")
+            .assertIsSelected()
+        composeRule
+            .onNodeWithText("This one made you smile")
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                "You marked this story as made me smile on Jul 26, 2026.",
+            ).assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Saved: Made me smile")
+            .assertIsDisplayed()
+
+        composeRule
+            .onNodeWithTag("article_detail_reflection_hope")
+            .performClick()
+        composeRule
+            .onNodeWithTag("article_detail_reflection_smile")
+            .assertIsNotSelected()
+        composeRule
+            .onNodeWithTag("article_detail_reflection_hope")
+            .assertIsSelected()
+        composeRule
+            .onNodeWithText("This one gave you hope")
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Saved: Gave me hope")
+            .assertIsDisplayed()
+        assertEquals(
+            listOf(
+                StoryReflectionReaction.Smile,
+                StoryReflectionReaction.Hope,
+            ),
+            selections,
+        )
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -595,6 +690,9 @@ class TabletArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExp
             ).assertIsDisplayed()
         composeRule.onNodeWithText(article.source).assertIsDisplayed()
         composeRule.onNodeWithText("Published today").assertIsDisplayed()
+        composeRule.onNodeWithText("Smile").assertIsDisplayed()
+        composeRule.onNodeWithText("Hope").assertIsDisplayed()
+        composeRule.onNodeWithText("Revisit").assertIsDisplayed()
         val editorHeightDp =
             bounds("article_detail_note_editor_frame").height /
                 composeRule.activity.resources.displayMetrics.density
