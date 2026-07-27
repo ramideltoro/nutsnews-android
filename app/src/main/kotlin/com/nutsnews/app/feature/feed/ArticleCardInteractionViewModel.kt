@@ -19,6 +19,7 @@ import kotlinx.coroutines.sync.withLock
 @Immutable
 data class ArticleCardInteractionUiState(
     val likedStoryIds: Set<StoryId> = emptySet(),
+    val savedArticlesById: Map<StoryId, Article> = emptyMap(),
     val hapticsEnabled: Boolean = true,
 )
 
@@ -35,6 +36,8 @@ class ArticleCardInteractionViewModel(
         ) { savedStories, preferences ->
             ArticleCardInteractionUiState(
                 likedStoryIds = savedStories.mapTo(linkedSetOf()) { story -> story.id },
+                savedArticlesById =
+                    savedStories.associate { story -> story.id to story.article },
                 hapticsEnabled = preferences.hapticsEnabled,
             )
         }.stateIn(

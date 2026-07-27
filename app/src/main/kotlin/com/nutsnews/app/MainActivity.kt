@@ -34,6 +34,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.feature.article.ArticleDetailScreen
+import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
 import com.nutsnews.app.feature.feed.ArticleCardInteractionViewModel
@@ -236,6 +238,24 @@ class MainActivity : ComponentActivity() {
                                             scrollable = false,
                                         )
                                     },
+                                )
+                            }
+                        }
+
+                        is AppDestination.ArticleDetail -> {
+                            val article =
+                                feedUiState.articles.firstOrNull { candidate ->
+                                    candidate.stableId == destination.storyId
+                                } ?: articleCardInteractionUiState
+                                    .savedArticlesById[destination.storyId]
+                            if (article == null) {
+                                UnavailableArticleDetailScreen(
+                                    onClose = bootstrapViewModel::onNavigateUp,
+                                )
+                            } else {
+                                ArticleDetailScreen(
+                                    article = article,
+                                    onClose = bootstrapViewModel::onNavigateUp,
                                 )
                             }
                         }
