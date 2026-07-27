@@ -1,12 +1,19 @@
 package com.nutsnews.app.feature.article
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -18,6 +25,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,10 +35,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.OpenInBrowser
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
@@ -53,13 +63,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -67,6 +82,7 @@ import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.util.Locale
 import kotlin.math.ceil
 import kotlin.math.max
@@ -90,6 +106,13 @@ fun ArticleDetailScreen(
             }
         },
     onOriginalStoryOpened: () -> Unit = {},
+    noteDraft: String = "",
+    hasSavedNote: Boolean = false,
+    isNoteLoading: Boolean = false,
+    noteStatusMessage: String? = null,
+    onNoteDraftChanged: (String) -> Unit = {},
+    onSaveNote: () -> Unit = {},
+    onClearNote: () -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val isTabletLandscape =
@@ -148,6 +171,7 @@ fun ArticleDetailScreen(
         modifier =
             modifier
                 .fillMaxSize()
+                .imePadding()
                 .testTag("article_detail"),
     ) {
         Scaffold(
@@ -202,6 +226,13 @@ fun ArticleDetailScreen(
                     heroImageModel = heroImageModel,
                     onOpenOriginalStory = openOriginalStory,
                     originalStoryStatus = originalStoryStatus,
+                    noteDraft = noteDraft,
+                    hasSavedNote = hasSavedNote,
+                    isNoteLoading = isNoteLoading,
+                    noteStatusMessage = noteStatusMessage,
+                    onNoteDraftChanged = onNoteDraftChanged,
+                    onSaveNote = onSaveNote,
+                    onClearNote = onClearNote,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -214,6 +245,13 @@ fun ArticleDetailScreen(
                     heroImageModel = heroImageModel,
                     onOpenOriginalStory = openOriginalStory,
                     originalStoryStatus = originalStoryStatus,
+                    noteDraft = noteDraft,
+                    hasSavedNote = hasSavedNote,
+                    isNoteLoading = isNoteLoading,
+                    noteStatusMessage = noteStatusMessage,
+                    onNoteDraftChanged = onNoteDraftChanged,
+                    onSaveNote = onSaveNote,
+                    onClearNote = onClearNote,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -342,6 +380,13 @@ private fun RegularArticleDetail(
     heroImageModel: Any?,
     onOpenOriginalStory: () -> Unit,
     originalStoryStatus: String?,
+    noteDraft: String,
+    hasSavedNote: Boolean,
+    isNoteLoading: Boolean,
+    noteStatusMessage: String?,
+    onNoteDraftChanged: (String) -> Unit,
+    onSaveNote: () -> Unit,
+    onClearNote: () -> Unit,
     modifier: Modifier,
 ) {
     Column(
@@ -366,6 +411,16 @@ private fun RegularArticleDetail(
             summary = article.summary,
             compact = false,
         )
+        ArticleNoteSection(
+            draft = noteDraft,
+            hasSavedNote = hasSavedNote,
+            isLoading = isNoteLoading,
+            statusMessage = noteStatusMessage,
+            compact = false,
+            onDraftChanged = onNoteDraftChanged,
+            onSave = onSaveNote,
+            onClear = onClearNote,
+        )
         ArticleDetailSource(
             article = article,
             compact = false,
@@ -386,6 +441,13 @@ private fun CompactLandscapeArticleDetail(
     heroImageModel: Any?,
     onOpenOriginalStory: () -> Unit,
     originalStoryStatus: String?,
+    noteDraft: String,
+    hasSavedNote: Boolean,
+    isNoteLoading: Boolean,
+    noteStatusMessage: String?,
+    onNoteDraftChanged: (String) -> Unit,
+    onSaveNote: () -> Unit,
+    onClearNote: () -> Unit,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -424,6 +486,16 @@ private fun CompactLandscapeArticleDetail(
                 ArticleDetailSummary(
                     summary = article.summary,
                     compact = true,
+                )
+                ArticleNoteSection(
+                    draft = noteDraft,
+                    hasSavedNote = hasSavedNote,
+                    isLoading = isNoteLoading,
+                    statusMessage = noteStatusMessage,
+                    compact = true,
+                    onDraftChanged = onNoteDraftChanged,
+                    onSave = onSaveNote,
+                    onClear = onClearNote,
                 )
                 ArticleDetailSource(
                     article = article,
@@ -796,6 +868,230 @@ private fun ArticleDetailSummary(
                 },
             maxLines = if (compact) 5 else Int.MAX_VALUE,
             overflow = if (compact) TextOverflow.Ellipsis else TextOverflow.Clip,
+        )
+    }
+}
+
+@Composable
+private fun ArticleNoteSection(
+    draft: String,
+    hasSavedNote: Boolean,
+    isLoading: Boolean,
+    statusMessage: String?,
+    compact: Boolean,
+    onDraftChanged: (String) -> Unit,
+    onSave: () -> Unit,
+    onClear: () -> Unit,
+) {
+    val focusManager = LocalFocusManager.current
+    val keyboardController = LocalSoftwareKeyboardController.current
+    val canClear = !isLoading && (draft.isNotBlank() || hasSavedNote)
+    var displayedStatus by remember { mutableStateOf(statusMessage.orEmpty()) }
+    LaunchedEffect(statusMessage) {
+        if (!statusMessage.isNullOrEmpty()) displayedStatus = statusMessage
+    }
+
+    DetailInfoCard(
+        label = "My Note",
+        compact = compact,
+        modifier = Modifier.testTag("article_detail_note"),
+    ) {
+        Column(
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    if (compact) {
+                        NutsNewsTheme.spacing.xs
+                    } else {
+                        NutsNewsTheme.spacing.small
+                    },
+                ),
+        ) {
+            if (!compact) {
+                Text(
+                    text =
+                        "Save a private thought, reminder, or reason this story " +
+                            "made you smile.",
+                    color = NutsNewsTheme.colors.mutedText,
+                    style = NutsNewsTheme.typography.subheadline,
+                )
+            }
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .height(if (compact) 66.dp else 96.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                NutsNewsTheme.dimensions.controlCornerRadius,
+                            ),
+                        )
+                        .background(NutsNewsTheme.colors.badgeBackground)
+                        .testTag("article_detail_note_editor_frame"),
+            ) {
+                BasicTextField(
+                    value = draft,
+                    onValueChange = onDraftChanged,
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(
+                                if (compact) {
+                                    NutsNewsTheme.spacing.xs
+                                } else {
+                                    NutsNewsTheme.spacing.small
+                                },
+                            )
+                            .testTag("article_detail_note_editor"),
+                    enabled = !isLoading,
+                    textStyle =
+                        (
+                            if (compact) {
+                                NutsNewsTheme.typography.subheadline
+                            } else {
+                                NutsNewsTheme.typography.body
+                            }
+                        ).copy(color = NutsNewsTheme.colors.primaryText),
+                    keyboardOptions =
+                        KeyboardOptions(
+                            capitalization = KeyboardCapitalization.Sentences,
+                        ),
+                    cursorBrush = SolidColor(NutsNewsTheme.colors.accent),
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement =
+                    Arrangement.spacedBy(
+                        if (compact) {
+                            NutsNewsTheme.spacing.xs
+                        } else {
+                            NutsNewsTheme.spacing.small
+                        },
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NoteActionButton(
+                    label = if (compact) "Save" else "Save note",
+                    primary = true,
+                    enabled = !isLoading,
+                    compact = compact,
+                    modifier = if (compact) Modifier else Modifier.weight(1f),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(if (compact) 14.dp else 16.dp),
+                        )
+                    },
+                    onClick = {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        onSave()
+                    },
+                )
+                NoteActionButton(
+                    label = "Clear",
+                    primary = false,
+                    enabled = canClear,
+                    compact = compact,
+                    modifier = if (compact) Modifier else Modifier.weight(1f),
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Delete,
+                            contentDescription = null,
+                            modifier = Modifier.size(if (compact) 14.dp else 16.dp),
+                        )
+                    },
+                    onClick = {
+                        focusManager.clearFocus()
+                        keyboardController?.hide()
+                        onClear()
+                    },
+                )
+                if (compact) Spacer(modifier = Modifier.weight(1f))
+            }
+            AnimatedVisibility(
+                visible = !statusMessage.isNullOrEmpty(),
+                enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { -it / 2 },
+                exit = fadeOut(tween(250)) + slideOutVertically(tween(250)) { -it / 2 },
+            ) {
+                Text(
+                    text = displayedStatus,
+                    modifier = Modifier.testTag("article_detail_note_status"),
+                    color = NutsNewsTheme.colors.accent,
+                    style = NutsNewsTheme.typography.caption,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun NoteActionButton(
+    label: String,
+    primary: Boolean,
+    enabled: Boolean,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius)
+    Row(
+        modifier =
+            modifier
+                .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+                .clip(shape)
+                .then(
+                    if (primary) {
+                        Modifier.background(nutsNewsButtonGradient())
+                    } else {
+                        Modifier.background(NutsNewsTheme.colors.badgeBackground)
+                    },
+                )
+                .clickable(
+                    enabled = enabled,
+                    role = Role.Button,
+                    onClick = onClick,
+                )
+                .testTag(
+                    if (primary) {
+                        "article_detail_note_save"
+                    } else {
+                        "article_detail_note_clear"
+                    },
+                )
+                .padding(
+                    horizontal =
+                        if (compact) {
+                            NutsNewsTheme.spacing.small
+                        } else {
+                            NutsNewsTheme.spacing.medium
+                        },
+                    vertical = if (compact) 7.dp else 11.dp,
+                ),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon()
+        Text(
+            text = label,
+            modifier = Modifier.padding(start = NutsNewsTheme.spacing.xs),
+            color =
+                if (primary) {
+                    NutsNewsTheme.colors.buttonText
+                } else {
+                    NutsNewsTheme.colors.primaryText
+                },
+            style =
+                if (compact) {
+                    NutsNewsTheme.typography.caption
+                } else {
+                    NutsNewsTheme.typography.subheadline
+                },
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
         )
     }
 }

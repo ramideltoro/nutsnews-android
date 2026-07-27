@@ -9,6 +9,10 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsNotFocused
+import androidx.compose.ui.test.assertTextEquals
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onAllNodesWithText
@@ -16,8 +20,14 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
@@ -162,6 +172,13 @@ abstract class ArticleDetailScreenshotContract(
         onOpenOriginalStory: (Article, OriginalStoryColors) -> OriginalStoryOpenResult =
             { _, _ -> OriginalStoryOpenResult.OpenedCustomTab },
         onOriginalStoryOpened: () -> Unit = {},
+        noteDraft: String = "",
+        hasSavedNote: Boolean = false,
+        isNoteLoading: Boolean = false,
+        noteStatusMessage: String? = null,
+        onNoteDraftChanged: (String) -> Unit = {},
+        onSaveNote: () -> Unit = {},
+        onClearNote: () -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -174,6 +191,13 @@ abstract class ArticleDetailScreenshotContract(
                     onArticleShown = onArticleShown,
                     onOpenOriginalStory = onOpenOriginalStory,
                     onOriginalStoryOpened = onOriginalStoryOpened,
+                    noteDraft = noteDraft,
+                    hasSavedNote = hasSavedNote,
+                    isNoteLoading = isNoteLoading,
+                    noteStatusMessage = noteStatusMessage,
+                    onNoteDraftChanged = onNoteDraftChanged,
+                    onSaveNote = onSaveNote,
+                    onClearNote = onClearNote,
                 )
             }
         }
@@ -446,6 +470,108 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
             .assertIsDisplayed()
         composeRule.runOnIdle { assertEquals(0, launchCount) }
     }
+
+    @Test
+    fun noteUiSavesReopensEditsClearsAndSharesTheStableRouteDraft() {
+        val feedArticle = contentArticle()
+        val routeArticle = mutableStateOf(feedArticle)
+        val routeEntry = mutableIntStateOf(0)
+        val persistedNote = mutableStateOf("Existing private note")
+        val draft = mutableStateOf(persistedNote.value)
+        val hasSavedNote = mutableStateOf(true)
+        val status = mutableStateOf<String?>(null)
+        val savedDrafts = mutableListOf<String>()
+        var clearCount = 0
+
+        composeRule.setContent {
+            NutsNewsTheme(updateSystemBars = false) {
+                key(routeEntry.intValue) {
+                    ArticleDetailScreen(
+                        article = routeArticle.value,
+                        onClose = {},
+                        heroImageModel = null,
+                        noteDraft = draft.value,
+                        hasSavedNote = hasSavedNote.value,
+                        noteStatusMessage = status.value,
+                        onNoteDraftChanged = { draft.value = it },
+                        onSaveNote = {
+                            persistedNote.value = draft.value.trim()
+                            draft.value = persistedNote.value
+                            hasSavedNote.value = persistedNote.value.isNotEmpty()
+                            savedDrafts += persistedNote.value
+                            status.value =
+                                if (persistedNote.value.isEmpty()) {
+                                    "Note cleared"
+                                } else {
+                                    "Note saved on this device"
+                                }
+                        },
+                        onClearNote = {
+                            persistedNote.value = ""
+                            draft.value = ""
+                            hasSavedNote.value = false
+                            clearCount += 1
+                            status.value = "Note cleared"
+                        },
+                    )
+                }
+            }
+        }
+
+        composeRule
+            .onNodeWithTag("article_detail_note_editor")
+            .performScrollTo()
+            .assertTextEquals("Existing private note")
+            .performClick()
+            .assertIsFocused()
+            .performTextReplacement("  Edited from the feed  ")
+        composeRule
+            .onNodeWithTag("article_detail_note_save")
+            .performScrollTo()
+            .performClick()
+        composeRule
+            .onNodeWithTag("article_detail_note_editor")
+            .assertIsNotFocused()
+            .assertTextEquals("Edited from the feed")
+        composeRule
+            .onNodeWithText("Note saved on this device")
+            .performScrollTo()
+            .assertIsDisplayed()
+        assertEquals(listOf("Edited from the feed"), savedDrafts)
+
+        composeRule.runOnIdle {
+            routeArticle.value =
+                feedArticle.copy(
+                    id = "search-route-id",
+                    title = "The same article reopened from search",
+                )
+            routeEntry.intValue += 1
+            draft.value = persistedNote.value
+            status.value = null
+        }
+        composeRule
+            .onNodeWithTag("article_detail_note_editor")
+            .performScrollTo()
+            .assertTextEquals("Edited from the feed")
+            .performTextReplacement("Edited after reopening")
+        composeRule
+            .onNodeWithTag("article_detail_note_clear")
+            .performScrollTo()
+            .performClick()
+
+        composeRule
+            .onNodeWithTag("article_detail_note_editor")
+            .assertTextEquals("")
+        composeRule
+            .onNodeWithText("Note cleared")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_note_clear")
+            .assertIsNotEnabled()
+        assertEquals(1, clearCount)
+        assertEquals(feedArticle.stableId, routeArticle.value.stableId)
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)
@@ -469,6 +595,13 @@ class TabletArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExp
             ).assertIsDisplayed()
         composeRule.onNodeWithText(article.source).assertIsDisplayed()
         composeRule.onNodeWithText("Published today").assertIsDisplayed()
+        val editorHeightDp =
+            bounds("article_detail_note_editor_frame").height /
+                composeRule.activity.resources.displayMetrics.density
+        assertTrue(
+            editorHeightDp in 58f..74.5f,
+            "Expected compact note editor height in 58..74dp but was $editorHeightDp",
+        )
         assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
     }
 }
