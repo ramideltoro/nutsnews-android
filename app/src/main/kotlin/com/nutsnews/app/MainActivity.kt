@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.feed.ArticleCardInteractionViewModel
 import com.nutsnews.app.feature.feed.ArticleFeedContent
 import com.nutsnews.app.feature.feed.ArticleFeedViewModel
 import com.nutsnews.app.feature.feed.FeedScreen
@@ -77,6 +78,14 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val articleCardInteractionViewModel: ArticleCardInteractionViewModel by viewModels {
+        val container = (application as NutsNewsApplication).container
+        ArticleCardInteractionViewModel.Factory(
+            savedStoryRepository = container.savedStoryRepository,
+            userPreferencesRepository = container.userPreferencesRepository,
+        )
+    }
+
     private val personalizationViewModel: PersonalizationViewModel by viewModels {
         PersonalizationViewModel.Factory(
             userPreferencesRepository =
@@ -106,6 +115,8 @@ class MainActivity : ComponentActivity() {
             val personalizationUiState by
                 personalizationViewModel.uiState.collectAsStateWithLifecycle()
             val feedUiState by articleFeedViewModel.uiState.collectAsStateWithLifecycle()
+            val articleCardInteractionUiState by
+                articleCardInteractionViewModel.uiState.collectAsStateWithLifecycle()
             val homeDashboardUiState by
                 homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
@@ -173,6 +184,12 @@ class MainActivity : ComponentActivity() {
                                             AppDestination.ArticleDetail(article.stableId),
                                         )
                                     },
+                                    likedStoryIds =
+                                        articleCardInteractionUiState.likedStoryIds,
+                                    hapticsEnabled =
+                                        articleCardInteractionUiState.hapticsEnabled,
+                                    onToggleLiked =
+                                        articleCardInteractionViewModel::toggleLiked,
                                     dashboard = {
                                         HomeDashboard(
                                             uiState = homeDashboardUiState,
