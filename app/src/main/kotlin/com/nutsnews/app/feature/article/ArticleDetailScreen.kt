@@ -24,7 +24,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Newspaper
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.CenterAlignedTopAppBar
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -34,6 +36,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -41,6 +44,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -54,6 +58,9 @@ import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import java.util.Locale
+import kotlin.math.ceil
+import kotlin.math.max
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -68,6 +75,7 @@ fun ArticleDetailScreen(
         configuration.smallestScreenWidthDp >= TabletMinimumWidthDp &&
             configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val palette = NutsNewsTheme.colors
+    val brief = remember(article) { deriveArticleBrief(article) }
 
     NutsNewsBackground(
         modifier =
@@ -112,6 +120,7 @@ fun ArticleDetailScreen(
             if (isTabletLandscape) {
                 CompactLandscapeArticleDetail(
                     article = article,
+                    brief = brief,
                     heroImageModel = heroImageModel,
                     modifier =
                         Modifier
@@ -121,6 +130,7 @@ fun ArticleDetailScreen(
             } else {
                 RegularArticleDetail(
                     article = article,
+                    brief = brief,
                     heroImageModel = heroImageModel,
                     modifier =
                         Modifier
@@ -201,6 +211,7 @@ fun UnavailableArticleDetailScreen(
 @Composable
 private fun RegularArticleDetail(
     article: Article,
+    brief: ArticleBriefContent,
     heroImageModel: Any?,
     modifier: Modifier,
 ) {
@@ -221,12 +232,22 @@ private fun RegularArticleDetail(
             title = article.title,
             compact = false,
         )
+        RegularArticleBrief(brief)
+        ArticleDetailSummary(
+            summary = article.summary,
+            compact = false,
+        )
+        ArticleDetailSource(
+            article = article,
+            compact = false,
+        )
     }
 }
 
 @Composable
 private fun CompactLandscapeArticleDetail(
     article: Article,
+    brief: ArticleBriefContent,
     heroImageModel: Any?,
     modifier: Modifier,
 ) {
@@ -260,6 +281,15 @@ private fun CompactLandscapeArticleDetail(
             ) {
                 ArticleDetailTitle(
                     title = article.title,
+                    compact = true,
+                )
+                CompactArticleBrief(brief)
+                ArticleDetailSummary(
+                    summary = article.summary,
+                    compact = true,
+                )
+                ArticleDetailSource(
+                    article = article,
                     compact = true,
                 )
                 Spacer(modifier = Modifier.weight(1f))
@@ -451,6 +481,400 @@ private fun ArticleDetailTitle(
     )
 }
 
+@Composable
+private fun RegularArticleBrief(brief: ArticleBriefContent) {
+    DetailInfoCard(
+        label = "NutsNews Brief",
+        compact = false,
+        modifier = Modifier.testTag("article_detail_brief"),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+            ) {
+                ArticleBriefMetric(
+                    text = brief.estimatedReadTime,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Schedule,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                        )
+                    },
+                )
+                ArticleBriefMetric(
+                    text = brief.primaryMoodLabel,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Filled.Favorite,
+                            contentDescription = null,
+                            modifier = Modifier.size(11.dp),
+                        )
+                    },
+                )
+            }
+            ArticleBriefBullet(
+                title = "What happened",
+                text = brief.whatHappened,
+            )
+            ArticleBriefBullet(
+                title = "Why it’s good news",
+                text = brief.whyGoodNews,
+            )
+            ArticleBriefBullet(
+                title = "Feel-good takeaway",
+                text = brief.takeaway,
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactArticleBrief(brief: ArticleBriefContent) {
+    DetailInfoCard(
+        label = "NutsNews Brief",
+        compact = true,
+        modifier = Modifier.testTag("article_detail_brief"),
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
+        ) {
+            Text(
+                text = brief.whyGoodNews,
+                modifier = Modifier.testTag("article_detail_brief_why"),
+                color = NutsNewsTheme.colors.secondaryText,
+                style = NutsNewsTheme.typography.subheadline,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = "Takeaway: ${brief.takeaway}",
+                modifier = Modifier.testTag("article_detail_brief_takeaway"),
+                color = NutsNewsTheme.colors.accent,
+                style = NutsNewsTheme.typography.caption,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArticleBriefMetric(
+    text: String,
+    icon: @Composable () -> Unit,
+) {
+    Row(
+        modifier =
+            Modifier
+                .clip(CircleShape)
+                .background(NutsNewsTheme.colors.badgeBackground)
+                .padding(
+                    horizontal = NutsNewsTheme.spacing.small,
+                    vertical = NutsNewsTheme.spacing.xs,
+                ),
+        horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        icon()
+        Text(
+            text = text,
+            color = NutsNewsTheme.colors.secondaryText,
+            style = NutsNewsTheme.typography.caption2,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
+    }
+}
+
+@Composable
+private fun ArticleBriefBullet(
+    title: String,
+    text: String,
+) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .padding(top = 7.dp)
+                    .size(NutsNewsTheme.spacing.xs)
+                    .background(
+                        color = NutsNewsTheme.colors.accentHighlight,
+                        shape = CircleShape,
+                    ),
+        )
+        Column(
+            verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+        ) {
+            Text(
+                text = title,
+                color = NutsNewsTheme.colors.primaryText,
+                style = NutsNewsTheme.typography.subheadline,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                text = text,
+                color = NutsNewsTheme.colors.secondaryText,
+                style =
+                    NutsNewsTheme.typography.subheadline.copy(
+                        lineHeight = 22.sp,
+                    ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ArticleDetailSummary(
+    summary: String,
+    compact: Boolean,
+) {
+    if (summary.isEmpty()) return
+
+    DetailInfoCard(
+        label = "Summary",
+        compact = compact,
+        modifier = Modifier.testTag("article_detail_summary"),
+    ) {
+        Text(
+            text = summary,
+            color = NutsNewsTheme.colors.secondaryText,
+            style =
+                if (compact) {
+                    NutsNewsTheme.typography.subheadline
+                } else {
+                    NutsNewsTheme.typography.body.copy(lineHeight = 26.sp)
+                },
+            maxLines = if (compact) 5 else Int.MAX_VALUE,
+            overflow = if (compact) TextOverflow.Ellipsis else TextOverflow.Clip,
+        )
+    }
+}
+
+@Composable
+private fun ArticleDetailSource(
+    article: Article,
+    compact: Boolean,
+) {
+    DetailInfoCard(
+        label = "Source",
+        compact = compact,
+        modifier = Modifier.testTag("article_detail_source"),
+    ) {
+        if (compact) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+            ) {
+                Text(
+                    text = article.source,
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .testTag("article_detail_source_name"),
+                    color = NutsNewsTheme.colors.primaryText,
+                    style = NutsNewsTheme.typography.subheadline,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = article.displayDate,
+                    modifier = Modifier.testTag("article_detail_source_date"),
+                    color = NutsNewsTheme.colors.mutedText,
+                    style = NutsNewsTheme.typography.caption,
+                    maxLines = 1,
+                )
+            }
+        } else {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
+            ) {
+                Text(
+                    text = article.source,
+                    modifier = Modifier.testTag("article_detail_source_name"),
+                    color = NutsNewsTheme.colors.primaryText,
+                    style = NutsNewsTheme.typography.headline,
+                )
+                Text(
+                    text = article.displayDate,
+                    modifier = Modifier.testTag("article_detail_source_date"),
+                    color = NutsNewsTheme.colors.mutedText,
+                    style = NutsNewsTheme.typography.subheadline,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun DetailInfoCard(
+    label: String,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    val shape =
+        RoundedCornerShape(
+            if (compact) {
+                NutsNewsTheme.dimensions.controlCornerRadius
+            } else {
+                NutsNewsTheme.dimensions.cardCornerRadius
+            },
+        )
+    val elevation =
+        if (compact) {
+            NutsNewsTheme.spacing.xs
+        } else {
+            NutsNewsTheme.spacing.small
+        }
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .shadow(
+                    elevation = elevation,
+                    shape = shape,
+                    ambientColor = NutsNewsTheme.colors.accentGlow,
+                    spotColor = NutsNewsTheme.colors.accentGlow,
+                )
+                .clip(shape)
+                .background(NutsNewsTheme.colors.cardBackgroundStrong)
+                .then(
+                    if (compact) {
+                        Modifier
+                    } else {
+                        Modifier.border(
+                            width = 1.25.dp,
+                            color = NutsNewsTheme.colors.cardBorder,
+                            shape = shape,
+                        )
+                    },
+                )
+                .padding(
+                    if (compact) {
+                        NutsNewsTheme.spacing.small
+                    } else {
+                        NutsNewsTheme.spacing.medium
+                    },
+                ),
+        verticalArrangement =
+            Arrangement.spacedBy(
+                if (compact) {
+                    NutsNewsTheme.spacing.xs
+                } else {
+                    NutsNewsTheme.spacing.small
+                },
+            ),
+    ) {
+        if (label.isNotEmpty()) {
+            Text(
+                text = label.uppercase(Locale.ROOT),
+                modifier = Modifier.testTag("article_detail_section_label"),
+                color = NutsNewsTheme.colors.accent,
+                style =
+                    if (compact) {
+                        NutsNewsTheme.typography.caption2
+                    } else {
+                        NutsNewsTheme.typography.caption
+                    },
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
+        content()
+    }
+}
+
+@Immutable
+internal data class ArticleBriefContent(
+    val estimatedReadTime: String,
+    val primaryMoodLabel: String,
+    val whatHappened: String,
+    val whyGoodNews: String,
+    val takeaway: String,
+)
+
+internal fun deriveArticleBrief(article: Article): ArticleBriefContent {
+    val searchableText =
+        (
+            listOf(article.title, article.summary, article.source) +
+                article.categories
+        ).joinToString(" ")
+            .lowercase(Locale.ROOT)
+    fun containsAny(vararg keywords: String): Boolean =
+        keywords.any(searchableText::contains)
+
+    val combinedText = "${article.title} ${article.summary}"
+    val wordCount =
+        combinedText
+            .split(WhitespacePattern)
+            .count(String::isNotBlank)
+    val minutes = max(1, ceil(wordCount / WordsPerMinute).toInt())
+    val mood =
+        when {
+            containsAny("science", "research", "space", "technology") -> "Curious"
+            containsAny("achievement", "record", "award", "success") -> "Inspired"
+            containsAny("community", "kindness", "volunteer", "family") -> "Hopeful"
+            else -> "Calm"
+        }
+    val whyGood =
+        when {
+            containsAny("animal", "wildlife", "rescue", "pet") ->
+                "It gives readers a wholesome moment centered on care, protection, " +
+                    "and the bond people share with animals."
+
+            containsAny("science", "research", "space", "technology", "discovery") ->
+                "It highlights progress and curiosity, showing how discovery can make " +
+                    "the world feel more hopeful."
+
+            containsAny("community", "volunteer", "school", "family", "kindness") ->
+                "It shows people helping each other in a practical way, which is exactly " +
+                    "the kind of local goodness NutsNews is built to surface."
+
+            containsAny("wellness", "health", "garden", "nature", "healing") ->
+                "It offers a calmer kind of news moment, focused on wellbeing, " +
+                    "restoration, and small positive changes."
+
+            containsAny("achievement", "record", "award", "first", "milestone") ->
+                "It celebrates effort, persistence, and a meaningful win that can leave " +
+                    "readers feeling encouraged."
+
+            else ->
+                "It gives readers a positive, low-stress story with a clear reason to " +
+                    "feel a little better about the day."
+        }
+    val takeaway =
+        when {
+            containsAny("community", "volunteer", "kindness") ->
+                "Good news often starts close to home."
+
+            containsAny("science", "research", "discovery") ->
+                "Progress is still happening, one discovery at a time."
+
+            containsAny("animal", "wildlife", "rescue") ->
+                "Care and compassion can travel farther than expected."
+
+            containsAny("achievement", "record", "milestone") ->
+                "Small steps can turn into a story worth celebrating."
+
+            else -> "A quick reminder that the world still has soft spots."
+        }
+
+    return ArticleBriefContent(
+        estimatedReadTime = "$minutes min native brief",
+        primaryMoodLabel = mood,
+        whatHappened = article.summary.trim().ifEmpty { article.title.trim() },
+        whyGoodNews = whyGood,
+        takeaway = takeaway,
+    )
+}
+
 internal fun shouldUseWideDetailHeroCrop(
     pixelWidth: Int,
     pixelHeight: Int,
@@ -471,3 +895,5 @@ private const val TabletImageColumnFraction = 0.39f
 private val TabletImageMaximumWidth = 440.dp
 private const val WideThumbnailCropAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 8
+private const val WordsPerMinute = 180.0
+private val WhitespacePattern = Regex("\\s+")
