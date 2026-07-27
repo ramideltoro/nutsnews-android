@@ -33,12 +33,16 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.lifecycleScope
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.feature.article.AndroidArticleShareLauncher
+import com.nutsnews.app.feature.article.AndroidArticleSharePackageCreator
+import com.nutsnews.app.feature.article.AndroidArticleSpeechEngine
+import com.nutsnews.app.feature.article.AndroidOriginalStoryLauncher
 import com.nutsnews.app.feature.article.ArticleDetailScreen
 import com.nutsnews.app.feature.article.ArticleDetailViewModel
-import com.nutsnews.app.feature.article.AndroidOriginalStoryLauncher
-import com.nutsnews.app.feature.article.AndroidArticleSpeechEngine
 import com.nutsnews.app.feature.article.ArticleListenController
+import com.nutsnews.app.feature.article.ArticleShareCardController
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
@@ -61,6 +65,14 @@ import com.nutsnews.app.reminder.DailyReminderContract
 import com.nutsnews.app.reminder.ReminderScheduleResult
 
 class MainActivity : ComponentActivity() {
+    private val articleShareCardController by lazy {
+        ArticleShareCardController(
+            scope = lifecycleScope,
+            packageCreator = AndroidArticleSharePackageCreator(applicationContext),
+            shareLauncher = AndroidArticleShareLauncher(this),
+        )
+    }
+
     private val articleListenController by lazy {
         ArticleListenController(AndroidArticleSpeechEngine(applicationContext))
     }
@@ -145,6 +157,8 @@ class MainActivity : ComponentActivity() {
                 articleDetailViewModel.uiState.collectAsStateWithLifecycle()
             val articleListenUiState by
                 articleListenController.uiState.collectAsStateWithLifecycle()
+            val articleShareCardUiState by
+                articleShareCardController.uiState.collectAsStateWithLifecycle()
             val homeDashboardUiState by
                 homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
@@ -347,6 +361,8 @@ class MainActivity : ComponentActivity() {
                                     listenUiState = articleListenUiState,
                                     onToggleListening = articleListenController::toggle,
                                     onStopListening = articleListenController::stop,
+                                    shareCardUiState = articleShareCardUiState,
+                                    onShareCard = articleShareCardController::share,
                                 )
                             }
                         }
@@ -413,6 +429,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         articleListenController.shutdown()
+        articleShareCardController.cancel()
         super.onDestroy()
     }
 

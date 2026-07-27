@@ -114,7 +114,10 @@ abstract class ArticleDetailScreenshotContract(
         )
 
         composeRule.onNodeWithText("Story").assertIsDisplayed()
-        composeRule.onNodeWithText(article.title).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_title")
+            .assertTextEquals(article.title)
+            .assertIsDisplayed()
         composeRule
             .onNodeWithTag("article_detail_hero_fallback", useUnmergedTree = true)
             .fetchSemanticsNode()
@@ -191,6 +194,8 @@ abstract class ArticleDetailScreenshotContract(
         listenUiState: () -> ArticleListenUiState = { ArticleListenUiState() },
         onToggleListening: (ArticleListenScript) -> Unit = {},
         onStopListening: () -> Unit = {},
+        shareCardUiState: () -> ArticleShareCardUiState = { ArticleShareCardUiState() },
+        onShareCard: (Article) -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -217,6 +222,8 @@ abstract class ArticleDetailScreenshotContract(
                     listenUiState = listenUiState(),
                     onToggleListening = onToggleListening,
                     onStopListening = onStopListening,
+                    shareCardUiState = shareCardUiState(),
+                    onShareCard = onShareCard,
                 )
             }
         }
@@ -375,7 +382,9 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
         composeRule.onNodeWithTag("article_detail_brief").performScrollTo()
         composeRule.onNodeWithText("NUTSNEWS BRIEF").assertIsDisplayed()
         composeRule.onNodeWithText("1 min native brief").assertIsDisplayed()
-        composeRule.onNodeWithText("Curious").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_brief_mood")
+            .assertIsDisplayed()
         composeRule.onNodeWithText("What happened").fetchSemanticsNode()
         composeRule.onNodeWithText("Why it’s good news").fetchSemanticsNode()
         composeRule.onNodeWithText("Feel-good takeaway").fetchSemanticsNode()
@@ -384,8 +393,14 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
         composeRule.onNodeWithTag("article_detail_source").performScrollTo()
         composeRule.onNodeWithTag("article_detail_summary").fetchSemanticsNode()
         composeRule.onAllNodesWithText(article.summary).assertCountEquals(2)
-        composeRule.onNodeWithText(article.source).assertIsDisplayed()
-        composeRule.onNodeWithText("Published today").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_source_name")
+            .assertTextEquals(article.source)
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_source_date")
+            .assertTextEquals("Published today")
+            .assertIsDisplayed()
         assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
     }
 
@@ -404,7 +419,7 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
         )
 
         composeRule.onAllNodesWithTag("article_detail_summary").assertCountEquals(0)
-        composeRule.onAllNodesWithText(article.title).assertCountEquals(2)
+        composeRule.onAllNodesWithText(article.title).assertCountEquals(3)
         composeRule.onNodeWithTag("article_detail_source").performScrollTo()
         composeRule.onNodeWithText("SOURCE").assertIsDisplayed()
         composeRule.onNodeWithText("Recently").assertIsDisplayed()
@@ -772,6 +787,76 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
         composeRule.onNodeWithTag("listen_mode_done").performClick()
         composeRule.onAllNodesWithTag("listen_mode_sheet").assertCountEquals(0)
         assertEquals(2, stopCount)
+    }
+
+    @Test
+    fun positiveShareCardPreviewShowsLoadingAndRetryableFailureStates() {
+        val article = contentArticle()
+        val brief = deriveArticleBrief(article)
+        val state = mutableStateOf(ArticleShareCardUiState())
+        val shared = mutableListOf<Article>()
+        setDetail(
+            article = article,
+            imageModel = null,
+            shareCardUiState = { state.value },
+            onShareCard = { selectedArticle ->
+                shared += selectedArticle
+                state.value = ArticleShareCardUiState(isCreating = true)
+            },
+        )
+
+        composeRule
+            .onNodeWithTag("article_detail_share_card")
+            .performScrollTo()
+        composeRule.onNodeWithText("NUTSNEWS SHARE CARD").assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_share_preview_title")
+            .assertTextEquals(article.title)
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_share_preview_takeaway")
+            .assertTextEquals(brief.takeaway)
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_share_preview_mood")
+            .assertTextEquals(brief.primaryMoodLabel)
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_share_preview_source")
+            .assertTextEquals(article.source)
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_share_button")
+            .assertTextEquals("Share card with someone special")
+            .performClick()
+
+        composeRule
+            .onNodeWithTag("article_detail_share_button")
+            .assertTextEquals("Creating card")
+            .assertIsNotEnabled()
+        composeRule
+            .onNodeWithTag("article_detail_share_loading")
+            .assertIsDisplayed()
+        assertEquals(listOf(article), shared)
+
+        composeRule.runOnIdle {
+            state.value =
+                ArticleShareCardUiState(
+                    failureMessage =
+                        "The positive share card couldn’t be created. Please try again.",
+                )
+        }
+        composeRule
+            .onNodeWithTag("article_detail_share_failure")
+            .performScrollTo()
+            .assertTextEquals(
+                "The positive share card couldn’t be created. Please try again.",
+            ).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("article_detail_share_button")
+            .assertTextEquals("Share card with someone special")
+            .performClick()
+        assertEquals(listOf(article, article), shared)
     }
 }
 
