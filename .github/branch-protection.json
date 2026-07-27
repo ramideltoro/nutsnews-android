@@ -33,6 +33,10 @@
       {
         "context": "Branch protection policy",
         "app_id": 15368
+      },
+      {
+        "context": "Release signing contract",
+        "app_id": 15368
       }
     ]
   },

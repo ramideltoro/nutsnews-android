@@ -5,6 +5,31 @@ plugins {
     alias(libs.plugins.room)
 }
 
+val releaseSigningVariableNames = listOf(
+    "NUTSNEWS_UPLOAD_KEYSTORE_PATH",
+    "NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD",
+    "NUTSNEWS_UPLOAD_KEY_ALIAS",
+    "NUTSNEWS_UPLOAD_KEY_PASSWORD",
+)
+val releaseTaskRequested = gradle.startParameter.taskNames.any {
+    it.contains("release", ignoreCase = true)
+}
+val releaseSigningValues = releaseSigningVariableNames.associateWith { variableName ->
+    providers.environmentVariable(variableName).orNull?.takeIf(String::isNotBlank)
+}
+
+if (releaseTaskRequested) {
+    val missingVariables = releaseSigningValues.filterValues { it == null }.keys
+    check(missingVariables.isEmpty()) {
+        "Release signing requires environment variables: ${missingVariables.joinToString()}"
+    }
+
+    val keystorePath = checkNotNull(releaseSigningValues["NUTSNEWS_UPLOAD_KEYSTORE_PATH"])
+    check(file(keystorePath).isFile) {
+        "Release signing keystore does not exist at the configured path."
+    }
+}
+
 tasks.withType<Test>().configureEach {
     systemProperty(
         "nutsnews.recordGoldens",
@@ -26,6 +51,23 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            if (releaseTaskRequested) {
+                storeFile = file(
+                    checkNotNull(releaseSigningValues["NUTSNEWS_UPLOAD_KEYSTORE_PATH"]),
+                )
+                storePassword = checkNotNull(
+                    releaseSigningValues["NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD"],
+                )
+                keyAlias = checkNotNull(releaseSigningValues["NUTSNEWS_UPLOAD_KEY_ALIAS"])
+                keyPassword = checkNotNull(
+                    releaseSigningValues["NUTSNEWS_UPLOAD_KEY_PASSWORD"],
+                )
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isDebuggable = true
@@ -33,6 +75,7 @@ android {
 
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -62,6 +105,14 @@ android {
 
     sourceSets {
         getByName("debug").assets.directories.add("$projectDir/schemas")
+    }
+}
+
+tasks.configureEach {
+    if (name.contains("release", ignoreCase = true)) {
+        notCompatibleWithConfigurationCache(
+            "Release signing credentials must never be retained in configuration-cache state.",
+        )
     }
 }
 

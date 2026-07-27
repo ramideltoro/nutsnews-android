@@ -40,6 +40,7 @@ the workflow definitions diverge:
 - `Dependency review`
 - `CodeQL (Java/Kotlin)`
 - `Branch protection policy`
+- `Release signing contract`
 
 All contexts are restricted to the GitHub Actions app (`app_id: 15368`) so a
 similarly named status from another integration cannot satisfy protection.

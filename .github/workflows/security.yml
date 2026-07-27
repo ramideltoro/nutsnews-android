@@ -6,6 +6,12 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      run_protected_signing:
+        description: Build and verify an AAB with protected upload-key secrets
+        required: false
+        type: boolean
+        default: true
 
 permissions:
   contents: read
@@ -26,6 +32,132 @@ jobs:
 
       - name: Validate branch protection contract
         run: ./scripts/validate-branch-protection.sh
+
+  release-signing-contract:
+    name: Release signing contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle caching
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: ${{ github.event_name == 'pull_request' }}
+          cache-cleanup: on-success
+
+      - name: Build and verify with ephemeral test signing
+        shell: bash
+        run: |
+          ./scripts/validate-release-signing.sh
+          signing_dir="$(mktemp -d)"
+          trap 'rm -rf "$signing_dir"' EXIT
+          umask 077
+          store_password="$(openssl rand -hex 32)"
+          key_password="$(openssl rand -hex 32)"
+          key_alias="nutsnews-ci-test-upload"
+          echo "::add-mask::$store_password"
+          echo "::add-mask::$key_password"
+          keytool -genkeypair \
+            -keystore "$signing_dir/test-upload.jks" \
+            -storetype JKS \
+            -storepass "$store_password" \
+            -keypass "$key_password" \
+            -alias "$key_alias" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -sigalg SHA256withRSA \
+            -validity 30 \
+            -dname "CN=NutsNews CI Test Upload, O=NutsNews, C=US" \
+            >/dev/null 2>&1
+          NUTSNEWS_UPLOAD_KEYSTORE_PATH="$signing_dir/test-upload.jks" \
+          NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD="$store_password" \
+          NUTSNEWS_UPLOAD_KEY_ALIAS="$key_alias" \
+          NUTSNEWS_UPLOAD_KEY_PASSWORD="$key_password" \
+            ./gradlew \
+              --no-daemon \
+              --no-configuration-cache \
+              --dependency-verification=strict \
+              --stacktrace \
+              --console=plain \
+              bundleRelease
+          ./scripts/verify-release-bundle.sh \
+            app/build/outputs/bundle/release/app-release.aab
+
+  protected-release-signing:
+    name: Protected release signing
+    if: github.event_name == 'workflow_dispatch' && inputs.run_protected_signing == true
+    needs:
+      - release-signing-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: release-signing
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle caching
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Build and verify with protected upload signing
+        shell: bash
+        env:
+          NUTSNEWS_UPLOAD_KEYSTORE_BASE64: ${{ secrets.NUTSNEWS_UPLOAD_KEYSTORE_BASE64 }}
+          NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD }}
+          NUTSNEWS_UPLOAD_KEY_ALIAS: ${{ secrets.NUTSNEWS_UPLOAD_KEY_ALIAS }}
+          NUTSNEWS_UPLOAD_KEY_PASSWORD: ${{ secrets.NUTSNEWS_UPLOAD_KEY_PASSWORD }}
+        run: |
+          for required_value in \
+            "$NUTSNEWS_UPLOAD_KEYSTORE_BASE64" \
+            "$NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD" \
+            "$NUTSNEWS_UPLOAD_KEY_ALIAS" \
+            "$NUTSNEWS_UPLOAD_KEY_PASSWORD"; do
+            if [[ -z "$required_value" ]]; then
+              echo "A protected release-signing secret is missing." >&2
+              exit 1
+            fi
+          done
+          signing_dir="$(mktemp -d)"
+          trap 'rm -rf "$signing_dir"' EXIT
+          umask 077
+          printf '%s' "$NUTSNEWS_UPLOAD_KEYSTORE_BASE64" |
+            base64 --decode >"$signing_dir/nutsnews-upload.jks"
+          NUTSNEWS_UPLOAD_KEYSTORE_PATH="$signing_dir/nutsnews-upload.jks" \
+            ./gradlew \
+              --no-daemon \
+              --no-configuration-cache \
+              --dependency-verification=strict \
+              --stacktrace \
+              --console=plain \
+              bundleRelease
+          ./scripts/verify-release-bundle.sh \
+            app/build/outputs/bundle/release/app-release.aab \
+            config/signing/nutsnews-upload-certificate.pem
+
+      - name: Upload verified release bundle
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-signed-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+          retention-days: 7
 
   dependency-review:
     name: Dependency review
