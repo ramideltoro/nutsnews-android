@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
 
 @Composable
 fun HapticsSettingsScreen(
@@ -210,7 +211,10 @@ private fun PreferenceSettingsTopBar(
         )
         Text(
             text = title,
-            modifier = Modifier.align(Alignment.Center),
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             fontWeight = FontWeight.Bold,
@@ -236,7 +240,7 @@ private fun PreferenceToolbarButton(
     Surface(
         modifier =
             modifier
-                .size(40.dp)
+                .size(48.dp)
                 .testTag(testTag),
         onClick = onClick,
         shape = CircleShape,

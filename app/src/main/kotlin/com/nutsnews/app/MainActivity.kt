@@ -13,8 +13,10 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
@@ -32,12 +34,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import com.nutsnews.app.designsystem.NutsNewsAdaptiveWindow
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsPane
 import com.nutsnews.app.feature.article.AndroidArticleShareLauncher
 import com.nutsnews.app.feature.article.AndroidArticleSharePackageCreator
 import com.nutsnews.app.feature.article.AndroidArticleSpeechEngine
@@ -714,27 +718,37 @@ internal fun NutsNewsApp(
     uiState: BootstrapUiState,
     splashUiState: StartupSplashUiState,
     modifier: Modifier = Modifier,
+    reducedMotionOverride: Boolean? = null,
     onNavigateUp: () -> Boolean = { false },
     destinationContent: @Composable (AppDestination) -> Unit = {
         NutsNewsDestinationPlaceholder(it)
     },
 ) {
-    NutsNewsTheme(theme = uiState.theme) {
+    NutsNewsTheme(
+        theme = uiState.theme,
+        reducedMotionOverride = reducedMotionOverride,
+    ) {
         NutsNewsAdaptiveWindow {
+            val showSplash =
+                splashUiState.isShowingSplash && !NutsNewsTheme.reducedMotion
             BackHandler(
-                enabled = !splashUiState.isShowingSplash && uiState.canNavigateUp,
+                enabled = !showSplash && uiState.canNavigateUp,
             ) {
                 onNavigateUp()
             }
 
             val contentProgress by
                 animateFloatAsState(
-                    targetValue = if (splashUiState.isShowingSplash) 0f else 1f,
+                    targetValue = if (showSplash) 0f else 1f,
                     animationSpec =
-                        tween(
-                            durationMillis = StartupSplashTiming.ContentTransitionMillis,
-                            easing = FastOutSlowInEasing,
-                        ),
+                        if (NutsNewsTheme.reducedMotion) {
+                            snap()
+                        } else {
+                            tween(
+                                durationMillis = StartupSplashTiming.ContentTransitionMillis,
+                                easing = FastOutSlowInEasing,
+                            )
+                        },
                     label = "Startup content transition",
                 )
 
@@ -744,6 +758,13 @@ internal fun NutsNewsApp(
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .then(
+                                    if (showSplash) {
+                                        Modifier.clearAndSetSemantics { }
+                                    } else {
+                                        Modifier.nutsNewsPane(uiState.destination.shellTitle)
+                                    },
+                                )
                                 .graphicsLayer {
                                     alpha = contentProgress
                                     scaleX = 0.99f + (0.01f * contentProgress)
@@ -755,16 +776,21 @@ internal fun NutsNewsApp(
                 }
 
                 AnimatedVisibility(
-                    visible = splashUiState.isShowingSplash,
+                    visible = showSplash,
                     enter = EnterTransition.None,
                     exit =
-                        fadeOut(
-                            animationSpec =
-                                tween(
-                                    durationMillis = StartupSplashTiming.ContentTransitionMillis,
-                                    easing = FastOutSlowInEasing,
-                                ),
-                        ),
+                        if (NutsNewsTheme.reducedMotion) {
+                            ExitTransition.None
+                        } else {
+                            fadeOut(
+                                animationSpec =
+                                    tween(
+                                        durationMillis =
+                                            StartupSplashTiming.ContentTransitionMillis,
+                                        easing = FastOutSlowInEasing,
+                                    ),
+                            )
+                        },
                 ) {
                     StartupSplash(uiState = splashUiState)
                 }

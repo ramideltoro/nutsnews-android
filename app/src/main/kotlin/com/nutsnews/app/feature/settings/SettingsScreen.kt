@@ -38,6 +38,8 @@ import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import java.util.Locale
 
 @Composable
@@ -69,6 +71,7 @@ fun SettingsScreen(
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .nutsNewsPoliteAnnouncement()
                                 .testTag("settings_loading"),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -100,7 +103,10 @@ private fun SettingsTopBar(onGoHome: () -> Unit) {
     ) {
         Text(
             text = "Settings",
-            modifier = Modifier.align(Alignment.Center),
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             fontWeight = FontWeight.Bold,
@@ -109,7 +115,7 @@ private fun SettingsTopBar(onGoHome: () -> Unit) {
             modifier =
                 Modifier
                     .align(Alignment.CenterEnd)
-                    .size(40.dp)
+                    .size(48.dp)
                     .testTag("settings_home"),
             onClick = onGoHome,
             shape = CircleShape,

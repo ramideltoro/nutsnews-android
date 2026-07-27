@@ -60,6 +60,8 @@ import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
 import java.time.Instant
@@ -116,7 +118,10 @@ private fun SavedStoriesTopBar(onClose: () -> Unit) {
         Spacer(modifier = Modifier.width(64.dp))
         Text(
             text = "Saved Stories",
-            modifier = Modifier.weight(1f),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             fontWeight = FontWeight.SemiBold,
@@ -149,6 +154,7 @@ private fun SavedStoriesLoading() {
         modifier =
             Modifier
                 .fillMaxSize()
+                .nutsNewsPoliteAnnouncement()
                 .testTag("saved_stories_loading"),
         contentAlignment = Alignment.Center,
     ) {
@@ -164,6 +170,7 @@ private fun EmptySavedStories() {
                 .fillMaxSize()
                 .navigationBarsPadding()
                 .padding(NutsNewsTheme.spacing.medium)
+                .nutsNewsPoliteAnnouncement()
                 .testTag("saved_stories_empty"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -371,7 +378,8 @@ private fun EmptySavedStoriesSearch() {
                 .padding(
                     horizontal = NutsNewsTheme.spacing.large,
                     vertical = NutsNewsTheme.spacing.xl,
-                ).testTag("saved_stories_empty_search"),
+                ).nutsNewsPoliteAnnouncement()
+                .testTag("saved_stories_empty_search"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
     ) {
@@ -430,6 +438,7 @@ private fun SavedStoryRow(
                 modifier =
                     Modifier
                         .fillMaxWidth()
+                        .nutsNewsHeading()
                         .testTag("saved_story_title"),
                 color = palette.primaryText,
                 style = NutsNewsTheme.typography.cardTitle,
@@ -490,7 +499,7 @@ private fun SavedStoryThumbnail(story: SavedStory) {
         story.article.thumbnailUrl?.let { thumbnailUrl ->
             AsyncImage(
                 model = thumbnailUrl.toString(),
-                contentDescription = "Thumbnail for ${story.article.title}",
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -562,7 +571,7 @@ private fun SavedStoryFooter(
             Text(
                 text = story.article.source,
                 modifier = Modifier.testTag("saved_story_source"),
-                color = NutsNewsTheme.colors.accentSoft,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.caption,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -588,8 +597,8 @@ private fun SavedStoryFooter(
         }
         Surface(
             modifier =
-                Modifier
-                    .size(34.dp)
+            Modifier
+                    .size(48.dp)
                     .testTag("saved_story_remove_${story.id.value}"),
             onClick = { onRemoveStory(story) },
             shape = CircleShape,

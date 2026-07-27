@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -74,7 +76,9 @@ import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 
 @Composable
 fun PersonalizationScreen(
@@ -190,7 +194,10 @@ private fun PersonalizationTopBar(
         Spacer(modifier = Modifier.width(64.dp))
         Text(
             text = if (mode == PersonalizationMode.Editor) "Personalize" else "Welcome",
-            modifier = Modifier.weight(1f),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             textAlign = TextAlign.Center,
@@ -200,6 +207,7 @@ private fun PersonalizationTopBar(
                 modifier =
                     Modifier
                         .width(64.dp)
+                        .heightIn(min = 48.dp)
                         .clip(RoundedCornerShape(NutsNewsTheme.radii.small))
                         .clickable(
                             role = Role.Button,
@@ -210,7 +218,7 @@ private fun PersonalizationTopBar(
             ) {
                 Text(
                     text = "Close",
-                    color = NutsNewsTheme.colors.accent,
+                    color = NutsNewsTheme.colors.accentText,
                     style = NutsNewsTheme.typography.callout,
                 )
             }
@@ -575,7 +583,7 @@ private fun StepperButton(
         onClick = onClick,
         modifier =
             Modifier
-                .size(40.dp)
+                .size(48.dp)
                 .alpha(if (enabled) 1f else 0.45f)
                 .testTag(testTag),
         enabled = enabled,
@@ -608,10 +616,12 @@ private fun ReminderControls(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .clickable(
+                    .toggleable(
+                        value = isEnabled,
                         role = Role.Switch,
-                        onClick = { onEnabledChanged(!isEnabled) },
-                    ),
+                        onValueChange = onEnabledChanged,
+                    )
+                    .testTag("reminder_toggle"),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(
@@ -631,8 +641,7 @@ private fun ReminderControls(
             }
             Switch(
                 checked = isEnabled,
-                onCheckedChange = onEnabledChanged,
-                modifier = Modifier.testTag("reminder_toggle"),
+                onCheckedChange = null,
             )
         }
 
@@ -653,6 +662,7 @@ private fun ReminderControls(
                         modifier =
                             Modifier
                                 .fillMaxWidth()
+                                .heightIn(min = 48.dp)
                                 .clip(RoundedCornerShape(NutsNewsTheme.radii.medium))
                                 .background(
                                     if (selected) {
@@ -695,8 +705,11 @@ private fun ReminderControls(
         if (statusText.isNotEmpty()) {
             Text(
                 text = statusText,
-                modifier = Modifier.testTag("reminder_status"),
-                color = colors.accent,
+                modifier =
+                    Modifier
+                        .nutsNewsPoliteAnnouncement()
+                        .testTag("reminder_status"),
+                color = colors.accentText,
                 style = NutsNewsTheme.typography.caption,
                 fontWeight = FontWeight.SemiBold,
             )

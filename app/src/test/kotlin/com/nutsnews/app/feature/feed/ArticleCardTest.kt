@@ -7,18 +7,32 @@ import androidx.activity.ComponentActivity
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalInputModeManager
+import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsFocused
+import androidx.compose.ui.test.assertWidthIsAtLeast
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performKeyInput
+import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.pressKey
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsTheme
@@ -257,6 +271,64 @@ class ArticleCardTest {
         assertFalse(performLikeHapticIfEnabled(enabled = true) { error("No vibrator") })
     }
 
+    @Test
+    fun customStoryControlsMeetTouchTargetsAndWorkFromAKeyboard() {
+        val article = representativeArticle()
+        val readStories = mutableListOf<Article>()
+        val likedStories = mutableListOf<Article>()
+        setCard(
+            article = article,
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+            onReadStory = readStories::add,
+            onLikeStory = likedStories::add,
+            keyboardInputMode = true,
+        )
+
+        composeRule
+            .onNodeWithTag("article_read_story")
+            .assertHeightIsAtLeast(48.dp)
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+        composeRule.runOnIdle { assertEquals(listOf(article), readStories) }
+
+        composeRule
+            .onNodeWithTag("article_like_story")
+            .assertWidthIsAtLeast(48.dp)
+            .assertHeightIsAtLeast(48.dp)
+            .performSemanticsAction(SemanticsActions.RequestFocus)
+            .assertIsFocused()
+            .performKeyInput { pressKey(Key.Enter) }
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.StateDescription,
+                    "Liked",
+                ),
+            )
+        composeRule.runOnIdle { assertEquals(listOf(article), likedStories) }
+    }
+
+    @Test
+    fun reducedMotionKeepsLikedStateFeedbackWithoutCelebrationMotion() {
+        setCard(
+            article = representativeArticle(),
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+            reducedMotionOverride = true,
+        )
+
+        composeRule.onNodeWithTag("article_like_story").performClick()
+        composeRule.waitForIdle()
+
+        composeRule
+            .onNodeWithTag("article_like_story")
+            .assertContentDescriptionEquals("Liked")
+        composeRule
+            .onAllNodesWithTag("article_celebration", useUnmergedTree = true)
+            .assertCountEquals(0)
+    }
+
     private fun setCard(
         article: Article,
         layout: ArticleCardLayout,
@@ -266,9 +338,20 @@ class ArticleCardTest {
         onLikeStory: (Article) -> Unit = {},
         hapticsEnabled: Boolean = true,
         onLikeHaptic: () -> Boolean = { false },
+        reducedMotionOverride: Boolean? = null,
+        keyboardInputMode: Boolean = false,
     ) {
         composeRule.setContent {
-            NutsNewsTheme(updateSystemBars = false) {
+            val inputModeManager = LocalInputModeManager.current
+            LaunchedEffect(keyboardInputMode) {
+                if (keyboardInputMode) {
+                    inputModeManager.requestInputMode(InputMode.Keyboard)
+                }
+            }
+            NutsNewsTheme(
+                updateSystemBars = false,
+                reducedMotionOverride = reducedMotionOverride,
+            ) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.TopCenter,

@@ -59,6 +59,7 @@ import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import com.nutsnews.app.navigation.AppDestination
 import java.util.Locale
@@ -129,7 +130,10 @@ internal fun FeedHeader(
 
             Text(
                 text = "NutsNews",
-                modifier = Modifier.align(Alignment.Center),
+                modifier =
+                    Modifier
+                        .align(Alignment.Center)
+                        .nutsNewsHeading(),
                 color = palette.accentHighlight,
                 style =
                     NutsNewsTheme.typography.brandTitle.copy(
@@ -280,6 +284,7 @@ private fun CategoryChip(
     Row(
         modifier =
             modifier
+                .heightIn(min = MinimumTouchTarget)
                 .testTag(categoryTestTag(title))
                 .clip(shape)
                 .then(backgroundModifier)

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -36,6 +37,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -43,6 +46,8 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 
 @Composable
@@ -98,6 +103,7 @@ private fun InitialFeedLoading(modifier: Modifier) {
         modifier =
             modifier
                 .fillMaxSize()
+                .nutsNewsPoliteAnnouncement()
                 .testTag("feed_initial_loading"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -128,6 +134,7 @@ private fun EmptyFeedState(
         modifier =
             modifier
                 .fillMaxSize()
+                .nutsNewsPoliteAnnouncement()
                 .testTag("feed_empty_state")
                 .padding(NutsNewsTheme.spacing.medium),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -245,6 +252,7 @@ private fun PopulatedFeed(
                             Modifier
                                 .fillMaxWidth()
                                 .padding(top = NutsNewsTheme.spacing.xs)
+                                .nutsNewsHeading()
                                 .testTag("feed_latest_stories"),
                         color = palette.primaryText,
                         style = NutsNewsTheme.typography.title3,
@@ -294,6 +302,10 @@ private fun PopulatedFeed(
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = NutsNewsTheme.spacing.medium)
+                                    .nutsNewsPoliteAnnouncement()
+                                    .semantics {
+                                        contentDescription = "Loading more stories"
+                                    }
                                     .testTag("feed_load_more_progress"),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -353,6 +365,7 @@ private fun StaleFeedBanner() {
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(NutsNewsTheme.radii.small))
                 .background(palette.badgeBackground)
+                .nutsNewsPoliteAnnouncement()
                 .testTag("feed_stale_banner")
                 .padding(NutsNewsTheme.spacing.small),
         horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
@@ -384,6 +397,7 @@ private fun FeedErrorBanner(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(NutsNewsTheme.radii.small))
                 .background(androidx.compose.ui.graphics.Color.Red.copy(alpha = 0.16f))
+                .nutsNewsPoliteAnnouncement()
                 .testTag("feed_error_banner")
                 .padding(NutsNewsTheme.spacing.small),
         horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
@@ -412,6 +426,7 @@ private fun RetryButton(
         text = text,
         modifier =
             modifier
+                .heightIn(min = 48.dp)
                 .clip(CircleShape)
                 .background(nutsNewsButtonGradient())
                 .clickable(

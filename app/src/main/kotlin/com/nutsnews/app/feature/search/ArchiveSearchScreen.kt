@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -50,6 +51,8 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -62,6 +65,9 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsMinimumTouchTarget
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
 import kotlinx.coroutines.delay
@@ -133,6 +139,7 @@ private fun ArchiveSearchHeader(onClose: () -> Unit) {
         ) {
             Text(
                 text = "Search",
+                modifier = Modifier.nutsNewsHeading(),
                 color = palette.accentHighlight,
                 style =
                     NutsNewsTheme.typography.title.copy(
@@ -149,7 +156,7 @@ private fun ArchiveSearchHeader(onClose: () -> Unit) {
         Surface(
             modifier =
                 Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .testTag("archive_search_close"),
             onClick = onClose,
             shape = CircleShape,
@@ -267,7 +274,7 @@ private fun ArchiveSearchControls(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(44.dp)
+                    .heightIn(min = 48.dp)
                     .clip(CircleShape)
                     .background(nutsNewsButtonGradient())
                     .testTag("archive_search_submit"),
@@ -390,6 +397,7 @@ private fun ArchiveSearchResultList(
                         Modifier
                             .padding(vertical = NutsNewsTheme.spacing.medium)
                             .size(24.dp)
+                            .nutsNewsPoliteAnnouncement()
                             .testTag("archive_search_loading_more"),
                     color = NutsNewsTheme.colors.accent,
                     strokeWidth = 2.dp,
@@ -424,7 +432,10 @@ private fun ArchiveSearchResultHeader(uiState: ArchiveSearchUiState) {
     ) {
         Text(
             text = "Results for “${uiState.searchedQuery}”",
-            modifier = Modifier.weight(1f),
+            modifier =
+                Modifier
+                    .weight(1f)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.subheadline,
             fontWeight = FontWeight.Bold,
@@ -433,7 +444,7 @@ private fun ArchiveSearchResultHeader(uiState: ArchiveSearchUiState) {
         )
         Surface(
             shape = CircleShape,
-            color = NutsNewsTheme.colors.accent,
+            color = NutsNewsTheme.colors.buttonGradient.first(),
         ) {
             Text(
                 text = uiState.articles.size.toString(),
@@ -548,7 +559,7 @@ private fun ArchiveSearchThumbnail(article: Article) {
         article.thumbnailUrl?.let { thumbnailUrl ->
             AsyncImage(
                 model = thumbnailUrl.toString(),
-                contentDescription = "Thumbnail for ${article.title}",
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -568,7 +579,7 @@ private fun ArchiveSearchMetadata(article: Article) {
                 Modifier
                     .weight(1f, fill = false)
                     .testTag("archive_search_result_source"),
-            color = NutsNewsTheme.colors.accentSoft,
+            color = NutsNewsTheme.colors.accentText,
             style = NutsNewsTheme.typography.caption2,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
@@ -603,10 +614,21 @@ private fun ArchiveSearchSaveButton(
 ) {
     val palette = NutsNewsTheme.colors
     Surface(
-        modifier = Modifier.testTag("archive_search_save_${article.stableId.value}"),
+        modifier =
+            Modifier
+                .nutsNewsMinimumTouchTarget()
+                .semantics {
+                    stateDescription = if (isSaved) "Saved" else "Not saved"
+                }
+                .testTag("archive_search_save_${article.stableId.value}"),
         onClick = { onToggleSaved(article) },
         shape = CircleShape,
-        color = if (isSaved) palette.accent else palette.badgeBackground,
+        color =
+            if (isSaved) {
+                palette.buttonGradient.first()
+            } else {
+                palette.badgeBackground
+            },
         border =
             if (isSaved) {
                 null
@@ -657,7 +679,7 @@ private fun ArchiveSearchLoadMoreButton(onLoadMore: () -> Unit) {
             Modifier
                 .fillMaxWidth()
                 .padding(top = NutsNewsTheme.spacing.small)
-                .height(44.dp)
+                .heightIn(min = 48.dp)
                 .clip(CircleShape)
                 .background(nutsNewsButtonGradient())
                 .testTag("archive_search_load_more"),
@@ -679,6 +701,7 @@ private fun ArchiveSearchLoading(modifier: Modifier) {
         modifier =
             modifier
                 .fillMaxWidth()
+                .nutsNewsPoliteAnnouncement()
                 .testTag("archive_search_loading"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -753,6 +776,7 @@ private fun ArchiveSearchNoResults(modifier: Modifier) {
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(NutsNewsTheme.spacing.medium)
+                .nutsNewsPoliteAnnouncement()
                 .testTag("archive_search_no_results"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -796,6 +820,7 @@ private fun ArchiveSearchFailure(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(NutsNewsTheme.spacing.medium)
+                .nutsNewsPoliteAnnouncement()
                 .testTag("archive_search_failure"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -841,6 +866,7 @@ private fun ArchiveSearchErrorBanner(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .nutsNewsPoliteAnnouncement()
                 .testTag("archive_search_page_error"),
         shape = RoundedCornerShape(NutsNewsTheme.radii.small),
         color = Color.Red.copy(alpha = 0.16f),
@@ -868,7 +894,9 @@ private fun ArchiveSearchRetryButton(
 ) {
     Surface(
         modifier =
-            modifier.testTag("archive_search_retry"),
+            modifier
+                .nutsNewsMinimumTouchTarget()
+                .testTag("archive_search_retry"),
         onClick = onRetry,
         shape = CircleShape,
         color = NutsNewsTheme.colors.badgeBackground,

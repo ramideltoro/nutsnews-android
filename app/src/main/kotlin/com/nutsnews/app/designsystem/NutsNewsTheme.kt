@@ -24,6 +24,8 @@ private val LocalPalette =
         error("NutsNewsTheme is missing from the composition.")
     }
 
+private val LocalReducedMotion = staticCompositionLocalOf { false }
+
 object NutsNewsTheme {
     val appTheme: NutsNewsAppTheme
         @Composable
@@ -65,13 +67,28 @@ object NutsNewsTheme {
         @ReadOnlyComposable
         get() = NutsNewsTypographyDefaults
 
+    /**
+     * True when Android's animator duration scale is disabled.
+     *
+     * Compose animations honor the platform scale automatically. Feature code
+     * uses this value for non-animation delays and decorative infinite motion.
+     */
+    val reducedMotion: Boolean
+        @Composable
+        @ReadOnlyComposable
+        get() = LocalReducedMotion.current
+
     @Composable
     operator fun invoke(
         theme: NutsNewsAppTheme = NutsNewsAppTheme.Default,
         updateSystemBars: Boolean = true,
+        reducedMotionOverride: Boolean? = null,
         content: @Composable () -> Unit,
     ) {
         val palette = NutsNewsPalettes.forTheme(theme)
+        val reducedMotion =
+            reducedMotionOverride
+                ?: rememberNutsNewsReducedMotion()
         val colorScheme =
             if (theme.isDark) {
                 darkColorScheme(
@@ -114,6 +131,7 @@ object NutsNewsTheme {
         CompositionLocalProvider(
             LocalAppTheme provides theme,
             LocalPalette provides palette,
+            LocalReducedMotion provides reducedMotion,
         ) {
             MaterialTheme(
                 colorScheme = colorScheme,

@@ -1,6 +1,7 @@
 package com.nutsnews.app.feature.home
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -55,7 +56,9 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
@@ -64,6 +67,8 @@ import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.data.preferences.NutsNewsPersonalization
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import java.net.URI
 
 @Composable
@@ -87,7 +92,12 @@ fun HomeDashboard(
     val refreshRotation by
         animateFloatAsState(
             targetValue = refreshTurns * 360f,
-            animationSpec = spring(dampingRatio = 0.82f, stiffness = 370f),
+            animationSpec =
+                if (NutsNewsTheme.reducedMotion) {
+                    snap()
+                } else {
+                    spring(dampingRatio = 0.82f, stiffness = 370f)
+                },
             label = "For You refresh",
         )
     val personalizedPool =
@@ -187,12 +197,13 @@ private fun DashboardHero(uiState: HomeDashboardUiState) {
                 ) {
                     Text(
                         text = "TODAY’S GOOD-NEWS RESET",
-                        color = palette.accent,
+                        color = palette.accentText,
                         style = NutsNewsTheme.typography.caption,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         text = uiState.goalTitle,
+                        modifier = Modifier.nutsNewsHeading(),
                         color = palette.primaryText,
                         style = NutsNewsTheme.typography.metric,
                     )
@@ -308,6 +319,7 @@ private fun QuickActions(
     onArchiveSearch: () -> Unit,
     onPersonalize: () -> Unit,
 ) {
+    val useSingleColumn = LocalDensity.current.fontScale >= 1.5f
     val actions =
         listOf(
             DashboardAction(
@@ -369,7 +381,7 @@ private fun QuickActions(
                 .testTag("dashboard_actions"),
         verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
     ) {
-        actions.chunked(2).forEach { rowActions ->
+        actions.chunked(if (useSingleColumn) 1 else 2).forEach { rowActions ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
@@ -395,7 +407,10 @@ private fun DashboardActionCard(
         modifier =
             modifier
                 .heightIn(min = 128.dp)
-                .clickable(onClick = action.onClick)
+                .clickable(
+                    role = Role.Button,
+                    onClick = action.onClick,
+                )
                 .testTag("dashboard_action_${action.tag}"),
         shape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius),
         color = palette.cardBackgroundStrong,
@@ -428,7 +443,7 @@ private fun DashboardActionCard(
                     color = palette.primaryText,
                     style = NutsNewsTheme.typography.subheadline,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
@@ -507,10 +522,11 @@ private fun ForYouSection(
             if (isLoading) {
                 Box(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .height(66.dp)
-                            .testTag("for_you_loading"),
+                            Modifier
+                                .fillMaxWidth()
+                                .height(66.dp)
+                                .nutsNewsPoliteAnnouncement()
+                                .testTag("for_you_loading"),
                     contentAlignment = Alignment.Center,
                 ) {
                     CircularProgressIndicator(
@@ -545,7 +561,7 @@ private fun ForYouIconButton(
         onClick = onClick,
         modifier =
             modifier
-                .size(36.dp)
+                .size(48.dp)
                 .clip(CircleShape)
                 .background(palette.badgeBackground)
                 .border(
@@ -580,7 +596,10 @@ private fun ForYouStoryRow(
                     palette.cardBorder,
                     RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius),
                 )
-                .clickable(onClick = onClick)
+                .clickable(
+                    role = Role.Button,
+                    onClick = onClick,
+                )
                 .testTag("for_you_story_${article.stableId.value}")
                 .padding(NutsNewsTheme.spacing.small),
         horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),

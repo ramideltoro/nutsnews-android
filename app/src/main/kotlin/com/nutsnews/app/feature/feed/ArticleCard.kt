@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -47,6 +48,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +60,7 @@ import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -99,6 +104,7 @@ fun ArticleCard(
     val heartGlow = remember(article.stableId.value) { Animatable(0f) }
     val cardGlow = remember(article.stableId.value) { Animatable(0f) }
     val celebrationProgress = remember(article.stableId.value) { Animatable(1f) }
+    val reducedMotion = NutsNewsTheme.reducedMotion
 
     LaunchedEffect(isLiked) {
         if (isLiked != lastExternalLiked) {
@@ -108,6 +114,12 @@ fun ArticleCard(
     }
     LaunchedEffect(animationToken) {
         if (animationToken == 0) return@LaunchedEffect
+        if (reducedMotion) {
+            heartGlow.snapTo(0f)
+            cardGlow.snapTo(0f)
+            celebrationProgress.snapTo(1f)
+            return@LaunchedEffect
+        }
         if (animationIsLike) {
             heartGlow.snapTo(1f)
             cardGlow.snapTo(1f)
@@ -403,7 +415,7 @@ private fun ArticleCategoryRow(categories: List<String>) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .height(30.dp)
+                .heightIn(min = 30.dp)
                 .horizontalScroll(rememberScrollState())
                 .testTag("article_categories"),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -470,6 +482,7 @@ private fun ArticleTitle(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .nutsNewsHeading()
                 .testTag("article_title"),
         color = NutsNewsTheme.colors.primaryText,
         style =
@@ -558,7 +571,7 @@ private fun ArticleCardFooter(
                     Modifier
                         .weight(1f)
                         .testTag("article_source"),
-                color = NutsNewsTheme.colors.accentSoft,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.caption,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -577,6 +590,7 @@ private fun ReadStoryButton(
         text = "Read Story",
         modifier =
             modifier
+                .heightIn(min = MinimumTouchTarget)
                 .clip(CircleShape)
                 .background(nutsNewsButtonGradient())
                 .clickable(
@@ -603,7 +617,7 @@ private fun LikeStoryButton(
     Box(
         modifier =
             modifier
-                .size(38.dp)
+                .size(MinimumTouchTarget)
                 .shadow(
                     elevation = (22f * glow).dp,
                     shape = CircleShape,
@@ -621,6 +635,10 @@ private fun LikeStoryButton(
                     role = Role.Button,
                     onClick = onClick,
                 )
+                .semantics {
+                    contentDescription = if (isLiked) "Liked" else "Like story"
+                    stateDescription = if (isLiked) "Liked" else "Not liked"
+                }
                 .testTag("article_like_story"),
         contentAlignment = Alignment.Center,
     ) {
@@ -631,7 +649,7 @@ private fun LikeStoryButton(
                 } else {
                     Icons.Filled.FavoriteBorder
                 },
-            contentDescription = if (isLiked) "Liked" else "Like story",
+            contentDescription = null,
             modifier = Modifier.size(16.dp),
             tint = if (isLiked) palette.likedCardAccent else palette.accentHighlight,
         )
@@ -735,6 +753,7 @@ private enum class ThumbnailLoadState {
 
 private const val ThumbnailAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 6
+private val MinimumTouchTarget = 48.dp
 private const val GlowDurationMillis = 1_000
 private const val CardGlowHoldMillis = 650L
 private const val CardGlowFadeMillis = 350

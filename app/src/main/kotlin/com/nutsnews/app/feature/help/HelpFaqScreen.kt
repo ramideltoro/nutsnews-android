@@ -57,6 +57,7 @@ import androidx.compose.ui.unit.dp
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 
 @Composable
@@ -257,7 +258,10 @@ private fun HelpTopBar(onClose: () -> Unit) {
     ) {
         Text(
             text = "Help & F.A.Q.",
-            modifier = Modifier.align(Alignment.Center),
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             fontWeight = FontWeight.Bold,
@@ -266,7 +270,7 @@ private fun HelpTopBar(onClose: () -> Unit) {
             modifier =
                 Modifier
                     .align(Alignment.CenterEnd)
-                    .size(40.dp)
+                    .size(48.dp)
                     .testTag("help_close"),
             onClick = onClose,
             shape = CircleShape,
@@ -406,6 +410,7 @@ private fun HelpFeatureSection(
                 ) {
                     Text(
                         text = title,
+                        modifier = Modifier.nutsNewsHeading(),
                         color = NutsNewsTheme.colors.primaryText,
                         style = NutsNewsTheme.typography.headline,
                         fontWeight = FontWeight.SemiBold,
