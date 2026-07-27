@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.datastore.preferences)
+    implementation(libs.androidx.glance.appwidget)
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.lifecycle.viewmodel)
     implementation(libs.androidx.room.ktx)
@@ -90,6 +91,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
 
     testImplementation(libs.androidx.room.testing)
+    testImplementation(libs.androidx.glance.appwidget.testing)
+    testImplementation(libs.androidx.glance.testing)
     testImplementation(composeBom)
     testImplementation(libs.androidx.compose.ui.test.junit4)
     testImplementation(libs.junit4)

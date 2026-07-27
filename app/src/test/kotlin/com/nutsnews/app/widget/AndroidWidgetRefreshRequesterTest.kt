@@ -1,7 +1,6 @@
 package com.nutsnews.app.widget
 
 import android.app.Application
-import android.appwidget.AppWidgetManager
 import androidx.test.core.app.ApplicationProvider
 import com.nutsnews.app.BuildConfig
 import kotlin.test.assertEquals
@@ -16,7 +15,7 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class AndroidWidgetRefreshRequesterTest {
     @Test
-    fun refreshImmediatelyBroadcastsSystemAndNutsNewsActionsToThisPackage() {
+    fun refreshImmediatelyTargetsTheNutsNewsGlanceReceiver() {
         val application = ApplicationProvider.getApplicationContext<Application>()
         val shadowApplication = shadowOf(application)
         val beforeCount = shadowApplication.broadcastIntents.size
@@ -25,16 +24,12 @@ class AndroidWidgetRefreshRequesterTest {
 
         val broadcasts = shadowApplication.broadcastIntents.drop(beforeCount)
         assertEquals(
-            listOf(
-                AppWidgetManager.ACTION_APPWIDGET_UPDATE,
-                NutsNewsWidgetContract.ActionRefresh,
-            ),
+            listOf(NutsNewsWidgetContract.ActionRefresh),
             broadcasts.map { intent -> intent.action },
         )
-        assertTrue(
-            broadcasts.all { intent ->
-                intent.`package` == BuildConfig.APPLICATION_ID
-            },
+        assertEquals(
+            "${BuildConfig.APPLICATION_ID}.widget.NutsNewsWidgetReceiver",
+            broadcasts.single().component?.className,
         )
     }
 
