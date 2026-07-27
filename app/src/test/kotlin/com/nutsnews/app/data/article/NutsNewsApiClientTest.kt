@@ -9,6 +9,10 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import mockwebserver3.MockResponse
 import mockwebserver3.junit4.MockWebServerRule
@@ -107,6 +111,35 @@ class NutsNewsApiClientTest {
 
             assertIs<IOException>(error.cause)
             Unit
+        }
+
+    @Test
+    fun cancellingInFlightRequestPropagatesWithoutMappingItToTimeout() =
+        runBlocking {
+            serverRule.server.enqueue(
+                MockResponse
+                    .Builder()
+                    .body("""{"articles":[{"id":"too-late"}]}""")
+                    .bodyDelay(30, TimeUnit.SECONDS)
+                    .build(),
+            )
+            val httpClient =
+                OkHttpClient
+                    .Builder()
+                    .callTimeout(30, TimeUnit.SECONDS)
+                    .build()
+            val pending =
+                async(Dispatchers.IO) {
+                    client(transport = OkHttpTransport(httpClient))
+                        .fetchArticles(fetchPolicy = NutsNewsFetchPolicy.ReloadIgnoringCache)
+                }
+
+            val request = serverRule.server.takeRequest()
+            pending.cancel()
+
+            assertEquals("/api/articles?page=0", request.target)
+            assertFailsWith<CancellationException> { pending.await() }
+            assertTrue(pending.isCancelled)
         }
 
     @Test

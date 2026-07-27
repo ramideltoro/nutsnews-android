@@ -10,6 +10,8 @@ import java.io.InterruptedIOException
 import java.net.SocketTimeoutException
 import java.time.Duration
 import java.util.Locale
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
@@ -292,10 +294,13 @@ class NutsNewsApiClient(
             try {
                 transport.execute(request)
             } catch (error: SocketTimeoutException) {
+                currentCoroutineContext().ensureActive()
                 throw NutsNewsApiException.Timeout(error)
             } catch (error: InterruptedIOException) {
+                currentCoroutineContext().ensureActive()
                 throw NutsNewsApiException.Timeout(error)
             } catch (error: IOException) {
+                currentCoroutineContext().ensureActive()
                 throw NutsNewsApiException.Network(error)
             }
 
