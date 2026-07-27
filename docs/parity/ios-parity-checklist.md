@@ -381,8 +381,8 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T55 — Room and DataStore migration tests
 
-- [ ] P-T55-01 Create/migrate from every committed schema version.
-- [ ] P-T55-02 Defaults, invalid/future values, identity fallback,
+- [x] P-T55-01 Create/migrate from every committed schema version.
+- [x] P-T55-02 Defaults, invalid/future values, identity fallback,
   deduplication, timestamps, and all user data survive.
 
 ### T56 — Compose end-to-end tests

@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
+import androidx.datastore.preferences.core.stringPreferencesKey
 import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import java.io.File
 import java.nio.file.Files
@@ -189,6 +190,49 @@ class DataStoreUserPreferencesRepositoryTest {
 
             assertEquals(UserPreferences(), fixture.repository.preferences.first())
             assertTrue(file.exists())
+            fixture.close()
+        }
+
+    @Test
+    fun unknownFutureKeysSurviveWritesWhileFutureValuesDecodeSafely() =
+        runBlocking {
+            val fixture = fixture("future-safe")
+            val futureKey = stringPreferencesKey("nutsnews.preferences.future.v99")
+            fixture.dataStore.edit { preferences ->
+                preferences[futureKey] = "preserve-for-future-release"
+                preferences[DataStoreUserPreferencesRepository.Keys.SelectedTopics] =
+                    "science,future-topic"
+                preferences[DataStoreUserPreferencesRepository.Keys.SelectedMood] =
+                    "future-mood"
+                preferences[DataStoreUserPreferencesRepository.Keys.DailyGoal] = Int.MAX_VALUE
+                preferences[DataStoreUserPreferencesRepository.Keys.ReminderHour] =
+                    Int.MIN_VALUE
+                preferences[DataStoreUserPreferencesRepository.Keys.SelectedTheme] =
+                    "future-theme"
+            }
+
+            assertEquals(
+                UserPreferences(
+                    selectedTopicIds = setOf("science"),
+                    selectedMoodId = UserPreferenceDefaults.DefaultMoodId,
+                    dailyGoal = 5,
+                    reminder =
+                        ReminderConfiguration(
+                            enabled = false,
+                            hour = UserPreferenceDefaults.DefaultReminderHour,
+                        ),
+                    theme = NutsNewsAppTheme.Amber,
+                ),
+                fixture.repository.preferences.first(),
+            )
+
+            fixture.repository.setDailyGoal(4)
+
+            assertEquals(
+                "preserve-for-future-release",
+                fixture.dataStore.data.first()[futureKey],
+            )
+            assertEquals(4, fixture.repository.preferences.first().dailyGoal)
             fixture.close()
         }
 
