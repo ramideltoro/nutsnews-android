@@ -564,18 +564,39 @@ private fun ArticleListenModeSheet(
         containerColor = NutsNewsTheme.colors.cardBackgroundStrong,
         contentColor = NutsNewsTheme.colors.primaryText,
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .verticalScroll(rememberScrollState())
-                    .padding(
-                        start = NutsNewsTheme.spacing.medium,
-                        end = NutsNewsTheme.spacing.medium,
-                        bottom = 32.dp,
-                    ),
-            verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
-        ) {
+        ArticleListenModeContent(
+            brief = brief,
+            script = script,
+            uiState = uiState,
+            onToggle = onToggle,
+            onStop = onStop,
+            onDismiss = onDismiss,
+        )
+    }
+}
+
+@Composable
+internal fun ArticleListenModeContent(
+    brief: ArticleBriefContent,
+    script: ArticleListenScript,
+    uiState: ArticleListenUiState,
+    onToggle: () -> Unit,
+    onStop: () -> Unit,
+    onDismiss: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(
+                    start = NutsNewsTheme.spacing.medium,
+                    end = NutsNewsTheme.spacing.medium,
+                    bottom = 32.dp,
+                ),
+        verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+    ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -889,7 +910,6 @@ private fun ArticleListenModeSheet(
                     }
                 }
             }
-        }
     }
 }
 
