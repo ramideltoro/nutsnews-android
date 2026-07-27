@@ -207,6 +207,47 @@ class DailyDigestEngineTest {
         assertEquals(emptyList(), digest.remainingArticles)
     }
 
+    @Test
+    fun quickReadBoundaryAndWorthSavingFallbackAreDeterministic() {
+        val featured =
+            article(
+                id = "featured",
+                title = "Good kind hope community rescue",
+                summary = "A healing achievement.",
+            )
+        val exactlyQuick =
+            article(
+                id = "exactly-quick",
+                title = "Ordinary A",
+                summary = "x".repeat(260),
+                publishedAt = "z-date",
+            )
+        val tooLong =
+            article(
+                id = "too-long",
+                title = "Ordinary B",
+                summary = "x".repeat(261),
+                publishedAt = "a-date",
+            )
+
+        val digest =
+            DailyDigestEngine.digest(
+                articles = listOf(tooLong, exactlyQuick, featured),
+                savedStoryIds =
+                    setOf(
+                        featured.stableId,
+                        exactlyQuick.stableId,
+                        tooLong.stableId,
+                    ),
+                locale = Locale.US,
+            )
+
+        assertEquals(featured, digest.featuredArticle)
+        assertEquals(exactlyQuick, digest.quickReadArticle)
+        assertEquals(exactlyQuick, digest.worthSavingArticle)
+        assertEquals(listOf(tooLong), digest.remainingArticles)
+    }
+
     private fun article(
         id: String,
         title: String,

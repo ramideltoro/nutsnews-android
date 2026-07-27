@@ -143,6 +143,37 @@ class DataStoreUserPreferencesRepositoryTest {
         }
 
     @Test
+    fun legacyAndMalformedStoredThemesUseIosMigrationWithoutChangingFlags() =
+        runBlocking {
+            val fixture = fixture("legacy-themes")
+            val expectedThemes =
+                linkedMapOf(
+                    "plain" to NutsNewsAppTheme.Amber,
+                    "dark" to NutsNewsAppTheme.Amber,
+                    "darkPink" to NutsNewsAppTheme.Foxy,
+                    "lilac" to NutsNewsAppTheme.Sakura,
+                    "unknown" to NutsNewsAppTheme.Amber,
+                    "" to NutsNewsAppTheme.Amber,
+                )
+
+            expectedThemes.forEach { (rawValue, expectedTheme) ->
+                fixture.dataStore.edit { preferences ->
+                    preferences[DataStoreUserPreferencesRepository.Keys.SelectedTheme] = rawValue
+                    preferences[DataStoreUserPreferencesRepository.Keys.HapticsEnabled] = false
+                    preferences[
+                        DataStoreUserPreferencesRepository.Keys.ShowStatsOnLargeWidget
+                    ] = false
+                }
+
+                val preferences = fixture.repository.preferences.first()
+                assertEquals(expectedTheme, preferences.theme)
+                assertFalse(preferences.hapticsEnabled)
+                assertFalse(preferences.showStatsOnLargeWidget)
+            }
+            fixture.close()
+        }
+
+    @Test
     fun corruptedDataStoreFileIsReplacedWithDefaults() =
         runBlocking {
             val file = preferenceFile("corrupt")

@@ -149,6 +149,30 @@ class GoodMoodRecommendationEngineTest {
         assertEquals(emptyList(), result.rankedArticles)
     }
 
+    @Test
+    fun everyMoodSelectsItsExclusiveFrozenKeywordFixture() {
+        val expectedByMood =
+            mapOf(
+                GoodMood.Calm to article(id = "calm", title = "A peaceful garden"),
+                GoodMood.Hopeful to article(id = "hopeful", title = "A kind rescue"),
+                GoodMood.Inspired to article(id = "inspired", title = "A record award"),
+                GoodMood.Curious to article(id = "curious", title = "A science discovery"),
+            )
+        val neutral = article(id = "neutral", title = "Ordinary report")
+        val corpus = expectedByMood.values.toList() + neutral
+
+        GoodMood.entries.forEach { mood ->
+            val recommendations =
+                GoodMoodRecommendationEngine.recommendations(corpus, mood)
+
+            assertEquals(expectedByMood.getValue(mood), recommendations.featuredArticle)
+            assertEquals(
+                listOf(expectedByMood.getValue(mood)),
+                recommendations.rankedArticles,
+            )
+        }
+    }
+
     private fun article(
         id: String = "story",
         title: String,

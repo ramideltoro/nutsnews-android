@@ -368,9 +368,9 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T53 — Domain and persistence unit tests
 
-- [ ] P-T53-01 Cover decoding, identity, preferences, saves, notes, reflections,
+- [x] P-T53-01 Cover decoding, identity, preferences, saves, notes, reflections,
   and stats with deterministic clocks.
-- [ ] P-T53-02 Cover personalization, mood, digest, dates, defaults, and malformed
+- [x] P-T53-02 Cover personalization, mood, digest, dates, defaults, and malformed
   stored data.
 
 ### T54 — API and cache integration tests
