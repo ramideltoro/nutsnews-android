@@ -65,6 +65,7 @@ import com.nutsnews.app.feature.search.ArchiveSearchScreen
 import com.nutsnews.app.feature.search.ArchiveSearchViewModel
 import com.nutsnews.app.feature.settings.SettingsScreen
 import com.nutsnews.app.feature.settings.SettingsViewModel
+import com.nutsnews.app.feature.settings.ThemeSettingsScreen
 import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
@@ -582,6 +583,15 @@ class MainActivity : ComponentActivity() {
                                         AppDestination.WidgetSettings,
                                     )
                                 },
+                                onGoHome = bootstrapViewModel::onHomeRequested,
+                            )
+                        }
+
+                        AppDestination.ThemePicker -> {
+                            ThemeSettingsScreen(
+                                selectedTheme = settingsUiState.theme,
+                                onThemeSelected = settingsViewModel::selectTheme,
+                                onBack = bootstrapViewModel::onNavigateUp,
                                 onGoHome = bootstrapViewModel::onHomeRequested,
                             )
                         }
