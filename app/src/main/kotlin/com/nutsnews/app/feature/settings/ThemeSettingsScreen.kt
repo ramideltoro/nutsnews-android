@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -62,10 +63,13 @@ import androidx.compose.ui.unit.dp
 import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsPalette
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
@@ -77,11 +81,29 @@ fun ThemeSettingsScreen(
     modifier: Modifier = Modifier,
 ) {
     var displayedTheme by remember { mutableStateOf(selectedTheme) }
-    var glowTheme by remember { mutableStateOf<NutsNewsAppTheme?>(null) }
+    var glowStartTheme by remember { mutableStateOf<NutsNewsAppTheme?>(null) }
+    var glowEndTheme by remember { mutableStateOf<NutsNewsAppTheme?>(null) }
     var glowSequence by remember { mutableIntStateOf(0) }
-    val glowProgress = remember { Animatable(0f) }
+    var glowJob by remember { mutableStateOf<Job?>(null) }
+    val glowTimeline = remember { Animatable(1f) }
     val scope = rememberCoroutineScope()
     val reducedMotion = NutsNewsTheme.reducedMotion
+    val glowColor =
+        if (glowStartTheme != null && glowEndTheme != null) {
+            lerp(
+                start = NutsNewsPalettes.forTheme(checkNotNull(glowStartTheme)).accent,
+                stop = NutsNewsPalettes.forTheme(checkNotNull(glowEndTheme)).accent,
+                fraction = glowTimeline.value,
+            )
+        } else {
+            Color.Transparent
+        }
+    val glowStrength =
+        if (glowStartTheme == null || glowEndTheme == null) {
+            0f
+        } else {
+            1f - glowTimeline.value
+        }
 
     LaunchedEffect(selectedTheme) {
         displayedTheme = selectedTheme
@@ -92,27 +114,34 @@ fun ThemeSettingsScreen(
             val sequence = glowSequence + 1
             val previousTheme = displayedTheme
             glowSequence = sequence
-            glowTheme = previousTheme
+            glowStartTheme = previousTheme
+            glowEndTheme = theme
             displayedTheme = theme
             onThemeSelected(theme)
-            scope.launch {
+            glowJob?.cancel()
+            glowJob = scope.launch {
                 if (reducedMotion) {
-                    glowProgress.snapTo(0f)
-                    glowTheme = null
+                    glowTimeline.snapTo(1f)
+                    glowStartTheme = null
+                    glowEndTheme = null
                     return@launch
                 }
-                glowProgress.snapTo(1f)
-                glowTheme = theme
-                glowProgress.animateTo(
-                    targetValue = 0f,
+                glowTimeline.snapTo(0f)
+                glowTimeline.animateTo(
+                    targetValue = 1f,
                     animationSpec =
                         tween(
                             durationMillis = ThemeGlowDurationMillis,
                             easing = FastOutSlowInEasing,
                         ),
                 )
+                delay(
+                    NutsNewsMotion.ThemeGlowResetMillis -
+                        ThemeGlowDurationMillis,
+                )
                 if (glowSequence == sequence) {
-                    glowTheme = null
+                    glowStartTheme = null
+                    glowEndTheme = null
                 }
             }
         }
@@ -133,8 +162,8 @@ fun ThemeSettingsScreen(
                         .navigationBarsPadding(),
             ) {
                 ThemeSettingsTopBar(
-                    glowTheme = glowTheme,
-                    glowProgress = glowProgress.value,
+                    glowColor = glowColor,
+                    glowStrength = glowStrength,
                     onBack = onBack,
                     onGoHome = onGoHome,
                 )
@@ -153,8 +182,8 @@ fun ThemeSettingsScreen(
                         ThemeOptionRow(
                             theme = theme,
                             isSelected = theme == displayedTheme,
-                            glowTheme = glowTheme,
-                            glowProgress = glowProgress.value,
+                            glowColor = glowColor,
+                            glowStrength = glowStrength,
                             onClick = { selectTheme(theme) },
                         )
                     }
@@ -166,8 +195,8 @@ fun ThemeSettingsScreen(
 
 @Composable
 private fun ThemeSettingsTopBar(
-    glowTheme: NutsNewsAppTheme?,
-    glowProgress: Float,
+    glowColor: Color,
+    glowStrength: Float,
     onBack: () -> Unit,
     onGoHome: () -> Unit,
 ) {
@@ -199,8 +228,8 @@ private fun ThemeSettingsTopBar(
             icon = Icons.Filled.Home,
             contentDescription = "Go home",
             testTag = "theme_settings_home",
-            glowTheme = glowTheme,
-            glowProgress = glowProgress,
+            glowColor = glowColor,
+            glowStrength = glowStrength,
             onClick = onGoHome,
             modifier = Modifier.align(Alignment.CenterEnd),
         )
@@ -214,37 +243,32 @@ private fun ThemeToolbarButton(
     testTag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    glowTheme: NutsNewsAppTheme? = null,
-    glowProgress: Float = 0f,
+    glowColor: Color = Color.Transparent,
+    glowStrength: Float = 0f,
 ) {
-    val glowColor =
-        glowTheme
-            ?.let(NutsNewsPalettes::forTheme)
-            ?.accent
-            ?: Color.Transparent
     val shape = CircleShape
     Surface(
         modifier =
             modifier
                 .size(48.dp)
                 .shadow(
-                    elevation = (22f * glowProgress).dp,
+                    elevation = (NutsNewsMotion.ActionGlowRadiusDp * glowStrength).dp,
                     shape = shape,
-                    ambientColor = glowColor.copy(alpha = glowProgress * 0.72f),
-                    spotColor = glowColor.copy(alpha = glowProgress * 0.72f),
+                    ambientColor = glowColor.copy(alpha = glowStrength * 0.72f),
+                    spotColor = glowColor.copy(alpha = glowStrength * 0.72f),
                 ).testTag(testTag),
         onClick = onClick,
         shape = shape,
         color = NutsNewsTheme.colors.badgeBackground,
         border =
             BorderStroke(
-                if (glowProgress > 0f) {
+                if (glowStrength > 0f) {
                     NutsNewsTheme.borders.glow
                 } else {
                     NutsNewsTheme.borders.hairline
                 },
-                if (glowProgress > 0f) {
-                    glowColor.copy(alpha = glowProgress * 0.86f)
+                if (glowStrength > 0f) {
+                    glowColor.copy(alpha = glowStrength * 0.86f)
                 } else {
                     NutsNewsTheme.colors.cardBorder
                 },
@@ -265,39 +289,34 @@ private fun ThemeToolbarButton(
 private fun ThemeOptionRow(
     theme: NutsNewsAppTheme,
     isSelected: Boolean,
-    glowTheme: NutsNewsAppTheme?,
-    glowProgress: Float,
+    glowColor: Color,
+    glowStrength: Float,
     onClick: () -> Unit,
 ) {
     val palette = NutsNewsPalettes.forTheme(theme)
-    val glowColor =
-        glowTheme
-            ?.let(NutsNewsPalettes::forTheme)
-            ?.accent
-            ?: Color.Transparent
     val shape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius)
     Row(
         modifier =
             Modifier
                 .fillMaxWidth()
                 .shadow(
-                    elevation = (22f * glowProgress).dp,
+                    elevation = (NutsNewsMotion.ActionGlowRadiusDp * glowStrength).dp,
                     shape = shape,
-                    ambientColor = glowColor.copy(alpha = glowProgress * 0.74f),
-                    spotColor = glowColor.copy(alpha = glowProgress * 0.74f),
+                    ambientColor = glowColor.copy(alpha = glowStrength * 0.74f),
+                    spotColor = glowColor.copy(alpha = glowStrength * 0.74f),
                 ).clip(shape)
                 .background(palette.backgroundGradient.first())
                 .border(
                     width =
                         when {
-                            glowProgress > 0f -> NutsNewsTheme.borders.glow
+                            glowStrength > 0f -> NutsNewsTheme.borders.glow
                             isSelected -> NutsNewsTheme.borders.selected
                             else -> NutsNewsTheme.borders.hairline
                         },
                     color =
                         when {
-                            glowProgress > 0f ->
-                                glowColor.copy(alpha = glowProgress * 0.88f)
+                            glowStrength > 0f ->
+                                glowColor.copy(alpha = glowStrength * 0.88f)
 
                             isSelected -> palette.accent
                             else -> palette.cardBorder
@@ -462,7 +481,7 @@ private val NutsNewsAppTheme.icon: ImageVector
             NutsNewsAppTheme.Bambi -> Icons.Filled.Eco
         }
 
-internal const val ThemeGlowDurationMillis = 1_000
+internal const val ThemeGlowDurationMillis = NutsNewsMotion.ThemeGlowMillis
 
 @Preview(showBackground = true)
 @Composable

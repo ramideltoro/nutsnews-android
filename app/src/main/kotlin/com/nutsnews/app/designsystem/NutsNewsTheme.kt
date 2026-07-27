@@ -3,6 +3,11 @@ package com.nutsnews.app.designsystem
 import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.FiniteAnimationSpec
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -11,6 +16,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
@@ -85,10 +91,14 @@ object NutsNewsTheme {
         reducedMotionOverride: Boolean? = null,
         content: @Composable () -> Unit,
     ) {
-        val palette = NutsNewsPalettes.forTheme(theme)
         val reducedMotion =
             reducedMotionOverride
                 ?: rememberNutsNewsReducedMotion()
+        val palette =
+            animateNutsNewsPalette(
+                target = NutsNewsPalettes.forTheme(theme),
+                reducedMotion = reducedMotion,
+            )
         val colorScheme =
             if (theme.isDark) {
                 darkColorScheme(
@@ -141,6 +151,67 @@ object NutsNewsTheme {
             )
         }
     }
+}
+
+@Composable
+private fun animateNutsNewsPalette(
+    target: NutsNewsPalette,
+    reducedMotion: Boolean,
+): NutsNewsPalette {
+    val animationSpec: FiniteAnimationSpec<Color> =
+        if (reducedMotion) {
+            snap()
+        } else {
+            tween(
+                durationMillis = NutsNewsMotion.ThemeChangeMillis,
+                easing = FastOutSlowInEasing,
+            )
+        }
+
+    @Composable
+    fun animated(
+        color: Color,
+        label: String,
+    ): Color =
+        animateColorAsState(
+            targetValue = color,
+            animationSpec = animationSpec,
+            label = label,
+        ).value
+
+    return NutsNewsPalette(
+        accent = animated(target.accent, "Theme accent"),
+        accentRich = animated(target.accentRich, "Theme rich accent"),
+        accentDeep = animated(target.accentDeep, "Theme deep accent"),
+        accentSoft = animated(target.accentSoft, "Theme soft accent"),
+        accentText = animated(target.accentText, "Theme accent text"),
+        accentHighlight = animated(target.accentHighlight, "Theme highlight"),
+        accentGlow = animated(target.accentGlow, "Theme glow"),
+        cardBackground = animated(target.cardBackground, "Theme card"),
+        cardBackgroundStrong = animated(target.cardBackgroundStrong, "Theme strong card"),
+        cardBorder = animated(target.cardBorder, "Theme card border"),
+        likedCardAccent = animated(target.likedCardAccent, "Theme liked accent"),
+        likedCardBorder = animated(target.likedCardBorder, "Theme liked border"),
+        likedCardGlow = animated(target.likedCardGlow, "Theme liked glow"),
+        badgeBackground = animated(target.badgeBackground, "Theme badge"),
+        primaryText = animated(target.primaryText, "Theme primary text"),
+        secondaryText = animated(target.secondaryText, "Theme secondary text"),
+        mutedText = animated(target.mutedText, "Theme muted text"),
+        buttonText = animated(target.buttonText, "Theme button text"),
+        backgroundGradient =
+            target.backgroundGradient.mapIndexed { index, color ->
+                animated(color, "Theme background $index")
+            },
+        backgroundOverlay = animated(target.backgroundOverlay, "Theme background overlay"),
+        buttonGradient =
+            target.buttonGradient.mapIndexed { index, color ->
+                animated(color, "Theme button gradient $index")
+            },
+        categoryDots =
+            target.categoryDots.mapIndexed { index, color ->
+                animated(color, "Theme category dot $index")
+            },
+    )
 }
 
 @Composable

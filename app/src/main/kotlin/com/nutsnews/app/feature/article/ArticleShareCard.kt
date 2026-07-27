@@ -28,6 +28,7 @@ import coil3.request.SuccessResult
 import coil3.request.allowHardware
 import coil3.toBitmap
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.coroutines.cancellation.CancellationException
@@ -37,6 +38,7 @@ import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -83,8 +85,9 @@ class ArticleShareCardController(
                     val sharePackage =
                         withContext(workDispatcher) {
                             packageCreator.create(article)
-                        }
+                    }
                     shareLauncher.launch(sharePackage)
+                    delay(NutsNewsMotion.ShareCreatingResetMillis)
                     mutableUiState.value = ArticleShareCardUiState()
                 } catch (cancellation: CancellationException) {
                     mutableUiState.value = ArticleShareCardUiState()

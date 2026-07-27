@@ -66,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.data.preferences.NutsNewsPersonalization
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
@@ -96,7 +97,10 @@ fun HomeDashboard(
                 if (NutsNewsTheme.reducedMotion) {
                     snap()
                 } else {
-                    spring(dampingRatio = 0.82f, stiffness = 370f)
+                    spring(
+                        dampingRatio = NutsNewsMotion.DashboardSpringDamping,
+                        stiffness = 370f,
+                    )
                 },
             label = "For You refresh",
         )

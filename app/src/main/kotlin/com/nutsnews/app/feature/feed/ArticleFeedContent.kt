@@ -1,6 +1,9 @@
 package com.nutsnews.app.feature.feed
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -31,9 +34,12 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
 import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
@@ -46,6 +52,7 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
@@ -271,20 +278,22 @@ private fun PopulatedFeed(
                 items = uiState.articles,
                 key = { _, article -> article.id },
             ) { index, article ->
-                FeedWidthContainer(isTabletLandscape) {
-                    ArticleCard(
-                        article = article,
-                        layout = cardLayout,
-                        isLiked = article.stableId in likedStoryIds,
-                        onReadStory = onOpenArticle,
-                        onLikeStory = onToggleLiked,
-                        hapticsEnabled = hapticsEnabled,
-                        onLikeHaptic = {
-                            view.performHapticFeedback(
-                                HapticFeedbackConstants.CONTEXT_CLICK,
-                            )
-                        },
-                    )
+                FeedScrollEntrance(article.id) {
+                    FeedWidthContainer(isTabletLandscape) {
+                        ArticleCard(
+                            article = article,
+                            layout = cardLayout,
+                            isLiked = article.stableId in likedStoryIds,
+                            onReadStory = onOpenArticle,
+                            onLikeStory = onToggleLiked,
+                            hapticsEnabled = hapticsEnabled,
+                            onLikeHaptic = {
+                                view.performHapticFeedback(
+                                    HapticFeedbackConstants.CONTEXT_CLICK,
+                                )
+                            },
+                        )
+                    }
                 }
                 if (index == uiState.articles.lastIndex) {
                     LaunchedEffect(article.id, uiState.nextPage) {
@@ -329,6 +338,57 @@ private fun PopulatedFeed(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FeedScrollEntrance(
+    itemKey: String,
+    content: @Composable () -> Unit,
+) {
+    val reducedMotion = NutsNewsTheme.reducedMotion
+    val progress =
+        remember(itemKey) {
+            Animatable(if (reducedMotion) 1f else 0f)
+        }
+    val offsetPixels =
+        with(LocalDensity.current) {
+            NutsNewsMotion.FeedEntranceOffsetDp.dp.toPx()
+        }
+
+    LaunchedEffect(itemKey, reducedMotion) {
+        if (reducedMotion) {
+            progress.snapTo(1f)
+        } else {
+            progress.animateTo(
+                targetValue = 1f,
+                animationSpec =
+                    tween(
+                        durationMillis = NutsNewsMotion.FeedEntranceMillis,
+                        easing = FastOutSlowInEasing,
+                    ),
+            )
+        }
+    }
+
+    val value = progress.value
+    Box(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    alpha =
+                        NutsNewsMotion.FeedEntranceStartAlpha +
+                            ((1f - NutsNewsMotion.FeedEntranceStartAlpha) * value)
+                    val scale =
+                        NutsNewsMotion.FeedEntranceStartScale +
+                            ((1f - NutsNewsMotion.FeedEntranceStartScale) * value)
+                    scaleX = scale
+                    scaleY = scale
+                    translationY = offsetPixels * (1f - value)
+                }.testTag("feed_scroll_entrance_$itemKey"),
+    ) {
+        content()
     }
 }
 

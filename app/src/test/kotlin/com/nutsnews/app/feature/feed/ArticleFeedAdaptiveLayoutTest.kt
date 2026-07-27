@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsAdaptiveWindow
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
 import kotlin.test.assertEquals
@@ -96,6 +97,7 @@ abstract class ArticleFeedAdaptiveLayoutContract(
             .performScrollTo()
             .assertIsDisplayed()
             .performClick()
+        composeRule.mainClock.advanceTimeBy(NutsNewsMotion.ActionOpenDelayMillis + 16L)
         assertEquals(listOf(article), opened)
     }
 

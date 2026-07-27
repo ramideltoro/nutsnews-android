@@ -34,6 +34,7 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryReflection
 import com.nutsnews.app.core.model.StoryReflectionReaction
 import com.nutsnews.app.designsystem.NutsNewsAdaptiveWindow
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
 import java.time.Instant
@@ -779,8 +780,19 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
             .performScrollTo()
             .assertTextEquals("Pause")
             .performClick()
+        composeRule.mainClock.advanceTimeBy(
+            NutsNewsMotion.ListenPausedTransitionMillis + 16L,
+        )
+        composeRule
+            .onNodeWithTag(
+                "listen_mode_paused_indicator",
+                useUnmergedTree = true,
+            )
+            .performScrollTo()
+            .assertIsDisplayed()
         composeRule
             .onNodeWithTag("listen_mode_primary")
+            .performScrollTo()
             .assertTextEquals("Resume")
             .performClick()
         composeRule

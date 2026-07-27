@@ -38,6 +38,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -59,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsPalettes
+import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
@@ -104,6 +106,10 @@ fun ArticleCard(
     val heartGlow = remember(article.stableId.value) { Animatable(0f) }
     val cardGlow = remember(article.stableId.value) { Animatable(0f) }
     val celebrationProgress = remember(article.stableId.value) { Animatable(1f) }
+    var showCelebration by
+        remember(article.stableId.value) {
+            mutableStateOf(false)
+        }
     val reducedMotion = NutsNewsTheme.reducedMotion
 
     LaunchedEffect(isLiked) {
@@ -118,47 +124,68 @@ fun ArticleCard(
             heartGlow.snapTo(0f)
             cardGlow.snapTo(0f)
             celebrationProgress.snapTo(1f)
+            showCelebration = false
             return@LaunchedEffect
         }
         if (animationIsLike) {
             heartGlow.snapTo(1f)
-            cardGlow.snapTo(1f)
+            cardGlow.snapTo(0f)
             celebrationProgress.snapTo(0f)
+            showCelebration = true
             coroutineScope {
                 launch {
                     heartGlow.animateTo(
                         targetValue = 0f,
-                        animationSpec = tween(durationMillis = GlowDurationMillis),
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.ActionGlowMillis),
                     )
                 }
                 launch {
-                    delay(CardGlowHoldMillis)
+                    cardGlow.animateTo(
+                        targetValue = 1f,
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.LikeGlowInMillis),
+                    )
+                    delay(
+                        NutsNewsMotion.LikeActiveWindowMillis -
+                            NutsNewsMotion.LikeGlowInMillis,
+                    )
                     cardGlow.animateTo(
                         targetValue = 0f,
-                        animationSpec = tween(durationMillis = CardGlowFadeMillis),
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.LikeSettleMillis),
                     )
                 }
                 launch {
                     celebrationProgress.animateTo(
                         targetValue = 1f,
-                        animationSpec = tween(durationMillis = CelebrationDurationMillis),
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.CelebrationTravelMillis),
                     )
+                    delay(
+                        NutsNewsMotion.CelebrationClearMillis -
+                            NutsNewsMotion.CelebrationTravelMillis,
+                    )
+                    showCelebration = false
                 }
             }
         } else {
             heartGlow.snapTo(1f)
             celebrationProgress.snapTo(1f)
+            showCelebration = false
             coroutineScope {
                 launch {
                     heartGlow.animateTo(
                         targetValue = 0f,
-                        animationSpec = tween(durationMillis = GlowDurationMillis),
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.ActionGlowMillis),
                     )
                 }
                 launch {
                     cardGlow.animateTo(
                         targetValue = 0f,
-                        animationSpec = tween(durationMillis = UnlikeFadeMillis),
+                        animationSpec =
+                            tween(durationMillis = NutsNewsMotion.UnlikeMillis),
                     )
                 }
             }
@@ -170,7 +197,7 @@ fun ArticleCard(
         if (showLikedStyling) palette.likedCardBorder else palette.cardBorder
     val cardBorderWidth =
         if (showLikedStyling) NutsNewsTheme.borders.selected else 1.25.dp
-    val baseShadow = if (isCompact) 10f else 16f
+    val baseShadow = 16f
     val shadowElevation = (baseShadow + (18f * cardGlow.value)).dp
     val shadowColor =
         if (cardGlow.value > 0f) palette.likedCardGlow else palette.accentGlow
@@ -239,7 +266,7 @@ fun ArticleCard(
                         .testTag("article_card_glow"),
             )
         }
-        if (animationIsLike && celebrationProgress.value < 1f) {
+        if (animationIsLike && showCelebration) {
             CelebrationBurst(
                 progress = celebrationProgress.value,
                 modifier =
@@ -586,16 +613,67 @@ private fun ReadStoryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val palette = NutsNewsTheme.colors
+    val reducedMotion = NutsNewsTheme.reducedMotion
+    val glow = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    var isPending by remember { mutableStateOf(false) }
+    val trigger: () -> Unit = {
+        if (!isPending) {
+            if (reducedMotion) {
+                onClick()
+            } else {
+                isPending = true
+                scope.launch {
+                    glow.snapTo(1f)
+                    launch {
+                        glow.animateTo(
+                            targetValue = 0f,
+                            animationSpec =
+                                tween(durationMillis = NutsNewsMotion.ActionGlowMillis),
+                        )
+                    }
+                    delay(NutsNewsMotion.ActionOpenDelayMillis)
+                    onClick()
+                    delay(
+                        NutsNewsMotion.ActionGlowResetMillis -
+                            NutsNewsMotion.ActionOpenDelayMillis,
+                    )
+                    glow.snapTo(0f)
+                    isPending = false
+                }
+            }
+        }
+    }
+    val glowProgress = glow.value
+
     Text(
         text = "Read Story",
         modifier =
             modifier
                 .heightIn(min = MinimumTouchTarget)
+                .shadow(
+                    elevation = (NutsNewsMotion.ActionGlowRadiusDp * glowProgress).dp,
+                    shape = CircleShape,
+                    ambientColor =
+                        palette.accentHighlight.copy(alpha = glowProgress * 0.72f),
+                    spotColor = palette.accentGlow.copy(alpha = glowProgress * 0.55f),
+                )
+                .graphicsLayer {
+                    scaleX = 1f + (glowProgress * 0.035f)
+                    scaleY = 1f + (glowProgress * 0.035f)
+                }
                 .clip(CircleShape)
                 .background(nutsNewsButtonGradient())
+                .border(
+                    width = if (glowProgress > 0f) 2.dp else 0.dp,
+                    color =
+                        palette.accentHighlight.copy(alpha = glowProgress * 0.86f),
+                    shape = CircleShape,
+                )
                 .clickable(
                     role = Role.Button,
-                    onClick = onClick,
+                    onClick = trigger,
                 )
                 .testTag("article_read_story")
                 .padding(horizontal = 18.dp, vertical = 9.dp),
@@ -754,8 +832,3 @@ private enum class ThumbnailLoadState {
 private const val ThumbnailAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 6
 private val MinimumTouchTarget = 48.dp
-private const val GlowDurationMillis = 1_000
-private const val CardGlowHoldMillis = 650L
-private const val CardGlowFadeMillis = 350
-private const val UnlikeFadeMillis = 250
-private const val CelebrationDurationMillis = 2_000

@@ -14,7 +14,9 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -202,6 +204,31 @@ class ArticleShareCardControllerTest {
             advanceUntilIdle()
             assertEquals(listOf(article), creator.createdArticles)
             assertEquals(listOf(creator.sharePackage), launcher.launchedPackages)
+            assertEquals(ArticleShareCardUiState(), controller.uiState.value)
+        }
+
+    @Test
+    fun creatingGlowRemainsVisibleForTheIosResetWindowAfterSharesheetLaunch() =
+        runTest {
+            val dispatcher = StandardTestDispatcher(testScheduler)
+            val launcher = RecordingShareLauncher()
+            val controller =
+                ArticleShareCardController(
+                    scope = this,
+                    packageCreator = RecordingSharePackageCreator(),
+                    shareLauncher = launcher,
+                    workDispatcher = dispatcher,
+                )
+
+            controller.share(shareArticle())
+            runCurrent()
+
+            assertEquals(1, launcher.launchedPackages.size)
+            assertTrue(controller.uiState.value.isCreating)
+            advanceTimeBy(799)
+            assertTrue(controller.uiState.value.isCreating)
+            advanceTimeBy(1)
+            runCurrent()
             assertEquals(ArticleShareCardUiState(), controller.uiState.value)
         }
 
