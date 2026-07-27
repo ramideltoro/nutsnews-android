@@ -37,6 +37,10 @@
       {
         "context": "Release signing contract",
         "app_id": 15368
+      },
+      {
+        "context": "Google Play provisioning contract",
+        "app_id": 15368
       }
     ]
   },

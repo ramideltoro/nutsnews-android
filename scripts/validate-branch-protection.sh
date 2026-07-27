@@ -27,6 +27,7 @@ expected_checks=(
   "CodeQL (Java/Kotlin)"
   "Branch protection policy"
   "Release signing contract"
+  "Google Play provisioning contract"
 )
 
 configured_checks=()
@@ -64,6 +65,7 @@ literal_workflow_names=(
   "CodeQL (Java/Kotlin)"
   "Branch protection policy"
   "Release signing contract"
+  "Google Play provisioning contract"
 )
 
 for check_name in "${literal_workflow_names[@]}"; do
