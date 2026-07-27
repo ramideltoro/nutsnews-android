@@ -67,6 +67,8 @@ import com.nutsnews.app.feature.splash.StartupSplash
 import com.nutsnews.app.feature.splash.StartupSplashTiming
 import com.nutsnews.app.feature.splash.StartupSplashUiState
 import com.nutsnews.app.feature.splash.StartupSplashViewModel
+import com.nutsnews.app.feature.stats.ReadingStatsScreen
+import com.nutsnews.app.feature.stats.ReadingStatsViewModel
 import com.nutsnews.app.navigation.AppDestination
 import com.nutsnews.app.navigation.AppNavigator
 import com.nutsnews.app.reminder.DailyReminderContract
@@ -162,6 +164,16 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val readingStatsViewModel: ReadingStatsViewModel by viewModels {
+        val container = (application as NutsNewsApplication).container
+        ReadingStatsViewModel.Factory(
+            userPreferencesRepository = container.userPreferencesRepository,
+            readingStatsRepository = container.readingStatsRepository,
+            savedStoryRepository = container.savedStoryRepository,
+            storyNoteRepository = container.storyNoteRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -188,6 +200,8 @@ class MainActivity : ComponentActivity() {
                 savedStoriesViewModel.uiState.collectAsStateWithLifecycle()
             val archiveSearchUiState by
                 archiveSearchViewModel.uiState.collectAsStateWithLifecycle()
+            val readingStatsUiState by
+                readingStatsViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
                 remember { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
@@ -528,6 +542,13 @@ class MainActivity : ComponentActivity() {
                                         AppDestination.ArticleDetail(article.stableId),
                                     )
                                 },
+                                onClose = bootstrapViewModel::onNavigateUp,
+                            )
+                        }
+
+                        AppDestination.ReadingStats -> {
+                            ReadingStatsScreen(
+                                uiState = readingStatsUiState,
                                 onClose = bootstrapViewModel::onNavigateUp,
                             )
                         }
