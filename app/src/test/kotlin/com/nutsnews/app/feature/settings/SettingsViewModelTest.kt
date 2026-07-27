@@ -74,7 +74,16 @@ class SettingsViewModelTest {
                 InMemoryUserPreferencesRepository(
                     UserPreferences(theme = NutsNewsAppTheme.Amber),
                 )
-            val viewModel = SettingsViewModel(preferences)
+            var widgetRefreshCount = 0
+            val viewModel =
+                SettingsViewModel(
+                    userPreferencesRepository = preferences,
+                    widgetRefreshRequester =
+                        WidgetRefreshRequester {
+                            widgetRefreshCount += 1
+                            true
+                        },
+                )
             viewModel.uiState.first { state -> !state.isLoading }
 
             viewModel.selectTheme(NutsNewsAppTheme.Friday)
@@ -88,6 +97,7 @@ class SettingsViewModelTest {
                 NutsNewsAppTheme.Friday,
                 preferences.preferences.first().theme,
             )
+            assertEquals(1, widgetRefreshCount)
 
             viewModel.selectTheme(NutsNewsAppTheme.Friday)
             mainDispatcher.scheduler.advanceUntilIdle()
@@ -95,6 +105,7 @@ class SettingsViewModelTest {
                 NutsNewsAppTheme.Friday,
                 preferences.preferences.first().theme,
             )
+            assertEquals(1, widgetRefreshCount)
         }
 
     @Test

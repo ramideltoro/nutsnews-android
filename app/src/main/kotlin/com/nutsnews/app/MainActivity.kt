@@ -135,6 +135,7 @@ class MainActivity : ComponentActivity() {
             readingStatsRepository = container.readingStatsRepository,
             storyNoteRepository = container.storyNoteRepository,
             storyReflectionRepository = container.storyReflectionRepository,
+            widgetRefreshRequester = container.widgetRefreshRequester,
         )
     }
 
@@ -142,6 +143,8 @@ class MainActivity : ComponentActivity() {
         PersonalizationViewModel.Factory(
             userPreferencesRepository =
                 (application as NutsNewsApplication).container.userPreferencesRepository,
+            widgetRefreshRequester =
+                (application as NutsNewsApplication).container.widgetRefreshRequester,
         )
     }
 

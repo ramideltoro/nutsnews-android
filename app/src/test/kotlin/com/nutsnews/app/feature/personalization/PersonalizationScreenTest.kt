@@ -16,6 +16,7 @@ import com.nutsnews.app.data.preferences.InMemoryUserPreferencesRepository
 import com.nutsnews.app.data.preferences.ReminderConfiguration
 import com.nutsnews.app.data.preferences.UserPreferences
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.widget.WidgetRefreshRequester
 import java.util.concurrent.atomic.AtomicInteger
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -244,6 +245,43 @@ class PersonalizationScreenTest {
             setOf("nature"),
             runBlocking { repository.preferences.first().selectedTopicIds },
         )
+    }
+
+    @Test
+    fun dailyGoalEditsAndCompletedSavesRequestWidgetRefreshes() {
+        val repository = InMemoryUserPreferencesRepository()
+        val refreshCount = AtomicInteger()
+        val viewModel =
+            PersonalizationViewModel(
+                userPreferencesRepository = repository,
+                widgetRefreshRequester =
+                    WidgetRefreshRequester {
+                        refreshCount.incrementAndGet()
+                        true
+                    },
+            )
+        setContent(viewModel)
+        composeRule.waitUntil {
+            !viewModel.uiState.value.isLoading
+        }
+
+        viewModel.onDailyGoalChanged(4)
+        composeRule.waitUntil {
+            runBlocking { repository.preferences.first().dailyGoal == 4 }
+        }
+        assertEquals(1, refreshCount.get())
+
+        viewModel.onMoodSelected("hopeful")
+        composeRule.waitUntil {
+            runBlocking { repository.preferences.first().selectedMoodId == "hopeful" }
+        }
+        assertEquals(1, refreshCount.get())
+
+        viewModel.save()
+        composeRule.waitUntil {
+            !viewModel.uiState.value.isSaving
+        }
+        assertEquals(2, refreshCount.get())
     }
 
     private fun setContent(

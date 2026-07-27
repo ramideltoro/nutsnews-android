@@ -13,7 +13,10 @@ import com.nutsnews.app.navigation.AppNavigator
 import com.nutsnews.app.navigation.DefaultAppNavigator
 import com.nutsnews.app.reminder.DailyReminderManager
 import com.nutsnews.app.reminder.NoOpDailyReminderManager
+import com.nutsnews.app.widget.DefaultWidgetDataPipeline
 import com.nutsnews.app.widget.NoOpWidgetRefreshRequester
+import com.nutsnews.app.widget.ResponseCacheWidgetArticleStore
+import com.nutsnews.app.widget.WidgetDataProvider
 import com.nutsnews.app.widget.WidgetRefreshRequester
 
 interface AppContainer {
@@ -25,6 +28,7 @@ interface AppContainer {
     val savedStoryRepository: SavedStoryRepository
     val storyNoteRepository: StoryNoteRepository
     val storyReflectionRepository: StoryReflectionRepository
+    val widgetDataProvider: WidgetDataProvider
     val widgetRefreshRequester: WidgetRefreshRequester
 }
 
@@ -47,5 +51,14 @@ class DefaultAppContainer(
 
     override val articleApiClient: NutsNewsApiClient by lazy {
         NutsNewsApiClient(responseCache = responseCache)
+    }
+
+    override val widgetDataProvider: WidgetDataProvider by lazy {
+        DefaultWidgetDataPipeline(
+            articleSource = articleApiClient,
+            articleStore = ResponseCacheWidgetArticleStore(responseCache),
+            userPreferencesRepository = userPreferencesRepository,
+            readingStatsRepository = readingStatsRepository,
+        )
     }
 }

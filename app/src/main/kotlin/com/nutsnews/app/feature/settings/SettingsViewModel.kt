@@ -31,6 +31,7 @@ class SettingsViewModel(
         if (theme == uiState.value.theme) return
         viewModelScope.launch {
             userPreferencesRepository.setTheme(theme)
+            widgetRefreshRequester.requestRefresh()
         }
     }
 

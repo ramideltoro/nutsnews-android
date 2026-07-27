@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.nutsnews.app.data.preferences.UserPreferenceDefaults
 import com.nutsnews.app.data.preferences.UserPreferences
 import com.nutsnews.app.data.preferences.UserPreferencesRepository
+import com.nutsnews.app.widget.NoOpWidgetRefreshRequester
+import com.nutsnews.app.widget.WidgetRefreshRequester
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +16,8 @@ import kotlinx.coroutines.launch
 
 class PersonalizationViewModel(
     private val userPreferencesRepository: UserPreferencesRepository,
+    private val widgetRefreshRequester: WidgetRefreshRequester =
+        NoOpWidgetRefreshRequester,
 ) : ViewModel() {
     private val mutableUiState = MutableStateFlow(PersonalizationUiState())
     val uiState: StateFlow<PersonalizationUiState> = mutableUiState.asStateFlow()
@@ -64,7 +68,7 @@ class PersonalizationViewModel(
         updateDraft { current ->
             current.copy(dailyGoal = sanitizedGoal)
         }
-        persistIosBoundEdit { preferences ->
+        persistIosBoundEdit(refreshWidget = true) { preferences ->
             preferences.copy(dailyGoal = sanitizedGoal)
         }
     }
@@ -121,6 +125,7 @@ class PersonalizationViewModel(
                     draft.toPreferences(previous)
                 }
             }.onSuccess {
+                widgetRefreshRequester.requestRefresh()
                 val savedPreferences = draft.toPreferences(persistedPreferences)
                 persistedPreferences = savedPreferences
                 mutableUiState.value =
@@ -163,6 +168,7 @@ class PersonalizationViewModel(
     }
 
     private fun persistIosBoundEdit(
+        refreshWidget: Boolean = false,
         transform: (UserPreferences) -> UserPreferences,
     ) {
         if (mutableUiState.value.isLoading || mutableUiState.value.isSaving) return
@@ -170,6 +176,10 @@ class PersonalizationViewModel(
         viewModelScope.launch {
             runCatching {
                 userPreferencesRepository.updatePreferences(transform)
+            }.onSuccess {
+                if (refreshWidget) {
+                    widgetRefreshRequester.requestRefresh()
+                }
             }.onFailure {
                 mutableUiState.update { current ->
                     current.copy(
@@ -182,13 +192,18 @@ class PersonalizationViewModel(
 
     class Factory(
         private val userPreferencesRepository: UserPreferencesRepository,
+        private val widgetRefreshRequester: WidgetRefreshRequester =
+            NoOpWidgetRefreshRequester,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             require(modelClass.isAssignableFrom(PersonalizationViewModel::class.java)) {
                 "Unknown ViewModel class: ${modelClass.name}"
             }
-            return PersonalizationViewModel(userPreferencesRepository) as T
+            return PersonalizationViewModel(
+                userPreferencesRepository = userPreferencesRepository,
+                widgetRefreshRequester = widgetRefreshRequester,
+            ) as T
         }
     }
 }
