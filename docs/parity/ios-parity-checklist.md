@@ -393,10 +393,10 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T57 — Screenshot parity tests
 
-- [ ] P-T57-01 Goldens cover every major S01–S26 loading/empty/error/populated state.
-- [ ] P-T57-02 All themes, phone/tablet widths, large text, and widget sizes are
+- [x] P-T57-01 Goldens cover every major S01–S26 loading/empty/error/populated state.
+- [x] P-T57-02 All themes, phone/tablet widths, large text, and widget sizes are
   represented.
-- [ ] P-T57-03 Comparison failures retain actionable diff artifacts.
+- [x] P-T57-03 Comparison failures retain actionable diff artifacts.
 
 ### T58 — Emulator-matrix CI
 

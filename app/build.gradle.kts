@@ -5,6 +5,13 @@ plugins {
     alias(libs.plugins.room)
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty(
+        "nutsnews.recordGoldens",
+        providers.gradleProperty("nutsnews.recordGoldens").orElse("false").get(),
+    )
+}
+
 android {
     namespace = "com.nutsnews.app"
     compileSdk = 36
