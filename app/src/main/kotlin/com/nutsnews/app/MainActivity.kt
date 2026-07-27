@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +36,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.feed.ArticleFeedViewModel
+import com.nutsnews.app.feature.feed.FeedScreen
 import com.nutsnews.app.feature.personalization.PersonalizationMode
 import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationViewModel
@@ -64,6 +67,13 @@ class MainActivity : ComponentActivity() {
 
     private val startupSplashViewModel: StartupSplashViewModel by viewModels()
 
+    private val articleFeedViewModel: ArticleFeedViewModel by viewModels {
+        ArticleFeedViewModel.Factory(
+            articleSource =
+                (application as NutsNewsApplication).container.articleApiClient,
+        )
+    }
+
     private val personalizationViewModel: PersonalizationViewModel by viewModels {
         PersonalizationViewModel.Factory(
             userPreferencesRepository =
@@ -82,6 +92,7 @@ class MainActivity : ComponentActivity() {
                 startupSplashViewModel.uiState.collectAsStateWithLifecycle()
             val personalizationUiState by
                 personalizationViewModel.uiState.collectAsStateWithLifecycle()
+            val feedUiState by articleFeedViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
                 remember { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
@@ -127,6 +138,18 @@ class MainActivity : ComponentActivity() {
                 onNavigateUp = bootstrapViewModel::onNavigateUp,
                 destinationContent = { destination ->
                     when (destination) {
+                        AppDestination.Feed -> {
+                            LaunchedEffect(Unit) {
+                                articleFeedViewModel.loadInitialArticles()
+                            }
+                            FeedScreen(
+                                uiState = feedUiState,
+                                onDestinationSelected =
+                                    bootstrapViewModel::onDestinationRequested,
+                                onCategorySelected = articleFeedViewModel::applyCategory,
+                            )
+                        }
+
                         AppDestination.Onboarding,
                         AppDestination.Personalization,
                         -> {

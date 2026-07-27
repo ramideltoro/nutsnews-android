@@ -72,6 +72,12 @@ retains non-blocking errors and stale-content provenance, and accumulates
 case-insensitively unique category labels. A request generation invalidates
 late refresh or pagination results whenever a newer full refresh begins.
 
+`FeedScreen` owns the static, safe-area-aware feed chrome. Its centered serif
+wordmark, capsule menu control, divider, and horizontally lazy category chips
+consume the active design-system palette. The menu emits typed destinations in
+the frozen iOS order, while chip selection emits the category value back to the
+feed ViewModel.
+
 User-owned story records use Room with separate DAO boundaries for saved-story
 snapshots, notes, reflections, and reading activity. Stable article IDs are
 primary keys (or part of the per-day composite key), legacy API IDs and sort
