@@ -375,9 +375,9 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T54 — API and cache integration tests
 
-- [ ] P-T54-01 Controlled server covers paging, encoding, errors, timeout,
+- [x] P-T54-01 Controlled server covers paging, encoding, errors, timeout,
   malformed data, and cancellation.
-- [ ] P-T54-02 Fresh/stale/corrupt/force/offline cache paths pass without internet.
+- [x] P-T54-02 Fresh/stale/corrupt/force/offline cache paths pass without internet.
 
 ### T55 — Room and DataStore migration tests
 
