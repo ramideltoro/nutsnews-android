@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.article.ArticleDetailScreen
+import com.nutsnews.app.feature.article.ArticleDetailViewModel
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
@@ -88,6 +89,14 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val articleDetailViewModel: ArticleDetailViewModel by viewModels {
+        val container = (application as NutsNewsApplication).container
+        ArticleDetailViewModel.Factory(
+            savedStoryRepository = container.savedStoryRepository,
+            readingStatsRepository = container.readingStatsRepository,
+        )
+    }
+
     private val personalizationViewModel: PersonalizationViewModel by viewModels {
         PersonalizationViewModel.Factory(
             userPreferencesRepository =
@@ -119,6 +128,8 @@ class MainActivity : ComponentActivity() {
             val feedUiState by articleFeedViewModel.uiState.collectAsStateWithLifecycle()
             val articleCardInteractionUiState by
                 articleCardInteractionViewModel.uiState.collectAsStateWithLifecycle()
+            val articleDetailUiState by
+                articleDetailViewModel.uiState.collectAsStateWithLifecycle()
             val homeDashboardUiState by
                 homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
@@ -256,6 +267,11 @@ class MainActivity : ComponentActivity() {
                                 ArticleDetailScreen(
                                     article = article,
                                     onClose = bootstrapViewModel::onNavigateUp,
+                                    isLiked =
+                                        article.stableId in
+                                            articleDetailUiState.likedStoryIds,
+                                    onToggleLiked = articleDetailViewModel::toggleLiked,
+                                    onArticleShown = articleDetailViewModel::onArticleShown,
                                 )
                             }
                         }

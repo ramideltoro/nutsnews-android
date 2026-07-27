@@ -1,6 +1,8 @@
 package com.nutsnews.app.feature.article
 
 import android.content.res.Configuration
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -25,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -37,7 +40,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,6 +50,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
@@ -69,6 +75,9 @@ fun ArticleDetailScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     heroImageModel: Any? = article.thumbnailUrl?.toString(),
+    isLiked: Boolean = false,
+    onToggleLiked: (Article) -> Unit = {},
+    onArticleShown: (Article) -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val isTabletLandscape =
@@ -76,6 +85,37 @@ fun ArticleDetailScreen(
             configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
     val palette = NutsNewsTheme.colors
     val brief = remember(article) { deriveArticleBrief(article) }
+    var displayedLiked by
+        remember(article.stableId.value) {
+            mutableStateOf(isLiked)
+        }
+    var lastExternalLiked by
+        remember(article.stableId.value) {
+            mutableStateOf(isLiked)
+        }
+    var likeAnimationToken by
+        remember(article.stableId.value) {
+            mutableIntStateOf(0)
+        }
+    val likeGlow = remember(article.stableId.value) { Animatable(0f) }
+
+    LaunchedEffect(isLiked) {
+        if (lastExternalLiked != isLiked) {
+            lastExternalLiked = isLiked
+            displayedLiked = isLiked
+        }
+    }
+    LaunchedEffect(likeAnimationToken) {
+        if (likeAnimationToken == 0) return@LaunchedEffect
+        likeGlow.snapTo(1f)
+        likeGlow.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = LikeGlowDurationMillis),
+        )
+    }
+    LaunchedEffect(article.stableId) {
+        onArticleShown(article)
+    }
 
     NutsNewsBackground(
         modifier =
@@ -108,6 +148,17 @@ fun ArticleDetailScreen(
                             )
                         }
                     },
+                    actions = {
+                        ArticleDetailLikeButton(
+                            isLiked = displayedLiked,
+                            glow = likeGlow.value,
+                            onClick = {
+                                displayedLiked = !displayedLiked
+                                likeAnimationToken += 1
+                                onToggleLiked(article)
+                            },
+                        )
+                    },
                     colors =
                         TopAppBarDefaults.topAppBarColors(
                             containerColor = androidx.compose.ui.graphics.Color.Transparent,
@@ -138,6 +189,51 @@ fun ArticleDetailScreen(
                             .padding(contentPadding),
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ArticleDetailLikeButton(
+    isLiked: Boolean,
+    glow: Float,
+    onClick: () -> Unit,
+) {
+    val palette = NutsNewsTheme.colors
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.testTag("article_detail_like"),
+    ) {
+        Box(
+            modifier =
+                Modifier
+                    .size(38.dp)
+                    .shadow(
+                        elevation = (22f * glow).dp,
+                        shape = CircleShape,
+                        ambientColor = palette.accentHighlight.copy(alpha = glow * 0.72f),
+                        spotColor = palette.accentGlow.copy(alpha = glow * 0.55f),
+                    )
+                    .graphicsLayer {
+                        scaleX = 1f + (glow * 0.035f)
+                        scaleY = 1f + (glow * 0.035f)
+                    }
+                    .clip(CircleShape)
+                    .background(palette.badgeBackground)
+                    .testTag("article_detail_like_surface"),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector =
+                    if (isLiked) {
+                        Icons.Filled.Favorite
+                    } else {
+                        Icons.Filled.FavoriteBorder
+                    },
+                contentDescription = if (isLiked) "Liked" else "Like story",
+                modifier = Modifier.size(16.dp),
+                tint = if (isLiked) palette.likedCardAccent else palette.accentHighlight,
+            )
         }
     }
 }
@@ -897,3 +993,4 @@ private const val WideThumbnailCropAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 8
 private const val WordsPerMinute = 180.0
 private val WhitespacePattern = Regex("\\s+")
+private const val LikeGlowDurationMillis = 1_000
