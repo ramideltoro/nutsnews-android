@@ -188,6 +188,9 @@ abstract class ArticleDetailScreenshotContract(
         isReflectionLoading: Boolean = false,
         reflectionStatusMessage: String? = null,
         onReflectionSelected: (StoryReflectionReaction) -> Unit = {},
+        listenUiState: () -> ArticleListenUiState = { ArticleListenUiState() },
+        onToggleListening: (ArticleListenScript) -> Unit = {},
+        onStopListening: () -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -211,6 +214,9 @@ abstract class ArticleDetailScreenshotContract(
                     isReflectionLoading = isReflectionLoading,
                     reflectionStatusMessage = reflectionStatusMessage,
                     onReflectionSelected = onReflectionSelected,
+                    listenUiState = listenUiState(),
+                    onToggleListening = onToggleListening,
+                    onStopListening = onStopListening,
                 )
             }
         }
@@ -666,6 +672,106 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
             ),
             selections,
         )
+    }
+
+    @Test
+    fun listenModeAutoStartsHighlightsProgressAndSupportsAllControls() {
+        val article = contentArticle()
+        val state =
+            mutableStateOf(
+                ArticleListenUiState(
+                    statusMessage = "Ready to listen",
+                    isEngineReady = true,
+                ),
+            )
+        val requestedScripts = mutableListOf<ArticleListenScript>()
+        var stopCount = 0
+        setDetail(
+            article = article,
+            imageModel = null,
+            listenUiState = { state.value },
+            onToggleListening = { script ->
+                requestedScripts += script
+                state.value =
+                    when (state.value.playbackState) {
+                        ArticleListenPlaybackState.Idle,
+                        ArticleListenPlaybackState.Failed,
+                        ->
+                            state.value.copy(
+                                playbackState = ArticleListenPlaybackState.Reading,
+                                statusMessage = "Reading with on-device voice",
+                                segments = script.segments,
+                                currentSegmentIndex = 2,
+                            )
+
+                        ArticleListenPlaybackState.Reading ->
+                            state.value.copy(
+                                playbackState = ArticleListenPlaybackState.Paused,
+                                statusMessage = "Paused",
+                            )
+
+                        ArticleListenPlaybackState.Paused ->
+                            state.value.copy(
+                                playbackState = ArticleListenPlaybackState.Reading,
+                                statusMessage = "Reading with on-device voice",
+                            )
+                    }
+            },
+            onStopListening = {
+                stopCount += 1
+                state.value =
+                    state.value.copy(
+                        playbackState = ArticleListenPlaybackState.Idle,
+                        statusMessage = "Stopped",
+                        currentSegmentIndex = null,
+                    )
+            },
+        )
+
+        composeRule
+            .onNodeWithTag("article_detail_listen")
+            .assertContentDescriptionEquals("Listen to story brief")
+            .performClick()
+        composeRule.onNodeWithTag("listen_mode_sheet").assertIsDisplayed()
+        composeRule.onNodeWithText("Listen Mode").assertIsDisplayed()
+        composeRule.onNodeWithText("AUDIO BRIEF").assertIsDisplayed()
+        composeRule.onNodeWithText("NOW PLAYING").assertIsDisplayed()
+        composeRule.waitUntil(timeoutMillis = 3_000) {
+            requestedScripts.size == 1
+        }
+
+        assertEquals(
+            listOf(
+                "Here’s your NutsNews brief.",
+                article.title,
+                "What happened: ${article.summary}",
+            ),
+            requestedScripts.single().segments.take(3).map(ArticleListenSegment::text),
+        )
+        composeRule
+            .onNodeWithTag("listen_mode_segment_what_happened")
+            .performScrollTo()
+            .assertIsSelected()
+        composeRule
+            .onNodeWithTag("listen_mode_primary")
+            .performScrollTo()
+            .assertTextEquals("Pause")
+            .performClick()
+        composeRule
+            .onNodeWithTag("listen_mode_primary")
+            .assertTextEquals("Resume")
+            .performClick()
+        composeRule
+            .onNodeWithTag("listen_mode_stop")
+            .performScrollTo()
+            .performClick()
+        composeRule.onNodeWithTag("listen_mode_status").assertTextEquals("Stopped")
+        assertEquals(3, requestedScripts.size)
+        assertEquals(1, stopCount)
+
+        composeRule.onNodeWithTag("listen_mode_done").performClick()
+        composeRule.onAllNodesWithTag("listen_mode_sheet").assertCountEquals(0)
+        assertEquals(2, stopCount)
     }
 }
 
