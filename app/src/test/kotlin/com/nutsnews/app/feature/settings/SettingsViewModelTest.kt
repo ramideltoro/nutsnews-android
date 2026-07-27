@@ -65,4 +65,34 @@ class SettingsViewModelTest {
             assertEquals("Off", updated.hapticsSubtitle)
             assertEquals("Large stats on", updated.widgetSubtitle)
         }
+
+    @Test
+    fun themeSelectionPersistsAndIsIgnoredWhenAlreadySelected() =
+        runTest(mainDispatcher) {
+            val preferences =
+                InMemoryUserPreferencesRepository(
+                    UserPreferences(theme = NutsNewsAppTheme.Amber),
+                )
+            val viewModel = SettingsViewModel(preferences)
+            viewModel.uiState.first { state -> !state.isLoading }
+
+            viewModel.selectTheme(NutsNewsAppTheme.Friday)
+
+            val selected =
+                viewModel.uiState.first { state ->
+                    state.theme == NutsNewsAppTheme.Friday
+                }
+            assertEquals(NutsNewsAppTheme.Friday, selected.theme)
+            assertEquals(
+                NutsNewsAppTheme.Friday,
+                preferences.preferences.first().theme,
+            )
+
+            viewModel.selectTheme(NutsNewsAppTheme.Friday)
+            mainDispatcher.scheduler.advanceUntilIdle()
+            assertEquals(
+                NutsNewsAppTheme.Friday,
+                preferences.preferences.first().theme,
+            )
+        }
 }
