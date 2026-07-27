@@ -4,6 +4,7 @@ import androidx.room.Room
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.data.database.NutsNewsDatabase
+import com.nutsnews.app.data.database.SavedStoryEntity
 import java.net.URI
 import java.time.Clock
 import java.time.Duration
@@ -135,6 +136,34 @@ class RoomSavedStoryRepositoryTest {
             assertEquals(article.copy(id = article.stableId.value), restored.article)
             assertEquals(clock.instant(), restored.savedAt)
         }
+
+    @Test
+    fun malformedStoredUrlsAreIgnoredWithoutDiscardingTheSavedStory() =
+        runBlocking {
+            database.savedStoryDao().upsert(
+                SavedStoryEntity(
+                    stableArticleId = "malformed-story",
+                    apiId = "api-malformed",
+                    title = "Still readable",
+                    summary = "The local snapshot remains available.",
+                    originalUrl = "https://bad url",
+                    source = "NutsNews",
+                    publishedAt = null,
+                    createdAt = null,
+                    thumbnailUrl = "https://bad image",
+                    categories = listOf("Community"),
+                    savedAtEpochMillis = clock.millis(),
+                ),
+            )
+
+            val restored = savedStories().single()
+            assertEquals("Still readable", restored.article.title)
+            assertEquals(null, restored.article.originalUrl)
+            assertEquals(null, restored.article.thumbnailUrl)
+            assertEquals(clock.instant(), restored.savedAt)
+        }
+
+    private suspend fun savedStories() = repository.stories.first()
 
     private fun article(
         id: String,

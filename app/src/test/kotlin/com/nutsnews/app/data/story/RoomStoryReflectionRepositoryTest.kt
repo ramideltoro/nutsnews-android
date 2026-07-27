@@ -157,6 +157,26 @@ class RoomStoryReflectionRepositoryTest {
             )
         }
 
+    @Test
+    fun malformedStoredReactionIsIgnoredWithoutCrashingObservers() =
+        runBlocking {
+            val article = article("api-bad", "https://nutsnews.com/bad-reaction")
+            database.storyReflectionDao().upsert(
+                StoryReflectionEntity(
+                    stableArticleId = article.stableId.value,
+                    legacyArticleId = article.id,
+                    articleTitle = article.title,
+                    articleSource = article.source,
+                    reactionId = "unknown-reaction",
+                    createdAtEpochMillis = clock.millis(),
+                ),
+            )
+
+            assertEquals(null, repository.findReflection(article))
+            assertEquals(null, repository.observeReflection(article).first())
+            assertEquals(1, repository.count.first())
+        }
+
     private fun article(
         id: String,
         originalUrl: String?,

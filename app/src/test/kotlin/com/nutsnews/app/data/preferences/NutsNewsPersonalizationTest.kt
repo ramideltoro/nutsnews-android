@@ -154,6 +154,33 @@ class NutsNewsPersonalizationTest {
         )
     }
 
+    @Test
+    fun everyTopicCanDeterministicallyDriveTheTopPersonalizedStory() {
+        val topicStories =
+            NutsNewsPersonalization.topics.map { topic ->
+                article(
+                    id = topic.id,
+                    title = "${topic.title} report",
+                    summary = "A focused update.",
+                    categories = listOf(topic.title),
+                )
+            }
+
+        NutsNewsPersonalization.topics.forEach { topic ->
+            assertEquals(
+                topic.id,
+                NutsNewsPersonalization
+                    .personalizedArticles(
+                        articles = topicStories,
+                        selectedTopicIds = setOf(topic.id),
+                        selectedMoodId = "calm",
+                        limit = 1,
+                    ).single()
+                    .id,
+            )
+        }
+    }
+
     private fun article(
         title: String,
         summary: String = "An ordinary update",
