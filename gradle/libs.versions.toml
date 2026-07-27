@@ -7,6 +7,7 @@ browser = "1.10.0"
 # Lifecycle 2.11 requires compileSdk 37; NutsNews is locked to API 36.
 lifecycle = "2.10.0"
 dataStore = "1.2.1"
+glance = "1.1.1"
 room = "2.8.4"
 ksp = "2.3.10"
 kotlinxCoroutines = "1.11.0"
@@ -28,6 +29,9 @@ androidx-compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-mani
 androidx-compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
 androidx-compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
 androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "dataStore" }
+androidx-glance-appwidget = { module = "androidx.glance:glance-appwidget", version.ref = "glance" }
+androidx-glance-appwidget-testing = { module = "androidx.glance:glance-appwidget-testing", version.ref = "glance" }
+androidx-glance-testing = { module = "androidx.glance:glance-testing", version.ref = "glance" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel = { module = "androidx.lifecycle:lifecycle-viewmodel", version.ref = "lifecycle" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }

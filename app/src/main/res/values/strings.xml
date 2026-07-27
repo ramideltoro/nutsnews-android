@@ -5,4 +5,11 @@
     <string name="daily_reminder_channel_description">A gentle daily reminder to read positive news.</string>
     <string name="daily_reminder_title">Your NutsNews reset is ready</string>
     <string name="daily_reminder_body">Take a minute for today’s calm, positive stories.</string>
+    <string name="widget_description">A calm good-news headline for your Home Screen.</string>
+    <string name="widget_loading">Loading a positive story…</string>
+    <string name="widget_name">NutsNews Daily</string>
+    <string name="widget_preview_header">☀  NutsNews Daily</string>
+    <string name="widget_preview_mood">Daily Reset</string>
+    <string name="widget_preview_summary">A calm, positive story for a brighter moment today.</string>
+    <string name="widget_preview_title">Your daily good-news reset is ready</string>
 </resources>

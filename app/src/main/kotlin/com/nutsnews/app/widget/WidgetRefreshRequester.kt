@@ -1,6 +1,5 @@
 package com.nutsnews.app.widget
 
-import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.Intent
 
@@ -20,12 +19,8 @@ class AndroidWidgetRefreshRequester(
     override fun requestRefresh(): Boolean =
         runCatching {
             applicationContext.sendBroadcast(
-                Intent(AppWidgetManager.ACTION_APPWIDGET_UPDATE)
-                    .setPackage(applicationContext.packageName),
-            )
-            applicationContext.sendBroadcast(
                 Intent(NutsNewsWidgetContract.ActionRefresh)
-                    .setPackage(applicationContext.packageName),
+                    .setClass(applicationContext, NutsNewsWidgetReceiver::class.java),
             )
             true
         }.getOrDefault(false)
