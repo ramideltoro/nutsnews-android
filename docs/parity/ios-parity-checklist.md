@@ -423,10 +423,10 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T61 — Secure release signing
 
-- [ ] P-T61-01 Upload key generation/backup/rotation/recovery is documented.
-- [ ] P-T61-02 Keystore, alias, and passwords load only from protected
+- [x] P-T61-01 Upload key generation/backup/rotation/recovery is documented.
+- [x] P-T61-02 Keystore, alias, and passwords load only from protected
   environment secrets.
-- [ ] P-T61-03 Release cannot use debug signing; AAB signature is verified.
+- [x] P-T61-03 Release cannot use debug signing; AAB signature is verified.
 
 ### T62 — Google Play Internal Testing
 

@@ -26,6 +26,7 @@ expected_checks=(
   "Dependency review"
   "CodeQL (Java/Kotlin)"
   "Branch protection policy"
+  "Release signing contract"
 )
 
 configured_checks=()
@@ -62,6 +63,7 @@ literal_workflow_names=(
   "Dependency review"
   "CodeQL (Java/Kotlin)"
   "Branch protection policy"
+  "Release signing contract"
 )
 
 for check_name in "${literal_workflow_names[@]}"; do
