@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.feed.ArticleFeedContent
 import com.nutsnews.app.feature.feed.ArticleFeedViewModel
 import com.nutsnews.app.feature.feed.FeedScreen
 import com.nutsnews.app.feature.home.HomeDashboard
@@ -162,46 +163,60 @@ class MainActivity : ComponentActivity() {
                                     bootstrapViewModel::onDestinationRequested,
                                 onCategorySelected = articleFeedViewModel::applyCategory,
                             ) {
-                                HomeDashboard(
-                                    uiState = homeDashboardUiState,
-                                    articles = feedUiState.articles,
-                                    isFeedLoading = feedUiState.isLoading,
-                                    onTodayPicks = {
-                                        bootstrapViewModel.onDestinationRequested(
-                                            AppDestination.DailyDigest,
-                                        )
-                                    },
-                                    onGoodMood = {
-                                        bootstrapViewModel.onDestinationRequested(
-                                            AppDestination.GoodMood,
-                                        )
-                                    },
-                                    onReadingStats = {
-                                        bootstrapViewModel.onDestinationRequested(
-                                            AppDestination.ReadingStats,
-                                        )
-                                    },
-                                    onSavedStories = {
-                                        bootstrapViewModel.onDestinationRequested(
-                                            AppDestination.SavedStories,
-                                        )
-                                    },
-                                    onArchiveSearch = {
-                                        bootstrapViewModel.onDestinationRequested(
-                                            AppDestination.ArchiveSearch,
-                                        )
-                                    },
-                                    onPersonalize = {
-                                        bootstrapViewModel.onDestinationRequested(
-                                            AppDestination.Personalization,
-                                        )
-                                    },
-                                    onRefreshForYou = {
-                                        articleFeedViewModel.refresh(forceReload = true)
-                                    },
+                                ArticleFeedContent(
+                                    uiState = feedUiState,
+                                    onRefresh = articleFeedViewModel::forceRefresh,
+                                    onRetry = articleFeedViewModel::retry,
+                                    onLoadMore = articleFeedViewModel::loadMoreIfNeeded,
                                     onOpenArticle = { article ->
                                         bootstrapViewModel.onDestinationRequested(
                                             AppDestination.ArticleDetail(article.stableId),
+                                        )
+                                    },
+                                    dashboard = {
+                                        HomeDashboard(
+                                            uiState = homeDashboardUiState,
+                                            articles = feedUiState.articles,
+                                            isFeedLoading = feedUiState.isLoading,
+                                            onTodayPicks = {
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.DailyDigest,
+                                                )
+                                            },
+                                            onGoodMood = {
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.GoodMood,
+                                                )
+                                            },
+                                            onReadingStats = {
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.ReadingStats,
+                                                )
+                                            },
+                                            onSavedStories = {
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.SavedStories,
+                                                )
+                                            },
+                                            onArchiveSearch = {
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.ArchiveSearch,
+                                                )
+                                            },
+                                            onPersonalize = {
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.Personalization,
+                                                )
+                                            },
+                                            onRefreshForYou = {
+                                                articleFeedViewModel.refresh(forceReload = true)
+                                            },
+                                            onOpenArticle = { article ->
+                                                bootstrapViewModel.onDestinationRequested(
+                                                    AppDestination.ArticleDetail(article.stableId),
+                                                )
+                                            },
+                                            scrollable = false,
                                         )
                                     },
                                 )

@@ -19,9 +19,10 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Notes
@@ -79,6 +80,7 @@ fun HomeDashboard(
     onRefreshForYou: () -> Unit,
     onOpenArticle: (Article) -> Unit,
     modifier: Modifier = Modifier,
+    scrollable: Boolean = true,
 ) {
     var refreshPage by rememberSaveable { mutableIntStateOf(0) }
     var refreshTurns by rememberSaveable { mutableIntStateOf(0) }
@@ -106,48 +108,51 @@ fun HomeDashboard(
             personalizedPool.page(refreshPage)
         }
 
-    LazyColumn(
-        modifier =
+    val dashboardModifier =
+        if (scrollable) {
             modifier
                 .fillMaxSize()
-                .testTag("home_dashboard"),
-        contentPadding =
-            androidx.compose.foundation.layout.PaddingValues(
-                horizontal = NutsNewsTheme.spacing.medium,
-                vertical = NutsNewsTheme.spacing.medium,
-            ),
+                .verticalScroll(rememberScrollState())
+        } else {
+            modifier.fillMaxWidth()
+        }
+
+    Column(
+        modifier =
+            dashboardModifier
+                .testTag("home_dashboard")
+                .padding(
+                    horizontal =
+                        if (scrollable) NutsNewsTheme.spacing.medium else 0.dp,
+                    vertical =
+                        if (scrollable) NutsNewsTheme.spacing.medium else 0.dp,
+                ),
         verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
     ) {
-        item(key = "hero") {
-            DashboardHero(uiState)
-        }
-        item(key = "actions") {
-            QuickActions(
-                uiState = uiState,
-                onTodayPicks = onTodayPicks,
-                onGoodMood = onGoodMood,
-                onReadingStats = onReadingStats,
-                onSavedStories = onSavedStories,
-                onArchiveSearch = onArchiveSearch,
-                onPersonalize = onPersonalize,
-            )
-        }
+        DashboardHero(uiState)
+        QuickActions(
+            uiState = uiState,
+            onTodayPicks = onTodayPicks,
+            onGoodMood = onGoodMood,
+            onReadingStats = onReadingStats,
+            onSavedStories = onSavedStories,
+            onArchiveSearch = onArchiveSearch,
+            onPersonalize = onPersonalize,
+        )
         if (personalizedArticles.isNotEmpty() || isFeedLoading) {
-            item(key = "for-you") {
-                ForYouSection(
-                    uiState = uiState,
-                    articles = personalizedArticles,
-                    isLoading = personalizedArticles.isEmpty() && isFeedLoading,
-                    refreshRotation = refreshRotation,
-                    onRefresh = {
-                        refreshPage += 1
-                        refreshTurns += 1
-                        onRefreshForYou()
-                    },
-                    onPersonalize = onPersonalize,
-                    onOpenArticle = onOpenArticle,
-                )
-            }
+            ForYouSection(
+                uiState = uiState,
+                articles = personalizedArticles,
+                isLoading = personalizedArticles.isEmpty() && isFeedLoading,
+                refreshRotation = refreshRotation,
+                onRefresh = {
+                    refreshPage += 1
+                    refreshTurns += 1
+                    onRefreshForYou()
+                },
+                onPersonalize = onPersonalize,
+                onOpenArticle = onOpenArticle,
+            )
         }
     }
 }
