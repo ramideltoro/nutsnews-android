@@ -1,0 +1,67 @@
+# T62 Google Play Internal Testing provisioning
+
+The versioned destination contract is
+`config/play/internal-testing.json`: package `com.nutsnews.app`, track
+`internal`, and GitHub Environment `play-internal`.
+
+## Manual Play Console setup
+
+Google Play does not provide an API for creating the application record. A Play
+Console administrator must:
+
+1. Create or select the `com.nutsnews.app` application.
+2. Complete the initial app setup and opt into Play App Signing.
+3. Confirm the registered upload certificate matches
+   `config/signing/nutsnews-upload-certificate.pem`.
+4. Create an internal tester Google Group, add the intended testers, and attach
+   that group to the Internal testing track.
+5. Link a dedicated Google Cloud project, enable the Google Play Android
+   Developer API, and invite its service account in Play Console.
+
+Grant the service account access only to `com.nutsnews.app` with:
+
+- View app information and download bulk reports (read-only).
+- Release apps to testing tracks.
+
+Do not grant production release, user administration, financial, order, or
+subscription permissions.
+
+## Protected GitHub environment
+
+`play-internal` accepts deployments only from protected branches. After the
+Play Console service account is linked, add its complete JSON key as the
+environment secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Do not split, print,
+commit, upload as an artifact, or place that JSON in repository/environment
+files.
+
+The credential-free contract runs on every pull request. The protected API
+probe runs only through an explicit Security workflow dispatch:
+
+```sh
+gh workflow run security.yml \
+  --ref main \
+  -f run_protected_signing=false \
+  -f run_play_verification=true
+```
+
+The probe exchanges a signed service-account JWT for an OAuth token, creates a
+temporary Android Publisher edit, reads the `internal` track for exactly
+`com.nutsnews.app`, and deletes the edit without committing changes.
+
+## Current external blocker
+
+As of T62 implementation, no authenticated Play Console session or
+service-account JSON is available, so the application, Play App Signing,
+least-privilege grant, tester group, and controlled API probe cannot be
+verified. The `play-internal` environment exists and is protected, but its
+required secret is intentionally absent.
+
+An administrator must complete the five Play Console steps above and set the
+environment secret. Then run:
+
+```sh
+./scripts/validate-play-internal-provisioning.sh --remote
+```
+
+and dispatch the protected API probe. T62 remains incomplete until both
+commands pass.

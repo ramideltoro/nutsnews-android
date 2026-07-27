@@ -12,6 +12,11 @@ on:
         required: false
         type: boolean
         default: true
+      run_play_verification:
+        description: Verify protected service-account access to Play Internal
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -158,6 +163,48 @@ jobs:
           path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
           retention-days: 7
+
+  play-provisioning-contract:
+    name: Google Play provisioning contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate Google Play provisioning contract
+        run: ./scripts/validate-play-internal-provisioning.sh
+
+  play-internal-access:
+    name: Google Play internal access
+    if: github.event_name == 'workflow_dispatch' && inputs.run_play_verification == true
+    needs:
+      - play-provisioning-contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    environment: play-internal
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Verify package and internal-track access
+        shell: bash
+        env:
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing." >&2
+            exit 1
+          fi
+          credential_dir="$(mktemp -d)"
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" \
+            >"$credential_dir/service-account.json"
+          ./scripts/verify-play-internal-access.sh \
+            "$credential_dir/service-account.json"
 
   dependency-review:
     name: Dependency review

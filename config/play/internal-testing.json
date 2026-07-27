@@ -1,0 +1,17 @@
+{
+  "packageName": "com.nutsnews.app",
+  "track": "internal",
+  "releaseStatus": "completed",
+  "githubEnvironment": "play-internal",
+  "serviceAccountSecret": "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON",
+  "requiredAppPermissions": [
+    "View app information and download bulk reports (read-only)",
+    "Release apps to testing tracks"
+  ],
+  "forbiddenPermissions": [
+    "Release to production",
+    "Manage users and permissions",
+    "View financial data",
+    "Manage orders and subscriptions"
+  ]
+}
