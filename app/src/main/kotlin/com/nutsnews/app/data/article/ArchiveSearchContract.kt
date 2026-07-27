@@ -1,6 +1,16 @@
 package com.nutsnews.app.data.article
 
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.ArticlesResponse
+
+interface ArchiveArticleSearchSource {
+    suspend fun searchArticles(
+        query: String,
+        page: Int = 0,
+        limit: Int = ArchiveSearchRequest.DefaultPageSize,
+        fetchPolicy: NutsNewsFetchPolicy = NutsNewsFetchPolicy.UseCache,
+    ): ArticlesResponse
+}
 
 class ArchiveSearchRequest private constructor(
     val query: String,
