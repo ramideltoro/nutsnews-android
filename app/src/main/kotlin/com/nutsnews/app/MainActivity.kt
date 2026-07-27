@@ -100,6 +100,7 @@ class MainActivity : ComponentActivity() {
             savedStoryRepository = container.savedStoryRepository,
             readingStatsRepository = container.readingStatsRepository,
             storyNoteRepository = container.storyNoteRepository,
+            storyReflectionRepository = container.storyReflectionRepository,
         )
     }
 
@@ -311,6 +312,26 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onClearNote = {
                                         articleDetailViewModel.clearNote(article)
+                                    },
+                                    reflection =
+                                        articleDetailUiState.reflection.takeIf {
+                                            articleDetailUiState.reflectionArticleId ==
+                                                article.stableId
+                                        },
+                                    isReflectionLoading =
+                                        articleDetailUiState.reflectionArticleId !=
+                                            article.stableId ||
+                                            articleDetailUiState.isReflectionLoading,
+                                    reflectionStatusMessage =
+                                        articleDetailUiState.reflectionStatusMessage.takeIf {
+                                            articleDetailUiState.reflectionArticleId ==
+                                                article.stableId
+                                        },
+                                    onReflectionSelected = { reaction ->
+                                        articleDetailViewModel.saveReflection(
+                                            article = article,
+                                            reaction = reaction,
+                                        )
                                     },
                                 )
                             }
