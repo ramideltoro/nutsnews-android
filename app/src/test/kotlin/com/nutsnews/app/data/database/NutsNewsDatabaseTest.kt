@@ -1,5 +1,6 @@
 package com.nutsnews.app.data.database
 
+import android.os.Build
 import androidx.room.Room
 import androidx.room.testing.MigrationTestHelper
 import androidx.test.platform.app.InstrumentationRegistry
@@ -187,7 +188,7 @@ class NutsNewsDatabaseTest {
 }
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [35], manifest = Config.NONE)
+@Config(sdk = [26, 35], manifest = Config.NONE)
 class NutsNewsDatabaseMigrationTest {
     @JvmField
     @Rule
@@ -198,53 +199,237 @@ class NutsNewsDatabaseMigrationTest {
         )
 
     @Test
-    fun versionOneSchemaPassesTheMigrationHarness() {
-        val databaseName = "nutsnews-migration-test"
-        migrationHelper.createDatabase(databaseName, NutsNewsDatabase.SchemaVersion).apply {
-            execSQL(
-                """
-                INSERT INTO saved_stories (
-                    stable_article_id,
-                    api_id,
-                    title,
-                    summary,
-                    original_url,
-                    source,
-                    published_at,
-                    created_at,
-                    thumbnail_url,
-                    categories,
-                    saved_at
-                ) VALUES (
-                    'stable-id',
-                    'api-id',
-                    'Title',
-                    'Summary',
-                    NULL,
-                    'Source',
-                    NULL,
-                    NULL,
-                    NULL,
-                    '[]',
-                    100
-                )
-                """.trimIndent(),
+    fun everyCommittedSchemaPreservesAllUserOwnedDataAndIdentityRules() {
+        assertEquals(
+            (1..NutsNewsDatabase.SchemaVersion).toList(),
+            CommittedSchemaVersions,
+        )
+
+        CommittedSchemaVersions.forEach { schemaVersion ->
+            val databaseName = "nutsnews-migration-v$schemaVersion-api${Build.VERSION.SDK_INT}"
+            RuntimeEnvironment.getApplication().deleteDatabase(databaseName)
+            migrationHelper.createDatabase(databaseName, schemaVersion).apply {
+                insertVersionOneFixture()
+                close()
+            }
+
+            migrationHelper
+                .runMigrationsAndValidate(
+                    databaseName,
+                    NutsNewsDatabase.SchemaVersion,
+                    true,
+                    *NutsNewsDatabaseMigrations.all.toTypedArray(),
+                ).close()
+
+            val database =
+                Room
+                    .databaseBuilder(
+                        RuntimeEnvironment.getApplication(),
+                        NutsNewsDatabase::class.java,
+                        databaseName,
+                    ).allowMainThreadQueries()
+                    .addMigrations(*NutsNewsDatabaseMigrations.all.toTypedArray())
+                    .build()
+
+            try {
+                assertMigratedFixture(database)
+            } finally {
+                database.close()
+                RuntimeEnvironment.getApplication().deleteDatabase(databaseName)
+            }
+        }
+    }
+
+    private fun androidx.sqlite.db.SupportSQLiteDatabase.insertVersionOneFixture() {
+        execSQL(
+            """
+            INSERT INTO saved_stories (
+                stable_article_id,
+                api_id,
+                title,
+                summary,
+                original_url,
+                source,
+                published_at,
+                created_at,
+                thumbnail_url,
+                categories,
+                saved_at
+            ) VALUES (
+                'https://nutsnews.com/saved',
+                'api-saved',
+                'Saved title',
+                'Saved summary',
+                'https://nutsnews.com/saved',
+                'NutsNews',
+                '2026-07-25T12:00:00Z',
+                '2026-07-25T12:01:00Z',
+                'https://nutsnews.com/saved.jpg',
+                '["Community","Science"]',
+                1753444800100
             )
-            close()
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT INTO story_notes (
+                stable_article_id,
+                legacy_article_id,
+                article_title,
+                text,
+                updated_at
+            ) VALUES (
+                'api-note',
+                NULL,
+                'Legacy note title',
+                'Preserve this private note.',
+                1753444800200
+            )
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT INTO story_reflections (
+                stable_article_id,
+                legacy_article_id,
+                article_title,
+                article_source,
+                reaction_id,
+                created_at
+            ) VALUES (
+                'api-reflection',
+                NULL,
+                'Legacy reflection title',
+                'NutsNews',
+                'hope',
+                1753444800300
+            )
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT OR IGNORE INTO reading_story_opens (
+                day_key,
+                stable_article_id,
+                opened_at
+            ) VALUES (
+                '2026-07-26',
+                'https://nutsnews.com/saved',
+                1753444800400
+            )
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT OR IGNORE INTO reading_story_opens (
+                day_key,
+                stable_article_id,
+                opened_at
+            ) VALUES (
+                '2026-07-26',
+                'https://nutsnews.com/saved',
+                1753444899999
+            )
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT INTO reading_story_opens (
+                day_key,
+                stable_article_id,
+                opened_at
+            ) VALUES (
+                '2026-07-26',
+                'api-second-story',
+                1753444800500
+            )
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT INTO reading_story_opens (
+                day_key,
+                stable_article_id,
+                opened_at
+            ) VALUES (
+                '2026-07-25',
+                'https://nutsnews.com/saved',
+                1753358400600
+            )
+            """.trimIndent(),
+        )
+        execSQL(
+            """
+            INSERT INTO original_story_opens (
+                day_key,
+                open_count,
+                updated_at
+            ) VALUES (
+                '2026-07-26',
+                3,
+                1753444800700
+            )
+            """.trimIndent(),
+        )
+    }
+
+    private fun assertMigratedFixture(database: NutsNewsDatabase) =
+        runBlocking {
+            val saved = database.savedStoryDao().observeStories().first().single()
+            assertEquals("https://nutsnews.com/saved", saved.stableArticleId)
+            assertEquals("api-saved", saved.apiId)
+            assertEquals(listOf("Community", "Science"), saved.categories)
+            assertEquals(1_753_444_800_100, saved.savedAtEpochMillis)
+
+            val note =
+                database
+                    .storyNoteDao()
+                    .findNote(
+                        stableArticleId = "https://nutsnews.com/note",
+                        legacyArticleId = "api-note",
+                    )
+            requireNotNull(note)
+            assertEquals("api-note", note.stableArticleId)
+            assertEquals("Preserve this private note.", note.text)
+            assertEquals(1_753_444_800_200, note.updatedAtEpochMillis)
+
+            val reflection =
+                database
+                    .storyReflectionDao()
+                    .findReflection(
+                        stableArticleId = "https://nutsnews.com/reflection",
+                        legacyArticleId = "api-reflection",
+                    )
+            requireNotNull(reflection)
+            assertEquals("api-reflection", reflection.stableArticleId)
+            assertEquals("hope", reflection.reactionId)
+            assertEquals(1_753_444_800_300, reflection.createdAtEpochMillis)
+
+            val storyOpens =
+                database
+                    .readingActivityDao()
+                    .observeStoryOpens("2026-07-25", "2026-07-26")
+                    .first()
+            assertEquals(3, storyOpens.size)
+            assertEquals(2, database.readingActivityDao().observeStoryCount("2026-07-26").first())
+            assertEquals(2, database.readingActivityDao().observeTotalUniqueStoryCount().first())
+            assertEquals(
+                1_753_444_800_400,
+                storyOpens
+                    .single {
+                        it.dayKey == "2026-07-26" &&
+                            it.stableArticleId == "https://nutsnews.com/saved"
+                    }.openedAtEpochMillis,
+            )
+
+            val originalOpens =
+                database.readingActivityDao().findOriginalStoryOpens("2026-07-26")
+            requireNotNull(originalOpens)
+            assertEquals(3, originalOpens.openCount)
+            assertEquals(1_753_444_800_700, originalOpens.updatedAtEpochMillis)
         }
 
-        val migrated =
-            migrationHelper.runMigrationsAndValidate(
-                databaseName,
-                NutsNewsDatabase.SchemaVersion,
-                true,
-                *NutsNewsDatabaseMigrations.all.toTypedArray(),
-            )
-        migrated.query("SELECT saved_at FROM saved_stories WHERE stable_article_id = 'stable-id'")
-            .use { cursor ->
-                assertEquals(true, cursor.moveToFirst())
-                assertEquals(100, cursor.getLong(0))
-            }
-        migrated.close()
+    private companion object {
+        val CommittedSchemaVersions = listOf(1)
     }
 }
