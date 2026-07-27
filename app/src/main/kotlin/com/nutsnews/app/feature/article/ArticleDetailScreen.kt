@@ -56,6 +56,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.SentimentSatisfiedAlt
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -81,6 +82,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -150,6 +152,8 @@ fun ArticleDetailScreen(
     listenUiState: ArticleListenUiState = ArticleListenUiState(),
     onToggleListening: (ArticleListenScript) -> Unit = {},
     onStopListening: () -> Unit = {},
+    shareCardUiState: ArticleShareCardUiState = ArticleShareCardUiState(),
+    onShareCard: (Article) -> Unit = {},
 ) {
     val configuration = LocalConfiguration.current
     val isTabletLandscape =
@@ -301,6 +305,8 @@ fun ArticleDetailScreen(
                     isReflectionLoading = isReflectionLoading,
                     reflectionStatusMessage = reflectionStatusMessage,
                     onReflectionSelected = onReflectionSelected,
+                    shareCardUiState = shareCardUiState,
+                    onShareCard = onShareCard,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -324,6 +330,8 @@ fun ArticleDetailScreen(
                     isReflectionLoading = isReflectionLoading,
                     reflectionStatusMessage = reflectionStatusMessage,
                     onReflectionSelected = onReflectionSelected,
+                    shareCardUiState = shareCardUiState,
+                    onShareCard = onShareCard,
                     modifier =
                         Modifier
                             .fillMaxSize()
@@ -961,6 +969,8 @@ private fun RegularArticleDetail(
     isReflectionLoading: Boolean,
     reflectionStatusMessage: String?,
     onReflectionSelected: (StoryReflectionReaction) -> Unit,
+    shareCardUiState: ArticleShareCardUiState,
+    onShareCard: (Article) -> Unit,
     modifier: Modifier,
 ) {
     Column(
@@ -986,6 +996,13 @@ private fun RegularArticleDetail(
             isLoading = isReflectionLoading,
             statusMessage = reflectionStatusMessage,
             onSelected = onReflectionSelected,
+        )
+        ArticleShareCardSection(
+            article = article,
+            brief = brief,
+            uiState = shareCardUiState,
+            compact = false,
+            onShare = { onShareCard(article) },
         )
         ArticleDetailSummary(
             summary = article.summary,
@@ -1032,6 +1049,8 @@ private fun CompactLandscapeArticleDetail(
     isReflectionLoading: Boolean,
     reflectionStatusMessage: String?,
     onReflectionSelected: (StoryReflectionReaction) -> Unit,
+    shareCardUiState: ArticleShareCardUiState,
+    onShareCard: (Article) -> Unit,
     modifier: Modifier,
 ) {
     BoxWithConstraints(modifier = modifier) {
@@ -1071,6 +1090,13 @@ private fun CompactLandscapeArticleDetail(
                     selectedReaction = reflection?.reaction,
                     isLoading = isReflectionLoading,
                     onSelected = onReflectionSelected,
+                )
+                ArticleShareCardSection(
+                    article = article,
+                    brief = brief,
+                    uiState = shareCardUiState,
+                    compact = true,
+                    onShare = { onShareCard(article) },
                 )
                 ArticleDetailSummary(
                     summary = article.summary,
@@ -1310,6 +1336,7 @@ private fun RegularArticleBrief(brief: ArticleBriefContent) {
                 )
                 ArticleBriefMetric(
                     text = brief.primaryMoodLabel,
+                    modifier = Modifier.testTag("article_detail_brief_mood"),
                     icon = {
                         Icon(
                             imageVector = Icons.Filled.Favorite,
@@ -1363,6 +1390,211 @@ private fun CompactArticleBrief(brief: ArticleBriefContent) {
                 overflow = TextOverflow.Ellipsis,
             )
         }
+    }
+}
+
+@Composable
+private fun ArticleShareCardSection(
+    article: Article,
+    brief: ArticleBriefContent,
+    uiState: ArticleShareCardUiState,
+    compact: Boolean,
+    onShare: () -> Unit,
+) {
+    DetailInfoCard(
+        label = "",
+        compact = compact,
+        modifier = Modifier.testTag("article_detail_share_card"),
+    ) {
+        Column(
+            verticalArrangement =
+                Arrangement.spacedBy(
+                    if (compact) {
+                        NutsNewsTheme.spacing.xs
+                    } else {
+                        NutsNewsTheme.spacing.medium
+                    },
+                ),
+        ) {
+            if (!compact) {
+                ShareCardMiniPreview(
+                    article = article,
+                    brief = brief,
+                )
+            }
+            ShareCardButton(
+                isCreating = uiState.isCreating,
+                compact = compact,
+                onClick = onShare,
+            )
+            uiState.failureMessage?.let { message ->
+                Text(
+                    text = message,
+                    modifier = Modifier.testTag("article_detail_share_failure"),
+                    color = NutsNewsTheme.colors.accentHighlight,
+                    style = NutsNewsTheme.typography.caption,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ShareCardMiniPreview(
+    article: Article,
+    brief: ArticleBriefContent,
+) {
+    val shape = RoundedCornerShape(NutsNewsTheme.dimensions.cardCornerRadius)
+    Column(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            NutsNewsTheme.colors.cardBackgroundStrong,
+                            NutsNewsTheme.colors.badgeBackground,
+                        ),
+                    ),
+                ).border(
+                    width = 1.dp,
+                    color = NutsNewsTheme.colors.cardBorder,
+                    shape = shape,
+                ).testTag("article_detail_share_preview")
+                .padding(NutsNewsTheme.spacing.medium),
+        verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.AutoAwesome,
+                contentDescription = null,
+                modifier = Modifier.size(13.dp),
+                tint = NutsNewsTheme.colors.accent,
+            )
+            Text(
+                text = "NUTSNEWS SHARE CARD",
+                color = NutsNewsTheme.colors.accent,
+                style = NutsNewsTheme.typography.caption,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+        Text(
+            text = article.title,
+            modifier = Modifier.testTag("article_detail_share_preview_title"),
+            color = NutsNewsTheme.colors.primaryText,
+            style =
+                NutsNewsTheme.typography.headline.copy(
+                    fontSize = 18.sp,
+                    lineHeight = 23.sp,
+                ),
+            fontWeight = FontWeight.Bold,
+            maxLines = 3,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Text(
+            text = brief.takeaway,
+            modifier = Modifier.testTag("article_detail_share_preview_takeaway"),
+            color = NutsNewsTheme.colors.secondaryText,
+            style = NutsNewsTheme.typography.subheadline,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Favorite,
+                contentDescription = null,
+                modifier = Modifier.size(13.dp),
+                tint = NutsNewsTheme.colors.mutedText,
+            )
+            Text(
+                text = brief.primaryMoodLabel,
+                modifier = Modifier.testTag("article_detail_share_preview_mood"),
+                color = NutsNewsTheme.colors.mutedText,
+                style = NutsNewsTheme.typography.caption,
+                fontWeight = FontWeight.SemiBold,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Text(
+                text = article.source,
+                modifier = Modifier.testTag("article_detail_share_preview_source"),
+                color = NutsNewsTheme.colors.mutedText,
+                style = NutsNewsTheme.typography.caption,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ShareCardButton(
+    isCreating: Boolean,
+    compact: Boolean,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius)
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .clip(shape)
+                .background(nutsNewsButtonGradient())
+                .clickable(
+                    enabled = !isCreating,
+                    role = Role.Button,
+                    onClick = onClick,
+                ).testTag("article_detail_share_button")
+                .padding(
+                    horizontal = NutsNewsTheme.spacing.small,
+                    vertical = if (compact) 10.dp else 14.dp,
+                ),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (isCreating) {
+            CircularProgressIndicator(
+                modifier =
+                    Modifier
+                        .size(if (compact) 14.dp else 18.dp)
+                        .testTag("article_detail_share_loading"),
+                color = NutsNewsTheme.colors.buttonText,
+                strokeWidth = 2.dp,
+            )
+        } else {
+            Icon(
+                imageVector = Icons.Filled.Share,
+                contentDescription = null,
+                modifier = Modifier.size(if (compact) 15.dp else 18.dp),
+                tint = NutsNewsTheme.colors.buttonText,
+            )
+        }
+        Text(
+            text =
+                if (isCreating) {
+                    "Creating card"
+                } else {
+                    "Share card with someone special"
+                },
+            modifier = Modifier.padding(start = NutsNewsTheme.spacing.xs),
+            color = NutsNewsTheme.colors.buttonText,
+            style =
+                if (compact) {
+                    NutsNewsTheme.typography.subheadline
+                } else {
+                    NutsNewsTheme.typography.headline
+                },
+            fontWeight = FontWeight.Bold,
+        )
     }
 }
 
@@ -1642,11 +1874,12 @@ internal fun reflectionDisplayDate(
 @Composable
 private fun ArticleBriefMetric(
     text: String,
+    modifier: Modifier = Modifier,
     icon: @Composable () -> Unit,
 ) {
     Row(
         modifier =
-            Modifier
+            modifier
                 .clip(CircleShape)
                 .background(NutsNewsTheme.colors.badgeBackground)
                 .padding(
