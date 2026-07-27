@@ -10,6 +10,11 @@ updates are grouped by ecosystem and production/development scope so reviewable
 pull requests are created without combining unrelated Android and workflow
 changes.
 
+The repository-level dependency graph, Dependabot alerts, and Dependabot
+security updates are enabled. These GitHub settings let the workflow compare
+base/head dependency snapshots and let known-vulnerability fixes complement
+the scheduled version-update configuration.
+
 Every pull request runs GitHub Dependency Review. It rejects newly introduced
 known vulnerabilities at moderate severity or higher and performs license
 review. The action consumes GitHub's dependency graph diff and does not receive
