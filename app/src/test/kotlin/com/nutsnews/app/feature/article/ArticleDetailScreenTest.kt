@@ -11,9 +11,11 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipeUp
 import com.nutsnews.app.core.model.Article
@@ -222,7 +224,7 @@ abstract class ArticleDetailScreenshotContract(
         )
     }
 
-    private fun captureLargestWindow(): Bitmap =
+    protected fun captureLargestWindow(): Bitmap =
         composeRule.runOnIdle {
             val windowManagerClass = Class.forName("android.view.WindowManagerGlobal")
             val instance =
@@ -277,12 +279,79 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
 
         assertTrue(bounds("article_detail_title").top < originalTitleTop)
     }
+
+    @Test
+    fun phoneBriefSummaryAndSourceMatchTheIosHierarchyInScreenshot() {
+        val article = contentArticle()
+        setDetail(
+            article = article,
+            imageModel = null,
+        )
+
+        composeRule.onNodeWithTag("article_detail_brief").performScrollTo()
+        composeRule.onNodeWithText("NUTSNEWS BRIEF").assertIsDisplayed()
+        composeRule.onNodeWithText("1 min native brief").assertIsDisplayed()
+        composeRule.onNodeWithText("Curious").assertIsDisplayed()
+        composeRule.onNodeWithText("What happened").fetchSemanticsNode()
+        composeRule.onNodeWithText("Why it’s good news").fetchSemanticsNode()
+        composeRule.onNodeWithText("Feel-good takeaway").fetchSemanticsNode()
+        assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
+
+        composeRule.onNodeWithTag("article_detail_source").performScrollTo()
+        composeRule.onNodeWithTag("article_detail_summary").fetchSemanticsNode()
+        composeRule.onAllNodesWithText(article.summary).assertCountEquals(2)
+        composeRule.onNodeWithText(article.source).assertIsDisplayed()
+        composeRule.onNodeWithText("Published today").assertIsDisplayed()
+        assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
+    }
+
+    @Test
+    fun missingSummaryUsesTitleFallbackAndOmitsSummaryCardInScreenshot() {
+        val article =
+            contentArticle().copy(
+                title = "A title-only positive update",
+                summary = "",
+                source = "",
+                publishedAt = null,
+            )
+        setDetail(
+            article = article,
+            imageModel = null,
+        )
+
+        composeRule.onAllNodesWithTag("article_detail_summary").assertCountEquals(0)
+        composeRule.onAllNodesWithText(article.title).assertCountEquals(2)
+        composeRule.onNodeWithTag("article_detail_source").performScrollTo()
+        composeRule.onNodeWithText("SOURCE").assertIsDisplayed()
+        composeRule.onNodeWithText("Recently").assertIsDisplayed()
+        assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
+    }
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], qualifiers = "w1024dp-h768dp-land")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-class TabletArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpected = true)
+class TabletArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpected = true) {
+    @Test
+    fun compactTabletBriefSummaryAndSourceMatchIosScreenshot() {
+        val article = contentArticle()
+        setDetail(
+            article = article,
+            imageModel = null,
+        )
+
+        composeRule.onNodeWithTag("article_detail_brief").assertIsDisplayed()
+        composeRule.onNodeWithTag("article_detail_summary").assertIsDisplayed()
+        composeRule.onNodeWithTag("article_detail_source").assertIsDisplayed()
+        composeRule
+            .onNodeWithText(
+                "Takeaway: Progress is still happening, one discovery at a time.",
+            ).assertIsDisplayed()
+        composeRule.onNodeWithText(article.source).assertIsDisplayed()
+        composeRule.onNodeWithText("Published today").assertIsDisplayed()
+        assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
+    }
+}
 
 class ArticleDetailHeroCropTest {
     @Test
@@ -326,6 +395,20 @@ private fun representativeArticle(): Article =
         createdAt = null,
         thumbnailUrl = URI("https://example.com/detail-reference.jpg"),
         categories = listOf("Nature", "Uplifting"),
+    )
+
+private fun contentArticle(): Article =
+    Article(
+        id = "detail-content",
+        title = "Researchers discover a practical clean-energy breakthrough",
+        summary =
+            "A university research team found a promising way to store renewable energy.",
+        originalUrl = URI("https://example.com/detail-content"),
+        source = "Positive Science Daily",
+        publishedAt = "Published today",
+        createdAt = null,
+        thumbnailUrl = null,
+        categories = listOf("Science", "Discovery"),
     )
 
 private fun sampledColorCount(image: Bitmap): Int {
