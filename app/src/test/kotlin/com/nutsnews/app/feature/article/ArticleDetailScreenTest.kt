@@ -156,6 +156,9 @@ abstract class ArticleDetailScreenshotContract(
         article: Article,
         imageModel: Any?,
         onClose: () -> Unit = {},
+        isLiked: Boolean = false,
+        onToggleLiked: (Article) -> Unit = {},
+        onArticleShown: (Article) -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -163,6 +166,9 @@ abstract class ArticleDetailScreenshotContract(
                     article = article,
                     onClose = onClose,
                     heroImageModel = imageModel,
+                    isLiked = isLiked,
+                    onToggleLiked = onToggleLiked,
+                    onArticleShown = onArticleShown,
                 )
             }
         }
@@ -257,6 +263,36 @@ abstract class ArticleDetailScreenshotContract(
 @Config(sdk = [35], qualifiers = "w393dp-h852dp-port")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpected = false) {
+    @Test
+    fun detailToolbarLikeUpdatesImmediatelyAndAppearanceRecordsOnce() {
+        val article = contentArticle()
+        val toggled = mutableListOf<Article>()
+        val shown = mutableListOf<Article>()
+        composeRule.mainClock.autoAdvance = false
+        setDetail(
+            article = article,
+            imageModel = null,
+            onToggleLiked = toggled::add,
+            onArticleShown = shown::add,
+        )
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule
+            .onNodeWithTag("article_detail_like")
+            .assertContentDescriptionEquals("Like story")
+            .performClick()
+        composeRule.mainClock.advanceTimeByFrame()
+
+        composeRule
+            .onNodeWithTag("article_detail_like")
+            .assertContentDescriptionEquals("Liked")
+        composeRule
+            .onNodeWithTag("article_detail_like_surface", useUnmergedTree = true)
+            .fetchSemanticsNode()
+        assertEquals(listOf(article), toggled)
+        assertEquals(listOf(article), shown)
+    }
+
     @Test
     fun phoneLayoutScrollsToKeepAnUnboundedTitleReachable() {
         val article =
