@@ -53,6 +53,7 @@ import com.nutsnews.app.feature.feed.ArticleCardInteractionViewModel
 import com.nutsnews.app.feature.feed.ArticleFeedContent
 import com.nutsnews.app.feature.feed.ArticleFeedViewModel
 import com.nutsnews.app.feature.feed.FeedScreen
+import com.nutsnews.app.feature.help.HelpFaqScreen
 import com.nutsnews.app.feature.home.HomeDashboard
 import com.nutsnews.app.feature.home.HomeDashboardViewModel
 import com.nutsnews.app.feature.mood.GoodMoodScreen
@@ -617,6 +618,49 @@ class MainActivity : ComponentActivity() {
                                     settingsViewModel::setShowStatsOnLargeWidget,
                                 onBack = bootstrapViewModel::onNavigateUp,
                                 onGoHome = bootstrapViewModel::onHomeRequested,
+                            )
+                        }
+
+                        AppDestination.Help -> {
+                            HelpFaqScreen(
+                                onClose = bootstrapViewModel::onNavigateUp,
+                                onOpenTodayPicks = {
+                                    bootstrapViewModel.onHelpDestinationRequested(
+                                        AppDestination.DailyDigest,
+                                    )
+                                },
+                                onOpenGoodMood = {
+                                    bootstrapViewModel.onHelpDestinationRequested(
+                                        AppDestination.GoodMood,
+                                    )
+                                },
+                                onOpenReadingStats = {
+                                    bootstrapViewModel.onHelpDestinationRequested(
+                                        AppDestination.ReadingStats,
+                                    )
+                                },
+                                onOpenSavedStories = {
+                                    bootstrapViewModel.onHelpDestinationRequested(
+                                        AppDestination.SavedStories,
+                                    )
+                                },
+                                onOpenSearch = {
+                                    bootstrapViewModel.onHelpDestinationRequested(
+                                        AppDestination.ArchiveSearch,
+                                    )
+                                },
+                                onOpenPersonalization = {
+                                    bootstrapViewModel.onHelpDestinationRequested(
+                                        AppDestination.Personalization,
+                                    )
+                                },
+                                onOpenStoryFeatures = {
+                                    feedUiState.articles.firstOrNull()?.let { article ->
+                                        bootstrapViewModel.onHelpDestinationRequested(
+                                            AppDestination.ArticleDetail(article.stableId),
+                                        )
+                                    }
+                                },
                             )
                         }
 
