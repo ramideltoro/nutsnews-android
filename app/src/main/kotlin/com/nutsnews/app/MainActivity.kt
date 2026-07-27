@@ -22,6 +22,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,7 +30,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -226,8 +227,10 @@ class MainActivity : ComponentActivity() {
                 readingStatsViewModel.uiState.collectAsStateWithLifecycle()
             val settingsUiState by
                 settingsViewModel.uiState.collectAsStateWithLifecycle()
+            val feedListState = rememberLazyListState()
+            val archiveSearchListState = rememberLazyListState()
             val pendingPermissionSaveMode =
-                remember { mutableStateOf<PersonalizationMode?>(null) }
+                rememberSaveable { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
                 val reminderEnabled =
                     personalizationViewModel.uiState.value.reminderEnabled
@@ -302,6 +305,7 @@ class MainActivity : ComponentActivity() {
                                         articleCardInteractionUiState.hapticsEnabled,
                                     onToggleLiked =
                                         articleCardInteractionViewModel::toggleLiked,
+                                    listState = feedListState,
                                     dashboard = {
                                         HomeDashboard(
                                             uiState = homeDashboardUiState,
@@ -359,6 +363,9 @@ class MainActivity : ComponentActivity() {
                                 } ?: articleCardInteractionUiState
                                     .savedArticlesById[destination.storyId]
                                 ?: archiveSearchUiState.articles.firstOrNull { candidate ->
+                                    candidate.stableId == destination.storyId
+                                }
+                                ?: articleDetailUiState.activeArticle?.takeIf { candidate ->
                                     candidate.stableId == destination.storyId
                                 }
                             if (article == null) {
@@ -519,6 +526,7 @@ class MainActivity : ComponentActivity() {
                                     archiveSearchViewModel.clearSearch()
                                     bootstrapViewModel.onNavigateUp()
                                 },
+                                listState = archiveSearchListState,
                             )
                         }
 

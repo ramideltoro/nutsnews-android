@@ -1,8 +1,11 @@
 package com.nutsnews.app.feature.saved
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.data.story.SavedStoryRepository
 import java.util.Locale
@@ -28,8 +31,10 @@ data class SavedStoriesUiState(
 
 class SavedStoriesViewModel(
     private val savedStoryRepository: SavedStoryRepository,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
-    private val query = MutableStateFlow("")
+    private val query =
+        MutableStateFlow(savedStateHandle[SavedStoriesQueryStateKey] ?: "")
 
     val uiState: StateFlow<SavedStoriesUiState> =
         combine(
@@ -49,11 +54,12 @@ class SavedStoriesViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = SavedStoriesUiState(),
+            initialValue = SavedStoriesUiState(query = query.value),
         )
 
     fun onQueryChanged(value: String) {
         query.value = value
+        savedStateHandle[SavedStoriesQueryStateKey] = value
     }
 
     fun remove(story: SavedStory) {
@@ -70,8 +76,22 @@ class SavedStoriesViewModel(
             require(modelClass.isAssignableFrom(SavedStoriesViewModel::class.java))
             return SavedStoriesViewModel(savedStoryRepository) as T
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            require(modelClass.isAssignableFrom(SavedStoriesViewModel::class.java))
+            return SavedStoriesViewModel(
+                savedStoryRepository = savedStoryRepository,
+                savedStateHandle = extras.createSavedStateHandle(),
+            ) as T
+        }
     }
 }
+
+internal const val SavedStoriesQueryStateKey = "savedStories.query"
 
 internal fun SavedStory.matchesSavedStoriesQuery(query: String): Boolean {
     val searchTerms =

@@ -104,6 +104,37 @@ class DailyReminderManagerTest {
     }
 
     @Test
+    fun repeatedLifecycleRestoreSchedulingReplacesTheSingleReminder() {
+        val alarm = RecordingAlarmGateway()
+        val now =
+            ZonedDateTime.of(
+                2026,
+                7,
+                26,
+                7,
+                30,
+                0,
+                0,
+                ZoneId.of("America/New_York"),
+            )
+        val manager =
+            AndroidDailyReminderManager(
+                alarmGateway = alarm,
+                notificationGateway = RecordingNotificationGateway(),
+                permissionGate = MutablePermissionGate(canPost = true),
+                now = { now },
+            )
+
+        val first = assertIs<ReminderScheduleResult.Scheduled>(manager.schedule(8))
+        val restored = assertIs<ReminderScheduleResult.Scheduled>(manager.schedule(8))
+
+        assertEquals(first.triggerAtMillis, restored.triggerAtMillis)
+        assertEquals(2, alarm.cancelCount)
+        assertEquals(2, alarm.scheduleCount)
+        assertEquals(restored.triggerAtMillis, alarm.scheduledAtMillis)
+    }
+
+    @Test
     fun channelAndCancellationDelegateToTheirPlatformGateways() {
         val alarm = RecordingAlarmGateway()
         val notifications = RecordingNotificationGateway()
@@ -125,8 +156,10 @@ class DailyReminderManagerTest {
 internal class RecordingAlarmGateway : ReminderAlarmGateway {
     var scheduledAtMillis: Long? = null
     var cancelCount = 0
+    var scheduleCount = 0
 
     override fun schedule(triggerAtMillis: Long) {
+        scheduleCount += 1
         scheduledAtMillis = triggerAtMillis
     }
 

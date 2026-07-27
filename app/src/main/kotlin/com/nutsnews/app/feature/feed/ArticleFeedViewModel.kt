@@ -1,9 +1,14 @@
 package com.nutsnews.app.feature.feed
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.ArticlesResponse
+import com.nutsnews.app.data.article.ArticleStateCodec
 import com.nutsnews.app.data.article.FeedArticleSource
 import com.nutsnews.app.data.article.NutsNewsFetchPolicy
 import java.util.Locale
@@ -17,14 +22,17 @@ import kotlinx.coroutines.launch
 
 class ArticleFeedViewModel(
     private val articleSource: FeedArticleSource,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
-    private val mutableUiState = MutableStateFlow(ArticleFeedUiState())
+    private val restoredUiState = restoreFeedState(savedStateHandle)
+    private val mutableUiState =
+        MutableStateFlow(restoredUiState ?: ArticleFeedUiState())
     val uiState: StateFlow<ArticleFeedUiState> = mutableUiState.asStateFlow()
 
     private var refreshJob: Job? = null
     private var paginationJob: Job? = null
     private var requestGeneration = 0L
-    private var completedInitialLoad = false
+    private var completedInitialLoad = restoredUiState?.articles?.isNotEmpty() == true
     private var failedRequest: FailedRequest? = null
 
     fun loadInitialArticles() {
@@ -92,6 +100,7 @@ class ArticleFeedViewModel(
                             errorMessage = null,
                         )
                     }
+                    persistRestorableState()
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
@@ -172,6 +181,7 @@ class ArticleFeedViewModel(
                             errorMessage = null,
                         )
                     }
+                    persistRestorableState()
                 } catch (error: CancellationException) {
                     throw error
                 } catch (error: Exception) {
@@ -225,12 +235,64 @@ class ArticleFeedViewModel(
             }
             return ArticleFeedViewModel(articleSource) as T
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            require(modelClass.isAssignableFrom(ArticleFeedViewModel::class.java)) {
+                "Unknown ViewModel class: ${modelClass.name}"
+            }
+            return ArticleFeedViewModel(
+                articleSource = articleSource,
+                savedStateHandle = extras.createSavedStateHandle(),
+            ) as T
+        }
+    }
+
+    private fun persistRestorableState() {
+        val state = mutableUiState.value
+        savedStateHandle[FeedResponseStateKey] =
+            ArticleStateCodec.encode(
+                ArticlesResponse(
+                    articles = state.articles,
+                    nextPage = state.nextPage,
+                ),
+            )
+        savedStateHandle[FeedCategoriesStateKey] = ArrayList(state.availableCategories)
+        state.selectedCategory?.let { category ->
+            savedStateHandle[FeedCategoryStateKey] = category
+        } ?: savedStateHandle.remove<String>(FeedCategoryStateKey)
+        savedStateHandle[FeedStaleStateKey] = state.isStale
     }
 
     private companion object {
         const val FirstPage = 0
     }
 }
+
+private fun restoreFeedState(savedStateHandle: SavedStateHandle): ArticleFeedUiState? {
+    val response =
+        ArticleStateCodec.decodeOrNull(
+            savedStateHandle[FeedResponseStateKey],
+        ) ?: return null
+    return ArticleFeedUiState(
+        articles = response.articles,
+        availableCategories =
+            savedStateHandle.get<ArrayList<String>>(FeedCategoriesStateKey)
+                ?.toList()
+                .orEmpty(),
+        selectedCategory = savedStateHandle[FeedCategoryStateKey],
+        nextPage = response.nextPage,
+        isStale = savedStateHandle[FeedStaleStateKey] ?: false,
+    )
+}
+
+internal const val FeedResponseStateKey = "feed.response"
+internal const val FeedCategoriesStateKey = "feed.categories"
+internal const val FeedCategoryStateKey = "feed.category"
+internal const val FeedStaleStateKey = "feed.stale"
 
 internal fun normalizeCategory(category: String?): String? =
     category

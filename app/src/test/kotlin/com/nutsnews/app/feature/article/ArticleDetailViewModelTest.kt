@@ -1,5 +1,6 @@
 package com.nutsnews.app.feature.article
 
+import androidx.lifecycle.SavedStateHandle
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.ReadingStats
 import com.nutsnews.app.core.model.SavedStory
@@ -78,7 +79,7 @@ class ArticleDetailViewModelTest {
         }
 
     @Test
-    fun repeatedDetailAppearancesRemainOneUniqueStoryInStats() =
+    fun repeatedDetailAppearancesDoNotDuplicateStatsOrWidgetRefreshes() =
         runTest(dispatcher) {
             val article = detailArticle()
             val stats = DetailReadingStatsRepository()
@@ -100,14 +101,67 @@ class ArticleDetailViewModelTest {
             viewModel.onArticleShown(article)
             advanceUntilIdle()
 
-            assertEquals(2, stats.storyOpenCalls)
-            assertEquals(2, widgetRefreshCount)
+            assertEquals(1, stats.storyOpenCalls)
+            assertEquals(1, widgetRefreshCount)
             assertEquals(
                 1,
                 viewModel.uiState.first { it.readingStats?.todayStoryCount == 1 }
                     .readingStats
                     ?.totalUniqueStoryCount,
             )
+        }
+
+    @Test
+    fun processRecreationRestoresCurrentNoteDraftAndDeduplicatesStoryOpen() =
+        runTest(dispatcher) {
+            val article = detailArticle()
+            val stats = DetailReadingStatsRepository()
+            val notes = DetailStoryNoteRepository()
+            val savedState = SavedStateHandle()
+            val original =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = stats,
+                    storyNoteRepository = notes,
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
+                    savedStateHandle = savedState,
+                )
+            original.uiState.launchIn(backgroundScope)
+            original.onArticleShown(article)
+            runCurrent()
+            original.onNoteDraftChanged(article, "Keep this unsaved thought")
+
+            val recreated =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = stats,
+                    storyNoteRepository = notes,
+                    storyReflectionRepository = DetailStoryReflectionRepository(),
+                    savedStateHandle =
+                        SavedStateHandle(
+                            mapOf(
+                                NoteArticleIdStateKey to
+                                    savedState.get<String>(NoteArticleIdStateKey),
+                                NoteDraftStateKey to
+                                    savedState.get<String>(NoteDraftStateKey),
+                                RecordedStoryIdsStateKey to
+                                    savedState.get<ArrayList<String>>(RecordedStoryIdsStateKey),
+                                ActiveArticleStateKey to
+                                    savedState.get<String>(ActiveArticleStateKey),
+                            ),
+                        ),
+                )
+            recreated.uiState.launchIn(backgroundScope)
+            assertEquals(article, recreated.uiState.value.activeArticle)
+            recreated.onArticleShown(article)
+            runCurrent()
+
+            assertEquals("Keep this unsaved thought", recreated.uiState.value.noteDraft)
+            assertEquals(1, stats.storyOpenCalls)
+
+            recreated.saveNote(article)
+            runCurrent()
+            assertEquals("Keep this unsaved thought", notes.findNote(article)?.text)
         }
 
     @Test

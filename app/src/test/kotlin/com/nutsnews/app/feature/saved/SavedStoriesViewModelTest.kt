@@ -1,5 +1,6 @@
 package com.nutsnews.app.feature.saved
 
+import androidx.lifecycle.SavedStateHandle
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.core.model.StoryId
@@ -107,6 +108,41 @@ class SavedStoriesViewModelTest {
                 }
             assertEquals(listOf(retained), updated.stories)
             assertFalse(repository.isLiked(removed.id))
+        }
+
+    @Test
+    fun savedLibraryQueryRestoresAfterProcessRecreation() =
+        runTest(mainDispatcher) {
+            val matching =
+                testStory(
+                    id = "science",
+                    categories = listOf("Science"),
+                )
+            val repository =
+                TestSavedStoryRepository(
+                    listOf(matching, testStory(id = "animals", categories = listOf("Animals"))),
+                )
+            val savedState = SavedStateHandle()
+            val original = SavedStoriesViewModel(repository, savedState)
+            original.onQueryChanged("science")
+
+            val recreated =
+                SavedStoriesViewModel(
+                    savedStoryRepository = repository,
+                    savedStateHandle =
+                        SavedStateHandle(
+                            mapOf(
+                                SavedStoriesQueryStateKey to
+                                    savedState.get<String>(SavedStoriesQueryStateKey),
+                            ),
+                        ),
+                )
+
+            assertEquals("science", recreated.uiState.value.query)
+            assertEquals(
+                listOf(matching),
+                recreated.uiState.first { state -> !state.isLoading }.filteredStories,
+            )
         }
 
     @Test

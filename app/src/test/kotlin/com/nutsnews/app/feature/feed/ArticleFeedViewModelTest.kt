@@ -1,5 +1,6 @@
 package com.nutsnews.app.feature.feed
 
+import androidx.lifecycle.SavedStateHandle
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.ArticlesResponse
 import com.nutsnews.app.data.article.ArticleFetchResult
@@ -143,6 +144,58 @@ class ArticleFeedViewModelTest {
 
             assertEquals(listOf("science"), viewModel.uiState.value.articles.map(Article::id))
             assertFalse(viewModel.uiState.value.isStale)
+        }
+
+    @Test
+    fun processRecreationRestoresVisibleStaleFeedWithoutDuplicateFetch() =
+        runTest(mainDispatcher) {
+            val firstSource = ControlledFeedArticleSource()
+            val savedState = SavedStateHandle()
+            val original =
+                ArticleFeedViewModel(
+                    articleSource = firstSource,
+                    savedStateHandle = savedState,
+                )
+            original.refresh(category = "Science")
+            runCurrent()
+            val expected = article("restored", listOf("Science", "Discovery"))
+            firstSource.nextRequest().succeed(
+                page(
+                    articles = listOf(expected),
+                    nextPage = 2,
+                    source = ArticleFetchSource.StaleCache,
+                ),
+            )
+            advanceUntilIdle()
+
+            val recreatedSource = ControlledFeedArticleSource()
+            val recreated =
+                ArticleFeedViewModel(
+                    articleSource = recreatedSource,
+                    savedStateHandle =
+                        SavedStateHandle(
+                            mapOf(
+                                FeedResponseStateKey to
+                                    savedState.get<String>(FeedResponseStateKey),
+                                FeedCategoriesStateKey to
+                                    savedState.get<ArrayList<String>>(FeedCategoriesStateKey),
+                                FeedCategoryStateKey to
+                                    savedState.get<String>(FeedCategoryStateKey),
+                                FeedStaleStateKey to
+                                    savedState.get<Boolean>(FeedStaleStateKey),
+                            ),
+                        ),
+                )
+
+            assertEquals(listOf(expected), recreated.uiState.value.articles)
+            assertEquals(listOf("Science", "Discovery"), recreated.uiState.value.availableCategories)
+            assertEquals("Science", recreated.uiState.value.selectedCategory)
+            assertEquals(2, recreated.uiState.value.nextPage)
+            assertTrue(recreated.uiState.value.isStale)
+
+            recreated.loadInitialArticles()
+            runCurrent()
+            assertTrue(recreatedSource.requests.tryReceive().isFailure)
         }
 
     @Test

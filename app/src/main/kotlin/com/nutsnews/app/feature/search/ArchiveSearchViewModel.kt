@@ -1,12 +1,17 @@
 package com.nutsnews.app.feature.search
 
+import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.CreationExtras
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.core.model.ArticlesResponse
 import com.nutsnews.app.core.model.StoryId
 import com.nutsnews.app.data.article.ArchiveArticleSearchSource
 import com.nutsnews.app.data.article.ArchiveSearchRequest
+import com.nutsnews.app.data.article.ArticleStateCodec
 import com.nutsnews.app.data.article.NutsNewsApiException
 import com.nutsnews.app.data.article.NutsNewsFetchPolicy
 import com.nutsnews.app.data.story.SavedStoryRepository
@@ -62,8 +67,10 @@ class ArchiveSearchViewModel(
     private val articleSearchSource: ArchiveArticleSearchSource,
     private val savedStoryRepository: SavedStoryRepository,
     private val debounceMillis: Long = SearchDebounceMillis,
+    private val savedStateHandle: SavedStateHandle = SavedStateHandle(),
 ) : ViewModel() {
-    private val mutableSearchState = MutableStateFlow(ArchiveSearchUiState())
+    private val mutableSearchState =
+        MutableStateFlow(restoreArchiveSearchState(savedStateHandle))
     private val saveMutex = Mutex()
     private var debounceJob: Job? = null
     private var searchGeneration = 0L
@@ -80,7 +87,7 @@ class ArchiveSearchViewModel(
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = ArchiveSearchUiState(),
+            initialValue = mutableSearchState.value,
         )
 
     fun onQueryChanged(value: String) {
@@ -95,8 +102,12 @@ class ArchiveSearchViewModel(
                 ArchiveSearchUiState(query = value)
             }
         }
+        savedStateHandle[ArchiveSearchQueryStateKey] = value
 
-        if (!request.meetsMinimum) return
+        if (!request.meetsMinimum) {
+            clearPersistedResults()
+            return
+        }
 
         val generation = searchGeneration
         debounceJob =
@@ -125,6 +136,7 @@ class ArchiveSearchViewModel(
         mutableSearchState.update { current ->
             current.copy(query = request.query)
         }
+        savedStateHandle[ArchiveSearchQueryStateKey] = request.query
         viewModelScope.launch {
             searchFirstPage(
                 request = request,
@@ -184,6 +196,8 @@ class ArchiveSearchViewModel(
         searchGeneration += 1
         debounceJob?.cancel()
         mutableSearchState.value = ArchiveSearchUiState()
+        savedStateHandle.remove<String>(ArchiveSearchQueryStateKey)
+        clearPersistedResults()
     }
 
     fun toggleSaved(article: Article) {
@@ -234,6 +248,7 @@ class ArchiveSearchViewModel(
                     isSearching = false,
                 )
             }
+            persistRestorableResults()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -283,6 +298,7 @@ class ArchiveSearchViewModel(
                     isLoadingMore = false,
                 )
             }
+            persistRestorableResults()
         } catch (error: CancellationException) {
             throw error
         } catch (error: Exception) {
@@ -309,6 +325,39 @@ class ArchiveSearchViewModel(
                 savedStoryRepository = savedStoryRepository,
             ) as T
         }
+
+        @Suppress("UNCHECKED_CAST")
+        override fun <T : ViewModel> create(
+            modelClass: Class<T>,
+            extras: CreationExtras,
+        ): T {
+            require(modelClass.isAssignableFrom(ArchiveSearchViewModel::class.java))
+            return ArchiveSearchViewModel(
+                articleSearchSource = articleSearchSource,
+                savedStoryRepository = savedStoryRepository,
+                savedStateHandle = extras.createSavedStateHandle(),
+            ) as T
+        }
+    }
+
+    private fun persistRestorableResults() {
+        val state = mutableSearchState.value
+        savedStateHandle[ArchiveSearchQueryStateKey] = state.query
+        savedStateHandle[ArchiveSearchSearchedQueryStateKey] = state.searchedQuery
+        savedStateHandle[ArchiveSearchResponseStateKey] =
+            ArticleStateCodec.encode(
+                ArticlesResponse(
+                    articles = state.articles,
+                    nextPage = state.nextPage,
+                ),
+            )
+        savedStateHandle[ArchiveSearchHasSearchedStateKey] = state.hasSearched
+    }
+
+    private fun clearPersistedResults() {
+        savedStateHandle.remove<String>(ArchiveSearchSearchedQueryStateKey)
+        savedStateHandle.remove<String>(ArchiveSearchResponseStateKey)
+        savedStateHandle.remove<Boolean>(ArchiveSearchHasSearchedStateKey)
     }
 
     private fun Exception.archiveSearchMessage(): String =
@@ -327,3 +376,25 @@ class ArchiveSearchViewModel(
         const val SearchDebounceMillis = 350L
     }
 }
+
+private fun restoreArchiveSearchState(
+    savedStateHandle: SavedStateHandle,
+): ArchiveSearchUiState {
+    val query = savedStateHandle[ArchiveSearchQueryStateKey] ?: ""
+    val response =
+        ArticleStateCodec.decodeOrNull(
+            savedStateHandle[ArchiveSearchResponseStateKey],
+        ) ?: return ArchiveSearchUiState(query = query)
+    return ArchiveSearchUiState(
+        query = query,
+        searchedQuery = savedStateHandle[ArchiveSearchSearchedQueryStateKey] ?: query,
+        articles = response.articles,
+        nextPage = response.nextPage,
+        hasSearched = savedStateHandle[ArchiveSearchHasSearchedStateKey] ?: true,
+    )
+}
+
+internal const val ArchiveSearchQueryStateKey = "archiveSearch.query"
+internal const val ArchiveSearchSearchedQueryStateKey = "archiveSearch.searchedQuery"
+internal const val ArchiveSearchResponseStateKey = "archiveSearch.response"
+internal const val ArchiveSearchHasSearchedStateKey = "archiveSearch.hasSearched"

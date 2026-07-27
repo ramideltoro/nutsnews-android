@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -85,6 +87,7 @@ fun ArchiveSearchScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     requestInitialFocus: Boolean = true,
+    listState: LazyListState = rememberLazyListState(),
 ) {
     NutsNewsBackground(
         modifier =
@@ -108,6 +111,7 @@ fun ArchiveSearchScreen(
                     onLoadMore = onLoadMore,
                     onToggleSaved = onToggleSaved,
                     onOpenArticle = onOpenArticle,
+                    listState = listState,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -311,6 +315,7 @@ private fun ArchiveSearchResults(
     onLoadMore: () -> Unit,
     onToggleSaved: (Article) -> Unit,
     onOpenArticle: (Article) -> Unit,
+    listState: LazyListState,
     modifier: Modifier = Modifier,
 ) {
     when {
@@ -340,6 +345,7 @@ private fun ArchiveSearchResults(
                 onLoadMore = onLoadMore,
                 onToggleSaved = onToggleSaved,
                 onOpenArticle = onOpenArticle,
+                listState = listState,
                 modifier = modifier,
             )
     }
@@ -352,9 +358,11 @@ private fun ArchiveSearchResultList(
     onLoadMore: () -> Unit,
     onToggleSaved: (Article) -> Unit,
     onOpenArticle: (Article) -> Unit,
+    listState: LazyListState,
     modifier: Modifier,
 ) {
     LazyColumn(
+        state = listState,
         modifier =
             modifier
                 .fillMaxWidth()

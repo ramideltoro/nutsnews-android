@@ -128,6 +128,7 @@ class ArticleListenController(
     }
 
     fun stop() {
+        if (!mutableUiState.value.isActive && pendingScript == null) return
         pendingScript = null
         engine.stop()
         mutableUiState.update { current ->
