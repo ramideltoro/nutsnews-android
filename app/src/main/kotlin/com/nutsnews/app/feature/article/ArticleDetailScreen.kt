@@ -1,6 +1,5 @@
 package com.nutsnews.app.feature.article
 
-import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -89,7 +88,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
@@ -107,6 +105,8 @@ import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryReflection
 import com.nutsnews.app.core.model.StoryReflectionReaction
+import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
@@ -155,10 +155,8 @@ fun ArticleDetailScreen(
     shareCardUiState: ArticleShareCardUiState = ArticleShareCardUiState(),
     onShareCard: (Article) -> Unit = {},
 ) {
-    val configuration = LocalConfiguration.current
-    val isTabletLandscape =
-        configuration.smallestScreenWidthDp >= TabletMinimumWidthDp &&
-            configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+    val windowInfo = LocalNutsNewsWindowInfo.current
+    val usesCompactLandscapeLayout = windowInfo.usesCompactLandscapeLayout
     val palette = NutsNewsTheme.colors
     val brief = remember(article) { deriveArticleBrief(article) }
     val listenScript = remember(article, brief) { buildArticleListenScript(article, brief) }
@@ -235,108 +233,110 @@ fun ArticleDetailScreen(
                 .imePadding()
                 .testTag("article_detail"),
     ) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
-            topBar = {
-                CenterAlignedTopAppBar(
-                    modifier = Modifier.testTag("article_detail_top_bar"),
-                    title = {
-                        Text(
-                            text = "Story",
-                            color = palette.primaryText,
-                            style = NutsNewsTheme.typography.headline,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = {
-                                onStopListening()
-                                onClose()
-                            },
-                            modifier = Modifier.testTag("article_detail_close"),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Close story",
-                                tint = palette.accentHighlight,
+        NutsNewsAdaptivePane(maximumWidth = windowInfo.immersiveContentMaximumWidth) {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        modifier = Modifier.testTag("article_detail_top_bar"),
+                        title = {
+                            Text(
+                                text = "Story",
+                                color = palette.primaryText,
+                                style = NutsNewsTheme.typography.headline,
                             )
-                        }
-                    },
-                    actions = {
-                        ArticleListenToolbarButton(
-                            isActive = listenUiState.isActive,
-                            onClick = { isShowingListenMode = true },
-                        )
-                        ArticleDetailLikeButton(
-                            isLiked = displayedLiked,
-                            glow = likeGlow.value,
-                            onClick = {
-                                displayedLiked = !displayedLiked
-                                likeAnimationToken += 1
-                                onToggleLiked(article)
-                            },
-                        )
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                            scrolledContainerColor =
-                                androidx.compose.ui.graphics.Color.Transparent,
-                        ),
-                )
-            },
-        ) { contentPadding ->
-            if (isTabletLandscape) {
-                CompactLandscapeArticleDetail(
-                    article = article,
-                    brief = brief,
-                    heroImageModel = heroImageModel,
-                    onOpenOriginalStory = openOriginalStory,
-                    originalStoryStatus = originalStoryStatus,
-                    noteDraft = noteDraft,
-                    hasSavedNote = hasSavedNote,
-                    isNoteLoading = isNoteLoading,
-                    noteStatusMessage = noteStatusMessage,
-                    onNoteDraftChanged = onNoteDraftChanged,
-                    onSaveNote = onSaveNote,
-                    onClearNote = onClearNote,
-                    reflection = reflection,
-                    isReflectionLoading = isReflectionLoading,
-                    reflectionStatusMessage = reflectionStatusMessage,
-                    onReflectionSelected = onReflectionSelected,
-                    shareCardUiState = shareCardUiState,
-                    onShareCard = onShareCard,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(contentPadding),
-                )
-            } else {
-                RegularArticleDetail(
-                    article = article,
-                    brief = brief,
-                    heroImageModel = heroImageModel,
-                    onOpenOriginalStory = openOriginalStory,
-                    originalStoryStatus = originalStoryStatus,
-                    noteDraft = noteDraft,
-                    hasSavedNote = hasSavedNote,
-                    isNoteLoading = isNoteLoading,
-                    noteStatusMessage = noteStatusMessage,
-                    onNoteDraftChanged = onNoteDraftChanged,
-                    onSaveNote = onSaveNote,
-                    onClearNote = onClearNote,
-                    reflection = reflection,
-                    isReflectionLoading = isReflectionLoading,
-                    reflectionStatusMessage = reflectionStatusMessage,
-                    onReflectionSelected = onReflectionSelected,
-                    shareCardUiState = shareCardUiState,
-                    onShareCard = onShareCard,
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .padding(contentPadding),
-                )
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = {
+                                    onStopListening()
+                                    onClose()
+                                },
+                                modifier = Modifier.testTag("article_detail_close"),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Close story",
+                                    tint = palette.accentHighlight,
+                                )
+                            }
+                        },
+                        actions = {
+                            ArticleListenToolbarButton(
+                                isActive = listenUiState.isActive,
+                                onClick = { isShowingListenMode = true },
+                            )
+                            ArticleDetailLikeButton(
+                                isLiked = displayedLiked,
+                                glow = likeGlow.value,
+                                onClick = {
+                                    displayedLiked = !displayedLiked
+                                    likeAnimationToken += 1
+                                    onToggleLiked(article)
+                                },
+                            )
+                        },
+                        colors =
+                            TopAppBarDefaults.topAppBarColors(
+                                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                                scrolledContainerColor =
+                                    androidx.compose.ui.graphics.Color.Transparent,
+                            ),
+                    )
+                },
+            ) { contentPadding ->
+                if (usesCompactLandscapeLayout) {
+                    CompactLandscapeArticleDetail(
+                        article = article,
+                        brief = brief,
+                        heroImageModel = heroImageModel,
+                        onOpenOriginalStory = openOriginalStory,
+                        originalStoryStatus = originalStoryStatus,
+                        noteDraft = noteDraft,
+                        hasSavedNote = hasSavedNote,
+                        isNoteLoading = isNoteLoading,
+                        noteStatusMessage = noteStatusMessage,
+                        onNoteDraftChanged = onNoteDraftChanged,
+                        onSaveNote = onSaveNote,
+                        onClearNote = onClearNote,
+                        reflection = reflection,
+                        isReflectionLoading = isReflectionLoading,
+                        reflectionStatusMessage = reflectionStatusMessage,
+                        onReflectionSelected = onReflectionSelected,
+                        shareCardUiState = shareCardUiState,
+                        onShareCard = onShareCard,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding),
+                    )
+                } else {
+                    RegularArticleDetail(
+                        article = article,
+                        brief = brief,
+                        heroImageModel = heroImageModel,
+                        onOpenOriginalStory = openOriginalStory,
+                        originalStoryStatus = originalStoryStatus,
+                        noteDraft = noteDraft,
+                        hasSavedNote = hasSavedNote,
+                        isNoteLoading = isNoteLoading,
+                        noteStatusMessage = noteStatusMessage,
+                        onNoteDraftChanged = onNoteDraftChanged,
+                        onSaveNote = onSaveNote,
+                        onClearNote = onClearNote,
+                        reflection = reflection,
+                        isReflectionLoading = isReflectionLoading,
+                        reflectionStatusMessage = reflectionStatusMessage,
+                        onReflectionSelected = onReflectionSelected,
+                        shareCardUiState = shareCardUiState,
+                        onShareCard = onShareCard,
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .padding(contentPadding),
+                    )
+                }
             }
         }
     }
@@ -893,59 +893,61 @@ fun UnavailableArticleDetailScreen(
 ) {
     val palette = NutsNewsTheme.colors
     NutsNewsBackground(modifier = modifier.fillMaxSize()) {
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
-            containerColor = androidx.compose.ui.graphics.Color.Transparent,
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        Text(
-                            text = "Story",
-                            color = palette.primaryText,
-                            style = NutsNewsTheme.typography.headline,
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(
-                            onClick = onClose,
-                            modifier = Modifier.testTag("article_detail_close"),
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Close,
-                                contentDescription = "Close story",
-                                tint = palette.accentHighlight,
+        NutsNewsAdaptivePane {
+            Scaffold(
+                modifier = Modifier.fillMaxSize(),
+                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                topBar = {
+                    CenterAlignedTopAppBar(
+                        title = {
+                            Text(
+                                text = "Story",
+                                color = palette.primaryText,
+                                style = NutsNewsTheme.typography.headline,
                             )
-                        }
-                    },
-                    colors =
-                        TopAppBarDefaults.topAppBarColors(
-                            containerColor = androidx.compose.ui.graphics.Color.Transparent,
-                        ),
-                )
-            },
-        ) { contentPadding ->
-            Column(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(contentPadding)
-                        .padding(NutsNewsTheme.spacing.large)
-                        .testTag("article_detail_unavailable"),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Filled.Newspaper,
-                    contentDescription = null,
-                    modifier = Modifier.size(42.dp),
-                    tint = palette.accent,
-                )
-                Text(
-                    text = "This story is no longer available.",
-                    modifier = Modifier.padding(top = NutsNewsTheme.spacing.medium),
-                    color = palette.secondaryText,
-                    style = NutsNewsTheme.typography.body,
-                )
+                        },
+                        navigationIcon = {
+                            IconButton(
+                                onClick = onClose,
+                                modifier = Modifier.testTag("article_detail_close"),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Close,
+                                    contentDescription = "Close story",
+                                    tint = palette.accentHighlight,
+                                )
+                            }
+                        },
+                        colors =
+                            TopAppBarDefaults.topAppBarColors(
+                                containerColor = androidx.compose.ui.graphics.Color.Transparent,
+                            ),
+                    )
+                },
+            ) { contentPadding ->
+                Column(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .padding(contentPadding)
+                            .padding(NutsNewsTheme.spacing.large)
+                            .testTag("article_detail_unavailable"),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Newspaper,
+                        contentDescription = null,
+                        modifier = Modifier.size(42.dp),
+                        tint = palette.accent,
+                    )
+                    Text(
+                        text = "This story is no longer available.",
+                        modifier = Modifier.padding(top = NutsNewsTheme.spacing.medium),
+                        color = palette.secondaryText,
+                        style = NutsNewsTheme.typography.body,
+                    )
+                }
             }
         }
     }
@@ -1078,8 +1080,12 @@ private fun CompactLandscapeArticleDetail(
                 ArticleDetailCategoryRow(article.categories)
             }
             Column(
-                modifier = Modifier.fillMaxHeight().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.small),
+                modifier =
+                    Modifier
+                        .fillMaxHeight()
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
             ) {
                 ArticleDetailTitle(
                     title = article.title,
@@ -1116,7 +1122,6 @@ private fun CompactLandscapeArticleDetail(
                     article = article,
                     compact = true,
                 )
-                Spacer(modifier = Modifier.weight(1f))
                 OriginalStoryButton(
                     article = article,
                     compact = true,
@@ -2499,7 +2504,6 @@ private enum class DetailHeroLoadState {
     Failed,
 }
 
-private const val TabletMinimumWidthDp = 600
 private const val TabletImageColumnFraction = 0.39f
 private val TabletImageMaximumWidth = 440.dp
 private const val WideThumbnailCropAspectRatio = 3f / 2f

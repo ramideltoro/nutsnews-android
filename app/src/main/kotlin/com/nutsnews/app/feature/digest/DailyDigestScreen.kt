@@ -59,6 +59,7 @@ import com.nutsnews.app.data.article.DailyDigest
 import com.nutsnews.app.data.article.DailyDigestEngine
 import com.nutsnews.app.data.article.DigestCategoryCount
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
@@ -95,16 +96,18 @@ fun DailyDigestScreen(
                 .fillMaxSize()
                 .testTag("daily_digest_screen"),
     ) {
-        if (digest.featuredArticle == null) {
-            DailyDigestEmptyState(onClose = onClose)
-        } else {
-            DailyDigestContent(
-                digest = digest,
-                savedStoryIds = savedStoryIds,
-                onOpenArticle = onOpenArticle,
-                onToggleSaved = toggleSaved,
-                onClose = onClose,
-            )
+        NutsNewsAdaptivePane {
+            if (digest.featuredArticle == null) {
+                DailyDigestEmptyState(onClose = onClose)
+            } else {
+                DailyDigestContent(
+                    digest = digest,
+                    savedStoryIds = savedStoryIds,
+                    onOpenArticle = onOpenArticle,
+                    onToggleSaved = toggleSaved,
+                    onClose = onClose,
+                )
+            }
         }
     }
 }

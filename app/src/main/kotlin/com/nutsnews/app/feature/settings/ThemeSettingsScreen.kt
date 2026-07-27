@@ -60,6 +60,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.designsystem.NutsNewsAppTheme
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsPalette
 import com.nutsnews.app.designsystem.NutsNewsPalettes
@@ -116,38 +117,40 @@ fun ThemeSettingsScreen(
                 .fillMaxSize()
                 .testTag("theme_settings_screen"),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding(),
-        ) {
-            ThemeSettingsTopBar(
-                glowTheme = glowTheme,
-                glowProgress = glowProgress.value,
-                onBack = onBack,
-                onGoHome = onGoHome,
-            )
-            LazyColumn(
+        NutsNewsAdaptivePane {
+            Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .testTag("theme_settings_list"),
-                contentPadding = PaddingValues(NutsNewsTheme.spacing.medium),
-                verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
             ) {
-                items(
-                    items = NutsNewsAppTheme.entries,
-                    key = NutsNewsAppTheme::rawValue,
-                ) { theme ->
-                    ThemeOptionRow(
-                        theme = theme,
-                        isSelected = theme == displayedTheme,
-                        glowTheme = glowTheme,
-                        glowProgress = glowProgress.value,
-                        onClick = { selectTheme(theme) },
-                    )
+                ThemeSettingsTopBar(
+                    glowTheme = glowTheme,
+                    glowProgress = glowProgress.value,
+                    onBack = onBack,
+                    onGoHome = onGoHome,
+                )
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .testTag("theme_settings_list"),
+                    contentPadding = PaddingValues(NutsNewsTheme.spacing.medium),
+                    verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                ) {
+                    items(
+                        items = NutsNewsAppTheme.entries,
+                        key = NutsNewsAppTheme::rawValue,
+                    ) { theme ->
+                        ThemeOptionRow(
+                            theme = theme,
+                            isSelected = theme == displayedTheme,
+                            glowTheme = glowTheme,
+                            glowProgress = glowProgress.value,
+                            onClick = { selectTheme(theme) },
+                        )
+                    }
                 }
             }
         }

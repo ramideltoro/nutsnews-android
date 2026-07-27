@@ -71,6 +71,7 @@ import com.nutsnews.app.data.preferences.MoodPreference
 import com.nutsnews.app.data.preferences.NutsNewsPersonalization
 import com.nutsnews.app.data.preferences.TopicPreference
 import com.nutsnews.app.designsystem.NutsNewsAppTheme
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
@@ -94,76 +95,78 @@ fun PersonalizationScreen(
                 .fillMaxSize()
                 .testTag("personalization_screen"),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            PersonalizationTopBar(
-                mode = mode,
-                onClose = onClose,
-            )
+        NutsNewsAdaptivePane {
+            Column(modifier = Modifier.fillMaxSize()) {
+                PersonalizationTopBar(
+                    mode = mode,
+                    onClose = onClose,
+                )
 
-            if (uiState.isLoading) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = NutsNewsTheme.colors.accent)
-                }
-            } else {
-                Column(
-                    modifier =
-                        Modifier
-                            .weight(1f)
-                            .verticalScroll(rememberScrollState())
-                            .navigationBarsPadding()
-                            .padding(NutsNewsTheme.spacing.medium),
-                    verticalArrangement =
-                        Arrangement.spacedBy(NutsNewsTheme.spacing.large),
-                ) {
-                    PersonalizationHero()
-                    PersonalizationSection(
-                        number = "1",
-                        title = "Pick your favorite good news",
+                if (uiState.isLoading) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        TopicChoices(
-                            selectedTopicIds = uiState.selectedTopicIds,
-                            onTopicToggled = onTopicToggled,
+                        CircularProgressIndicator(color = NutsNewsTheme.colors.accent)
+                    }
+                } else {
+                    Column(
+                        modifier =
+                            Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState())
+                                .navigationBarsPadding()
+                                .padding(NutsNewsTheme.spacing.medium),
+                        verticalArrangement =
+                            Arrangement.spacedBy(NutsNewsTheme.spacing.large),
+                    ) {
+                        PersonalizationHero()
+                        PersonalizationSection(
+                            number = "1",
+                            title = "Pick your favorite good news",
+                        ) {
+                            TopicChoices(
+                                selectedTopicIds = uiState.selectedTopicIds,
+                                onTopicToggled = onTopicToggled,
+                            )
+                        }
+                        PersonalizationSection(
+                            number = "2",
+                            title = "Choose your default mood",
+                        ) {
+                            MoodChoices(
+                                selectedMoodId = uiState.selectedMoodId,
+                                onMoodSelected = onMoodSelected,
+                            )
+                        }
+                        PersonalizationSection(
+                            number = "3",
+                            title = "Set a daily good-news goal",
+                        ) {
+                            DailyGoalControl(
+                                dailyGoal = uiState.dailyGoal,
+                                onDailyGoalChanged = onDailyGoalChanged,
+                            )
+                        }
+                        PersonalizationSection(
+                            number = "4",
+                            title = "Optional daily reminder",
+                        ) {
+                            ReminderControls(
+                                isEnabled = uiState.reminderEnabled,
+                                selectedHour = uiState.reminderHour,
+                                statusText = uiState.statusText,
+                                onEnabledChanged = onReminderEnabledChanged,
+                                onHourSelected = onReminderHourSelected,
+                            )
+                        }
+                        SaveButton(
+                            mode = mode,
+                            isEnabled = uiState.canSave,
+                            isSaving = uiState.isSaving,
+                            onSave = onSave,
                         )
                     }
-                    PersonalizationSection(
-                        number = "2",
-                        title = "Choose your default mood",
-                    ) {
-                        MoodChoices(
-                            selectedMoodId = uiState.selectedMoodId,
-                            onMoodSelected = onMoodSelected,
-                        )
-                    }
-                    PersonalizationSection(
-                        number = "3",
-                        title = "Set a daily good-news goal",
-                    ) {
-                        DailyGoalControl(
-                            dailyGoal = uiState.dailyGoal,
-                            onDailyGoalChanged = onDailyGoalChanged,
-                        )
-                    }
-                    PersonalizationSection(
-                        number = "4",
-                        title = "Optional daily reminder",
-                    ) {
-                        ReminderControls(
-                            isEnabled = uiState.reminderEnabled,
-                            selectedHour = uiState.reminderHour,
-                            statusText = uiState.statusText,
-                            onEnabledChanged = onReminderEnabledChanged,
-                            onHourSelected = onReminderHourSelected,
-                        )
-                    }
-                    SaveButton(
-                        mode = mode,
-                        isEnabled = uiState.canSave,
-                        isSaving = uiState.isSaving,
-                        onSave = onSave,
-                    )
                 }
             }
         }

@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import com.nutsnews.app.designsystem.NutsNewsAdaptiveWindow
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.article.AndroidArticleShareLauncher
 import com.nutsnews.app.feature.article.AndroidArticleSharePackageCreator
@@ -719,52 +720,54 @@ internal fun NutsNewsApp(
     },
 ) {
     NutsNewsTheme(theme = uiState.theme) {
-        BackHandler(
-            enabled = !splashUiState.isShowingSplash && uiState.canNavigateUp,
-        ) {
-            onNavigateUp()
-        }
-
-        val contentProgress by
-            animateFloatAsState(
-                targetValue = if (splashUiState.isShowingSplash) 0f else 1f,
-                animationSpec =
-                    tween(
-                        durationMillis = StartupSplashTiming.ContentTransitionMillis,
-                        easing = FastOutSlowInEasing,
-                    ),
-                label = "Startup content transition",
-            )
-
-        Box(modifier = modifier.fillMaxSize()) {
-            key(uiState.destination) {
-                Surface(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .graphicsLayer {
-                                alpha = contentProgress
-                                scaleX = 0.99f + (0.01f * contentProgress)
-                                scaleY = 0.99f + (0.01f * contentProgress)
-                            },
-                ) {
-                    destinationContent(uiState.destination)
-                }
+        NutsNewsAdaptiveWindow {
+            BackHandler(
+                enabled = !splashUiState.isShowingSplash && uiState.canNavigateUp,
+            ) {
+                onNavigateUp()
             }
 
-            AnimatedVisibility(
-                visible = splashUiState.isShowingSplash,
-                enter = EnterTransition.None,
-                exit =
-                    fadeOut(
-                        animationSpec =
-                            tween(
-                                durationMillis = StartupSplashTiming.ContentTransitionMillis,
-                                easing = FastOutSlowInEasing,
-                            ),
-                    ),
-            ) {
-                StartupSplash(uiState = splashUiState)
+            val contentProgress by
+                animateFloatAsState(
+                    targetValue = if (splashUiState.isShowingSplash) 0f else 1f,
+                    animationSpec =
+                        tween(
+                            durationMillis = StartupSplashTiming.ContentTransitionMillis,
+                            easing = FastOutSlowInEasing,
+                        ),
+                    label = "Startup content transition",
+                )
+
+            Box(modifier = modifier.fillMaxSize()) {
+                key(uiState.destination) {
+                    Surface(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .graphicsLayer {
+                                    alpha = contentProgress
+                                    scaleX = 0.99f + (0.01f * contentProgress)
+                                    scaleY = 0.99f + (0.01f * contentProgress)
+                                },
+                    ) {
+                        destinationContent(uiState.destination)
+                    }
+                }
+
+                AnimatedVisibility(
+                    visible = splashUiState.isShowingSplash,
+                    enter = EnterTransition.None,
+                    exit =
+                        fadeOut(
+                            animationSpec =
+                                tween(
+                                    durationMillis = StartupSplashTiming.ContentTransitionMillis,
+                                    easing = FastOutSlowInEasing,
+                                ),
+                        ),
+                ) {
+                    StartupSplash(uiState = splashUiState)
+                }
             }
         }
     }

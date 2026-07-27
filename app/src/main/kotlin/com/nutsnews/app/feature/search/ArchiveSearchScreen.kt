@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
@@ -85,23 +86,25 @@ fun ArchiveSearchScreen(
                 .fillMaxSize()
                 .testTag("archive_search_screen"),
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            ArchiveSearchHeader(onClose = onClose)
-            ArchiveSearchControls(
-                uiState = uiState,
-                onQueryChanged = onQueryChanged,
-                onSubmitSearch = onSubmitSearch,
-                onClearSearch = onClearSearch,
-                requestInitialFocus = requestInitialFocus,
-            )
-            ArchiveSearchResults(
-                uiState = uiState,
-                onRetry = onRetry,
-                onLoadMore = onLoadMore,
-                onToggleSaved = onToggleSaved,
-                onOpenArticle = onOpenArticle,
-                modifier = Modifier.weight(1f),
-            )
+        NutsNewsAdaptivePane {
+            Column(modifier = Modifier.fillMaxSize()) {
+                ArchiveSearchHeader(onClose = onClose)
+                ArchiveSearchControls(
+                    uiState = uiState,
+                    onQueryChanged = onQueryChanged,
+                    onSubmitSearch = onSubmitSearch,
+                    onClearSearch = onClearSearch,
+                    requestInitialFocus = requestInitialFocus,
+                )
+                ArchiveSearchResults(
+                    uiState = uiState,
+                    onRetry = onRetry,
+                    onLoadMore = onLoadMore,
+                    onToggleSaved = onToggleSaved,
+                    onOpenArticle = onOpenArticle,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 }

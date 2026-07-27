@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 
@@ -76,28 +77,29 @@ fun HelpFaqScreen(
                 .fillMaxSize()
                 .testTag(HelpScreenTag),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding(),
-        ) {
-            HelpTopBar(onClose = onClose)
-            LazyColumn(
+        NutsNewsAdaptivePane {
+            Column(
                 modifier =
                     Modifier
                         .fillMaxSize()
-                        .testTag(HelpListTag),
-                contentPadding =
-                    PaddingValues(
-                        start = NutsNewsTheme.spacing.medium,
-                        top = NutsNewsTheme.spacing.medium,
-                        end = NutsNewsTheme.spacing.medium,
-                        bottom = NutsNewsTheme.spacing.xl,
-                    ),
-                verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
             ) {
+                HelpTopBar(onClose = onClose)
+                LazyColumn(
+                    modifier =
+                        Modifier
+                            .fillMaxSize()
+                            .testTag(HelpListTag),
+                    contentPadding =
+                        PaddingValues(
+                            start = NutsNewsTheme.spacing.medium,
+                            top = NutsNewsTheme.spacing.medium,
+                            end = NutsNewsTheme.spacing.medium,
+                            bottom = NutsNewsTheme.spacing.xl,
+                        ),
+                    verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),
+                ) {
                 item(key = "hero") {
                     HelpHeroCard()
                 }
@@ -237,6 +239,7 @@ fun HelpFaqScreen(
                             }
                         }
                     }
+                }
                 }
             }
         }

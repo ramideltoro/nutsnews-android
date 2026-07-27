@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.StoryReflection
 import com.nutsnews.app.core.model.StoryReflectionReaction
+import com.nutsnews.app.designsystem.NutsNewsAdaptiveWindow
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
 import java.time.Instant
@@ -198,33 +199,35 @@ abstract class ArticleDetailScreenshotContract(
         onShareCard: (Article) -> Unit = {},
     ) {
         composeRule.setContent {
-            NutsNewsTheme(updateSystemBars = false) {
-                ArticleDetailScreen(
-                    article = article,
-                    onClose = onClose,
-                    heroImageModel = imageModel,
-                    isLiked = isLiked,
-                    onToggleLiked = onToggleLiked,
-                    onArticleShown = onArticleShown,
-                    onOpenOriginalStory = onOpenOriginalStory,
-                    onOriginalStoryOpened = onOriginalStoryOpened,
-                    noteDraft = noteDraft,
-                    hasSavedNote = hasSavedNote,
-                    isNoteLoading = isNoteLoading,
-                    noteStatusMessage = noteStatusMessage,
-                    onNoteDraftChanged = onNoteDraftChanged,
-                    onSaveNote = onSaveNote,
-                    onClearNote = onClearNote,
-                    reflection = reflection,
-                    isReflectionLoading = isReflectionLoading,
-                    reflectionStatusMessage = reflectionStatusMessage,
-                    onReflectionSelected = onReflectionSelected,
-                    listenUiState = listenUiState(),
-                    onToggleListening = onToggleListening,
-                    onStopListening = onStopListening,
-                    shareCardUiState = shareCardUiState(),
-                    onShareCard = onShareCard,
-                )
+            NutsNewsAdaptiveWindow {
+                NutsNewsTheme(updateSystemBars = false) {
+                    ArticleDetailScreen(
+                        article = article,
+                        onClose = onClose,
+                        heroImageModel = imageModel,
+                        isLiked = isLiked,
+                        onToggleLiked = onToggleLiked,
+                        onArticleShown = onArticleShown,
+                        onOpenOriginalStory = onOpenOriginalStory,
+                        onOriginalStoryOpened = onOriginalStoryOpened,
+                        noteDraft = noteDraft,
+                        hasSavedNote = hasSavedNote,
+                        isNoteLoading = isNoteLoading,
+                        noteStatusMessage = noteStatusMessage,
+                        onNoteDraftChanged = onNoteDraftChanged,
+                        onSaveNote = onSaveNote,
+                        onClearNote = onClearNote,
+                        reflection = reflection,
+                        isReflectionLoading = isReflectionLoading,
+                        reflectionStatusMessage = reflectionStatusMessage,
+                        onReflectionSelected = onReflectionSelected,
+                        listenUiState = listenUiState(),
+                        onToggleListening = onToggleListening,
+                        onStopListening = onStopListening,
+                        shareCardUiState = shareCardUiState(),
+                        onShareCard = onShareCard,
+                    )
+                }
             }
         }
     }
@@ -262,6 +265,10 @@ abstract class ArticleDetailScreenshotContract(
             val title = bounds("article_detail_title")
             assertTrue(title.left > hero.right)
             assertTrue(hero.width.toDp() <= DetailGolden.TabletImageMaximumWidthDp)
+            composeRule
+                .onNodeWithTag("article_detail_open_original")
+                .performScrollTo()
+                .assertIsDisplayed()
         }
     }
 
@@ -894,6 +901,24 @@ class TabletArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExp
         assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
     }
 }
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], qualifiers = "w852dp-h393dp-land")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class PhoneLandscapeArticleDetailScreenTest :
+    ArticleDetailScreenshotContract(compactExpected = false)
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], qualifiers = "w841dp-h673dp-land")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class FoldableLandscapeArticleDetailScreenTest :
+    ArticleDetailScreenshotContract(compactExpected = true)
+
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35], qualifiers = "w800dp-h1280dp-port")
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
+class TabletPortraitArticleDetailScreenTest :
+    ArticleDetailScreenshotContract(compactExpected = false)
 
 class ArticleDetailHeroCropTest {
     @Test

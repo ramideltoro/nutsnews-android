@@ -55,6 +55,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.LocalNutsNewsWindowInfo
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
@@ -70,18 +72,22 @@ fun FeedScreen(
     content: @Composable BoxScope.() -> Unit = {},
 ) {
     NutsNewsBackground(modifier = modifier.fillMaxSize()) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            FeedHeader(
-                availableCategories = uiState.availableCategories,
-                selectedCategory = uiState.selectedCategory,
-                onDestinationSelected = onDestinationSelected,
-                onCategorySelected = onCategorySelected,
-                modifier = Modifier.statusBarsPadding(),
-            )
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                content = content,
-            )
+        NutsNewsAdaptivePane(
+            maximumWidth = LocalNutsNewsWindowInfo.current.immersiveContentMaximumWidth,
+        ) {
+            Column(modifier = Modifier.fillMaxSize()) {
+                FeedHeader(
+                    availableCategories = uiState.availableCategories,
+                    selectedCategory = uiState.selectedCategory,
+                    onDestinationSelected = onDestinationSelected,
+                    onCategorySelected = onCategorySelected,
+                    modifier = Modifier.statusBarsPadding(),
+                )
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    content = content,
+                )
+            }
         }
     }
 }

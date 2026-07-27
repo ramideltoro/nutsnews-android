@@ -36,6 +36,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.designsystem.NutsNewsAppTheme
 import com.nutsnews.app.designsystem.NutsNewsBackground
+import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.util.Locale
 
@@ -54,33 +55,35 @@ fun SettingsScreen(
                 .fillMaxSize()
                 .testTag("settings_screen"),
     ) {
-        Column(
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding()
-                    .navigationBarsPadding(),
-        ) {
-            SettingsTopBar(onGoHome = onGoHome)
-            if (uiState.isLoading) {
-                Box(
-                    modifier =
-                        Modifier
-                            .fillMaxSize()
-                            .testTag("settings_loading"),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(
-                        color = NutsNewsTheme.colors.accent,
+        NutsNewsAdaptivePane {
+            Column(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding(),
+            ) {
+                SettingsTopBar(onGoHome = onGoHome)
+                if (uiState.isLoading) {
+                    Box(
+                        modifier =
+                            Modifier
+                                .fillMaxSize()
+                                .testTag("settings_loading"),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        CircularProgressIndicator(
+                            color = NutsNewsTheme.colors.accent,
+                        )
+                    }
+                } else {
+                    SettingsContent(
+                        uiState = uiState,
+                        onAppearance = onAppearance,
+                        onHaptics = onHaptics,
+                        onWidget = onWidget,
                     )
                 }
-            } else {
-                SettingsContent(
-                    uiState = uiState,
-                    onAppearance = onAppearance,
-                    onHaptics = onHaptics,
-                    onWidget = onWidget,
-                )
             }
         }
     }
