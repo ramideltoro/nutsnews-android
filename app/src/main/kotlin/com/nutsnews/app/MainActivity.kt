@@ -99,6 +99,7 @@ class MainActivity : ComponentActivity() {
         ArticleDetailViewModel.Factory(
             savedStoryRepository = container.savedStoryRepository,
             readingStatsRepository = container.readingStatsRepository,
+            storyNoteRepository = container.storyNoteRepository,
         )
     }
 
@@ -281,6 +282,36 @@ class MainActivity : ComponentActivity() {
                                         originalStoryLauncher::open,
                                     onOriginalStoryOpened =
                                         articleDetailViewModel::onOriginalStoryOpened,
+                                    noteDraft =
+                                        articleDetailUiState.noteDraft.takeIf {
+                                            articleDetailUiState.noteArticleId ==
+                                                article.stableId
+                                        }.orEmpty(),
+                                    hasSavedNote =
+                                        articleDetailUiState.noteArticleId ==
+                                            article.stableId &&
+                                            articleDetailUiState.hasSavedNote,
+                                    isNoteLoading =
+                                        articleDetailUiState.noteArticleId !=
+                                            article.stableId ||
+                                            articleDetailUiState.isNoteLoading,
+                                    noteStatusMessage =
+                                        articleDetailUiState.noteStatusMessage.takeIf {
+                                            articleDetailUiState.noteArticleId ==
+                                                article.stableId
+                                        },
+                                    onNoteDraftChanged = { draft ->
+                                        articleDetailViewModel.onNoteDraftChanged(
+                                            article = article,
+                                            draft = draft,
+                                        )
+                                    },
+                                    onSaveNote = {
+                                        articleDetailViewModel.saveNote(article)
+                                    },
+                                    onClearNote = {
+                                        articleDetailViewModel.clearNote(article)
+                                    },
                                 )
                             }
                         }

@@ -4,8 +4,10 @@ import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.ReadingStats
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.core.model.StoryId
+import com.nutsnews.app.core.model.StoryNote
 import com.nutsnews.app.data.story.ReadingStatsRepository
 import com.nutsnews.app.data.story.SavedStoryRepository
+import com.nutsnews.app.data.story.StoryNoteRepository
 import java.net.URI
 import java.time.Instant
 import kotlin.test.assertEquals
@@ -16,10 +18,13 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import org.junit.After
@@ -45,7 +50,12 @@ class ArticleDetailViewModelTest {
         runTest(dispatcher) {
             val article = detailArticle()
             val saved = DetailSavedStoryRepository()
-            val viewModel = ArticleDetailViewModel(saved, DetailReadingStatsRepository())
+            val viewModel =
+                ArticleDetailViewModel(
+                    savedStoryRepository = saved,
+                    readingStatsRepository = DetailReadingStatsRepository(),
+                    storyNoteRepository = DetailStoryNoteRepository(),
+                )
 
             viewModel.toggleLiked(article)
             advanceUntilIdle()
@@ -67,7 +77,12 @@ class ArticleDetailViewModelTest {
         runTest(dispatcher) {
             val article = detailArticle()
             val stats = DetailReadingStatsRepository()
-            val viewModel = ArticleDetailViewModel(DetailSavedStoryRepository(), stats)
+            val viewModel =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = stats,
+                    storyNoteRepository = DetailStoryNoteRepository(),
+                )
 
             viewModel.onArticleShown(article)
             viewModel.onArticleShown(article)
@@ -86,7 +101,12 @@ class ArticleDetailViewModelTest {
     fun everyOriginalStoryOpenUpdatesObservableStats() =
         runTest(dispatcher) {
             val stats = DetailReadingStatsRepository()
-            val viewModel = ArticleDetailViewModel(DetailSavedStoryRepository(), stats)
+            val viewModel =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = stats,
+                    storyNoteRepository = DetailStoryNoteRepository(),
+                )
 
             viewModel.onOriginalStoryOpened()
             viewModel.onOriginalStoryOpened()
@@ -100,6 +120,90 @@ class ArticleDetailViewModelTest {
                 }.readingStats
                     ?.originalOpensTodayCount,
             )
+        }
+
+    @Test
+    fun noteEditorSavesReopensEditsAndClearsWithIosStatusMessages() =
+        runTest(dispatcher) {
+            val article = detailArticle()
+            val notes = DetailStoryNoteRepository()
+            val viewModel =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = DetailReadingStatsRepository(),
+                    storyNoteRepository = notes,
+                )
+            viewModel.uiState.launchIn(backgroundScope)
+
+            viewModel.onArticleShown(article)
+            runCurrent()
+            assertEquals("", viewModel.uiState.value.noteDraft)
+
+            viewModel.onNoteDraftChanged(article, "  Remember this kindness.  ")
+            viewModel.saveNote(article)
+            runCurrent()
+
+            assertEquals("Remember this kindness.", notes.findNote(article)?.text)
+            assertEquals("Remember this kindness.", viewModel.uiState.value.noteDraft)
+            assertTrue(viewModel.uiState.value.hasSavedNote)
+            assertEquals(
+                "Note saved on this device",
+                viewModel.uiState.value.noteStatusMessage,
+            )
+
+            viewModel.onArticleShown(article)
+            runCurrent()
+            assertEquals("Remember this kindness.", viewModel.uiState.value.noteDraft)
+
+            viewModel.onNoteDraftChanged(article, "A brighter edit")
+            viewModel.saveNote(article)
+            runCurrent()
+            assertEquals("A brighter edit", notes.findNote(article)?.text)
+
+            viewModel.clearNote(article)
+            runCurrent()
+            assertEquals("", viewModel.uiState.value.noteDraft)
+            assertFalse(viewModel.uiState.value.hasSavedNote)
+            assertEquals("Note cleared", viewModel.uiState.value.noteStatusMessage)
+            assertEquals(null, notes.findNote(article))
+
+            advanceTimeBy(1_800)
+            runCurrent()
+            assertEquals(null, viewModel.uiState.value.noteStatusMessage)
+        }
+
+    @Test
+    fun oneStableNoteLoadsFromFeedSearchSavedMoodAndDigestArticleShapes() =
+        runTest(dispatcher) {
+            val feedArticle = detailArticle()
+            val notes = DetailStoryNoteRepository()
+            notes.setNote(feedArticle, "One note from every route")
+            val viewModel =
+                ArticleDetailViewModel(
+                    savedStoryRepository = DetailSavedStoryRepository(),
+                    readingStatsRepository = DetailReadingStatsRepository(),
+                    storyNoteRepository = notes,
+                )
+            viewModel.uiState.launchIn(backgroundScope)
+            val routeArticles =
+                listOf("feed-id", "search-id", "saved-id", "mood-id", "digest-id")
+                    .map { routeId ->
+                        feedArticle.copy(
+                            id = routeId,
+                            title = "The same story opened from $routeId",
+                        )
+                    }
+
+            routeArticles.forEach { routeArticle ->
+                viewModel.onArticleShown(routeArticle)
+                runCurrent()
+
+                assertEquals(feedArticle.stableId, viewModel.uiState.value.noteArticleId)
+                assertEquals(
+                    "One note from every route",
+                    viewModel.uiState.value.noteDraft,
+                )
+            }
         }
 }
 
@@ -168,6 +272,44 @@ private class DetailReadingStatsRepository : ReadingStatsRepository {
     }
 
     override suspend fun lastOpenedAt(storyId: StoryId): Instant? = null
+}
+
+private class DetailStoryNoteRepository : StoryNoteRepository {
+    private val notes = MutableStateFlow<Map<StoryId, StoryNote>>(emptyMap())
+
+    override val count: Flow<Int> = notes.map { it.size }
+
+    override fun observeNote(article: Article): Flow<StoryNote?> =
+        notes.map { storedNotes -> storedNotes[article.stableId] }
+
+    override suspend fun findNote(article: Article): StoryNote? =
+        notes.value[article.stableId]
+
+    override suspend fun setNote(
+        article: Article,
+        text: String,
+    ) {
+        val cleaned = text.trim()
+        if (cleaned.isEmpty()) {
+            clearNote(article)
+        } else {
+            notes.value =
+                notes.value +
+                    (
+                        article.stableId to
+                            StoryNote(
+                                articleId = article.stableId,
+                                articleTitle = article.title,
+                                text = cleaned,
+                                updatedAt = Instant.EPOCH,
+                            )
+                    )
+        }
+    }
+
+    override suspend fun clearNote(article: Article) {
+        notes.value = notes.value - article.stableId
+    }
 }
 
 private fun detailArticle() =
