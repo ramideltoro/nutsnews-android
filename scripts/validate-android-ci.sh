@@ -43,6 +43,7 @@ required_fragments=(
   "java-version: \"17\""
   "gradle/actions/setup-gradle@"
   "cache-read-only:"
+  "--dependency-verification=strict"
   "compileDebugKotlin"
   "lintDebug"
   "testDebugUnitTest"
