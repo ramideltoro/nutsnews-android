@@ -2,6 +2,7 @@ package com.nutsnews.app
 
 import android.Manifest
 import android.content.Intent
+import android.view.HapticFeedbackConstants
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -52,6 +54,7 @@ import com.nutsnews.app.feature.feed.ArticleFeedViewModel
 import com.nutsnews.app.feature.feed.FeedScreen
 import com.nutsnews.app.feature.home.HomeDashboard
 import com.nutsnews.app.feature.home.HomeDashboardViewModel
+import com.nutsnews.app.feature.mood.GoodMoodScreen
 import com.nutsnews.app.feature.personalization.PersonalizationMode
 import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationViewModel
@@ -477,6 +480,30 @@ class MainActivity : ComponentActivity() {
                                     archiveSearchViewModel.clearSearch()
                                     bootstrapViewModel.onNavigateUp()
                                 },
+                            )
+                        }
+
+                        AppDestination.GoodMood -> {
+                            val view = LocalView.current
+                            GoodMoodScreen(
+                                articles = feedUiState.articles,
+                                savedStoryIds =
+                                    articleCardInteractionUiState.likedStoryIds,
+                                hapticsEnabled =
+                                    articleCardInteractionUiState.hapticsEnabled,
+                                onToggleSaved =
+                                    articleCardInteractionViewModel::toggleLiked,
+                                onSaveHaptic = {
+                                    view.performHapticFeedback(
+                                        HapticFeedbackConstants.CONTEXT_CLICK,
+                                    )
+                                },
+                                onOpenArticle = { article ->
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.ArticleDetail(article.stableId),
+                                    )
+                                },
+                                onClose = bootstrapViewModel::onNavigateUp,
                             )
                         }
 
