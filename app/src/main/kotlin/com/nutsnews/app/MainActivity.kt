@@ -38,6 +38,8 @@ import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
 import com.nutsnews.app.feature.feed.ArticleFeedViewModel
 import com.nutsnews.app.feature.feed.FeedScreen
+import com.nutsnews.app.feature.home.HomeDashboard
+import com.nutsnews.app.feature.home.HomeDashboardViewModel
 import com.nutsnews.app.feature.personalization.PersonalizationMode
 import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationViewModel
@@ -81,6 +83,16 @@ class MainActivity : ComponentActivity() {
         )
     }
 
+    private val homeDashboardViewModel: HomeDashboardViewModel by viewModels {
+        val container = (application as NutsNewsApplication).container
+        HomeDashboardViewModel.Factory(
+            userPreferencesRepository = container.userPreferencesRepository,
+            readingStatsRepository = container.readingStatsRepository,
+            savedStoryRepository = container.savedStoryRepository,
+            storyNoteRepository = container.storyNoteRepository,
+        )
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         setTheme(R.style.Theme_NutsNews)
         super.onCreate(savedInstanceState)
@@ -93,6 +105,8 @@ class MainActivity : ComponentActivity() {
             val personalizationUiState by
                 personalizationViewModel.uiState.collectAsStateWithLifecycle()
             val feedUiState by articleFeedViewModel.uiState.collectAsStateWithLifecycle()
+            val homeDashboardUiState by
+                homeDashboardViewModel.uiState.collectAsStateWithLifecycle()
             val pendingPermissionSaveMode =
                 remember { mutableStateOf<PersonalizationMode?>(null) }
             val savePersonalization: (PersonalizationMode) -> Unit = { mode ->
@@ -147,7 +161,51 @@ class MainActivity : ComponentActivity() {
                                 onDestinationSelected =
                                     bootstrapViewModel::onDestinationRequested,
                                 onCategorySelected = articleFeedViewModel::applyCategory,
-                            )
+                            ) {
+                                HomeDashboard(
+                                    uiState = homeDashboardUiState,
+                                    articles = feedUiState.articles,
+                                    isFeedLoading = feedUiState.isLoading,
+                                    onTodayPicks = {
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.DailyDigest,
+                                        )
+                                    },
+                                    onGoodMood = {
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.GoodMood,
+                                        )
+                                    },
+                                    onReadingStats = {
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.ReadingStats,
+                                        )
+                                    },
+                                    onSavedStories = {
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.SavedStories,
+                                        )
+                                    },
+                                    onArchiveSearch = {
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.ArchiveSearch,
+                                        )
+                                    },
+                                    onPersonalize = {
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.Personalization,
+                                        )
+                                    },
+                                    onRefreshForYou = {
+                                        articleFeedViewModel.refresh(forceReload = true)
+                                    },
+                                    onOpenArticle = { article ->
+                                        bootstrapViewModel.onDestinationRequested(
+                                            AppDestination.ArticleDetail(article.stableId),
+                                        )
+                                    },
+                                )
+                            }
                         }
 
                         AppDestination.Onboarding,
