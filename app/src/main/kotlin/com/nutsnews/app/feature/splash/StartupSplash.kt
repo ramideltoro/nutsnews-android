@@ -31,6 +31,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.nutsnews.app.R
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPane
 
 @Composable
 internal fun StartupSplash(
@@ -45,6 +47,7 @@ internal fun StartupSplash(
         modifier =
             modifier
                 .fillMaxSize()
+                .nutsNewsPane("Starting NutsNews")
                 .background(StartupSplashColors.background),
         contentAlignment = Alignment.Center,
     ) {
@@ -77,7 +80,10 @@ internal fun StartupSplash(
                         fontSize = 38.sp,
                         lineHeight = 44.sp,
                     ),
-                modifier = Modifier.alpha(titleAlpha),
+                modifier =
+                    Modifier
+                        .alpha(titleAlpha)
+                        .nutsNewsHeading(),
             )
 
             Spacer(modifier = Modifier.height(4.dp))

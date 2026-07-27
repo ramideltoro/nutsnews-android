@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -92,8 +93,10 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -110,6 +113,9 @@ import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPane
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -158,6 +164,7 @@ fun ArticleDetailScreen(
     val windowInfo = LocalNutsNewsWindowInfo.current
     val usesCompactLandscapeLayout = windowInfo.usesCompactLandscapeLayout
     val palette = NutsNewsTheme.colors
+    val reducedMotion = NutsNewsTheme.reducedMotion
     val brief = remember(article) { deriveArticleBrief(article) }
     val listenScript = remember(article, brief) { buildArticleListenScript(article, brief) }
     var isShowingListenMode by
@@ -201,6 +208,10 @@ fun ArticleDetailScreen(
     }
     LaunchedEffect(likeAnimationToken) {
         if (likeAnimationToken == 0) return@LaunchedEffect
+        if (reducedMotion) {
+            likeGlow.snapTo(0f)
+            return@LaunchedEffect
+        }
         likeGlow.snapTo(1f)
         likeGlow.animateTo(
             targetValue = 0f,
@@ -365,7 +376,13 @@ private fun ArticleDetailLikeButton(
     val palette = NutsNewsTheme.colors
     IconButton(
         onClick = onClick,
-        modifier = Modifier.testTag("article_detail_like"),
+        modifier =
+            Modifier
+                .semantics {
+                    contentDescription = if (isLiked) "Liked" else "Like story"
+                    stateDescription = if (isLiked) "Liked" else "Not liked"
+                }
+                .testTag("article_detail_like"),
     ) {
         Box(
             modifier =
@@ -393,7 +410,7 @@ private fun ArticleDetailLikeButton(
                     } else {
                         Icons.Filled.FavoriteBorder
                     },
-                contentDescription = if (isLiked) "Liked" else "Like story",
+                contentDescription = null,
                 modifier = Modifier.size(16.dp),
                 tint = if (isLiked) palette.likedCardAccent else palette.accentHighlight,
             )
@@ -408,7 +425,12 @@ private fun ArticleListenToolbarButton(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = Modifier.testTag("article_detail_listen"),
+        modifier =
+            Modifier
+                .semantics {
+                    stateDescription = if (isActive) "Active" else "Inactive"
+                }
+                .testTag("article_detail_listen"),
     ) {
         Box(
             modifier =
@@ -450,7 +472,10 @@ private fun ArticleListenModeSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        modifier = Modifier.testTag("listen_mode_sheet"),
+        modifier =
+            Modifier
+                .nutsNewsPane("Listen Mode")
+                .testTag("listen_mode_sheet"),
         containerColor = NutsNewsTheme.colors.cardBackgroundStrong,
         contentColor = NutsNewsTheme.colors.primaryText,
     ) {
@@ -472,7 +497,10 @@ private fun ArticleListenModeSheet(
             ) {
                 Text(
                     text = "Listen Mode",
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .nutsNewsHeading(),
                     color = NutsNewsTheme.colors.primaryText,
                     style = NutsNewsTheme.typography.title3,
                     fontWeight = FontWeight.Bold,
@@ -481,6 +509,7 @@ private fun ArticleListenModeSheet(
                     text = "Done",
                     modifier =
                         Modifier
+                            .heightIn(min = 48.dp)
                             .clip(CircleShape)
                             .clickable(
                                 role = Role.Button,
@@ -490,7 +519,7 @@ private fun ArticleListenModeSheet(
                                 horizontal = NutsNewsTheme.spacing.small,
                                 vertical = NutsNewsTheme.spacing.xs,
                             ),
-                    color = NutsNewsTheme.colors.accent,
+                    color = NutsNewsTheme.colors.accentText,
                     style = NutsNewsTheme.typography.subheadline,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -579,8 +608,11 @@ private fun ArticleListenModeSheet(
                         )
                         Text(
                             text = uiState.statusMessage,
-                            modifier = Modifier.testTag("listen_mode_status"),
-                            color = NutsNewsTheme.colors.accent,
+                            modifier =
+                                Modifier
+                                    .nutsNewsPoliteAnnouncement()
+                                    .testTag("listen_mode_status"),
+                            color = NutsNewsTheme.colors.accentText,
                             style = NutsNewsTheme.typography.caption,
                             fontWeight = FontWeight.SemiBold,
                         )
@@ -609,7 +641,20 @@ private fun ArticleListenModeSheet(
                                 .clickable(
                                     role = Role.Button,
                                     onClick = onToggle,
-                                ).testTag("listen_mode_waveform")
+                                ).semantics {
+                                    contentDescription =
+                                        when (uiState.playbackState) {
+                                            ArticleListenPlaybackState.Reading ->
+                                                "Pause audio brief"
+
+                                            ArticleListenPlaybackState.Paused ->
+                                                "Resume audio brief"
+
+                                            else -> "Play audio brief"
+                                        }
+                                    stateDescription = uiState.statusMessage
+                                }
+                                .testTag("listen_mode_waveform")
                                 .padding(vertical = NutsNewsTheme.spacing.xs),
                     )
                     Row(
@@ -841,7 +886,12 @@ private fun ListenWaveform(
         )
     val isReading = uiState.playbackState == ArticleListenPlaybackState.Reading
     val isPaused = uiState.playbackState == ArticleListenPlaybackState.Paused
-    val phase = if (isReading) animatedPhase else uiState.speechWaveSeed.toFloat()
+    val phase =
+        if (isReading && !NutsNewsTheme.reducedMotion) {
+            animatedPhase
+        } else {
+            uiState.speechWaveSeed.toFloat()
+        }
     val level =
         when {
             isReading -> uiState.speechWaveLevel
@@ -931,6 +981,7 @@ fun UnavailableArticleDetailScreen(
                             .fillMaxSize()
                             .padding(contentPadding)
                             .padding(NutsNewsTheme.spacing.large)
+                            .nutsNewsPoliteAnnouncement()
                             .testTag("article_detail_unavailable"),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -943,7 +994,10 @@ fun UnavailableArticleDetailScreen(
                     )
                     Text(
                         text = "This story is no longer available.",
-                        modifier = Modifier.padding(top = NutsNewsTheme.spacing.medium),
+                        modifier =
+                            Modifier
+                                .padding(top = NutsNewsTheme.spacing.medium)
+                                .nutsNewsHeading(),
                         color = palette.secondaryText,
                         style = NutsNewsTheme.typography.body,
                     )
@@ -1388,7 +1442,7 @@ private fun CompactArticleBrief(brief: ArticleBriefContent) {
             Text(
                 text = "Takeaway: ${brief.takeaway}",
                 modifier = Modifier.testTag("article_detail_brief_takeaway"),
-                color = NutsNewsTheme.colors.accent,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.caption,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
@@ -1435,7 +1489,10 @@ private fun ArticleShareCardSection(
             uiState.failureMessage?.let { message ->
                 Text(
                     text = message,
-                    modifier = Modifier.testTag("article_detail_share_failure"),
+                    modifier =
+                        Modifier
+                            .nutsNewsPoliteAnnouncement()
+                            .testTag("article_detail_share_failure"),
                     color = NutsNewsTheme.colors.accentHighlight,
                     style = NutsNewsTheme.typography.caption,
                     fontWeight = FontWeight.SemiBold,
@@ -1483,7 +1540,7 @@ private fun ShareCardMiniPreview(
             )
             Text(
                 text = "NUTSNEWS SHARE CARD",
-                color = NutsNewsTheme.colors.accent,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.caption,
                 fontWeight = FontWeight.Bold,
             )
@@ -1552,13 +1609,19 @@ private fun ShareCardButton(
         modifier =
             Modifier
                 .fillMaxWidth()
+                .heightIn(min = 48.dp)
                 .clip(shape)
                 .background(nutsNewsButtonGradient())
                 .clickable(
                     enabled = !isCreating,
                     role = Role.Button,
                     onClick = onClick,
-                ).testTag("article_detail_share_button")
+                ).semantics {
+                    stateDescription =
+                        if (isCreating) "Creating share card" else "Ready to share"
+                }
+                .nutsNewsPoliteAnnouncement()
+                .testTag("article_detail_share_button")
                 .padding(
                     horizontal = NutsNewsTheme.spacing.small,
                     vertical = if (compact) 10.dp else 14.dp,
@@ -1692,7 +1755,10 @@ private fun RegularArticleReflection(
             }
             Text(
                 text = status,
-                modifier = Modifier.testTag("article_detail_reflection_status"),
+                modifier =
+                    Modifier
+                        .nutsNewsPoliteAnnouncement()
+                        .testTag("article_detail_reflection_status"),
                 color = NutsNewsTheme.colors.mutedText,
                 style = NutsNewsTheme.typography.caption,
                 fontWeight = FontWeight.SemiBold,
@@ -1767,7 +1833,7 @@ private fun ReflectionChoice(
         } else {
             Modifier
                 .fillMaxWidth()
-                .height(74.dp)
+                .heightIn(min = 74.dp)
                 .padding(horizontal = NutsNewsTheme.spacing.xs)
         }
 
@@ -1776,6 +1842,7 @@ private fun ReflectionChoice(
             modifier =
                 modifier
                     .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+                    .heightIn(min = 48.dp)
                     .clip(shape)
                     .then(selectionModifier)
                     .selectable(
@@ -2019,7 +2086,7 @@ private fun ArticleNoteSection(
                 modifier =
                     Modifier
                         .fillMaxWidth()
-                        .height(if (compact) 66.dp else 96.dp)
+                        .heightIn(min = if (compact) 66.dp else 96.dp)
                         .clip(
                             RoundedCornerShape(
                                 NutsNewsTheme.dimensions.controlCornerRadius,
@@ -2117,8 +2184,11 @@ private fun ArticleNoteSection(
             ) {
                 Text(
                     text = displayedStatus,
-                    modifier = Modifier.testTag("article_detail_note_status"),
-                    color = NutsNewsTheme.colors.accent,
+                    modifier =
+                        Modifier
+                            .nutsNewsPoliteAnnouncement()
+                            .testTag("article_detail_note_status"),
+                    color = NutsNewsTheme.colors.accentText,
                     style = NutsNewsTheme.typography.caption,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -2142,6 +2212,7 @@ private fun NoteActionButton(
         modifier =
             modifier
                 .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
+                .heightIn(min = 48.dp)
                 .clip(shape)
                 .then(
                     if (primary) {
@@ -2268,6 +2339,7 @@ private fun OriginalStoryButton(
             modifier =
                 Modifier
                     .fillMaxWidth()
+                    .heightIn(min = 48.dp)
                     .graphicsLayer { alpha = if (enabled) 1f else 0.55f }
                     .clip(RoundedCornerShape(NutsNewsTheme.dimensions.controlCornerRadius))
                     .background(NutsNewsTheme.colors.badgeBackground)
@@ -2307,7 +2379,10 @@ private fun OriginalStoryButton(
         (status ?: if (!enabled) "Original story link unavailable." else null)?.let { message ->
             Text(
                 text = message,
-                modifier = Modifier.testTag("article_detail_browser_status"),
+                modifier =
+                    Modifier
+                        .nutsNewsPoliteAnnouncement()
+                        .testTag("article_detail_browser_status"),
                 color = NutsNewsTheme.colors.mutedText,
                 style = NutsNewsTheme.typography.caption,
             )
@@ -2378,8 +2453,11 @@ private fun DetailInfoCard(
         if (label.isNotEmpty()) {
             Text(
                 text = label.uppercase(Locale.ROOT),
-                modifier = Modifier.testTag("article_detail_section_label"),
-                color = NutsNewsTheme.colors.accent,
+                modifier =
+                    Modifier
+                        .nutsNewsHeading()
+                        .testTag("article_detail_section_label"),
+                color = NutsNewsTheme.colors.accentText,
                 style =
                     if (compact) {
                         NutsNewsTheme.typography.caption2

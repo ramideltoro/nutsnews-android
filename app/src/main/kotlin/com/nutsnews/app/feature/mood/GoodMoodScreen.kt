@@ -1,11 +1,12 @@
 package com.nutsnews.app.feature.mood
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -58,6 +60,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +77,8 @@ import com.nutsnews.app.data.article.GoodMoodRecommendations
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
 
@@ -226,6 +232,7 @@ private fun GoodMoodHeader(onClose: () -> Unit) {
         ) {
             Text(
                 text = "Good Mood",
+                modifier = Modifier.nutsNewsHeading(),
                 color = NutsNewsTheme.colors.accentHighlight,
                 style =
                     NutsNewsTheme.typography.title.copy(
@@ -245,7 +252,7 @@ private fun GoodMoodHeader(onClose: () -> Unit) {
         Surface(
             modifier =
                 Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .testTag("good_mood_close"),
             onClick = onClose,
             shape = CircleShape,
@@ -278,14 +285,24 @@ private fun GoodMoodChoice(
     val shape = RoundedCornerShape(NutsNewsTheme.radii.medium)
     val scale by
         animateFloatAsState(
-            targetValue = if (isSelected) 1.02f else 1f,
-            animationSpec = spring(dampingRatio = 0.84f, stiffness = 480f),
+            targetValue =
+                if (isSelected && !NutsNewsTheme.reducedMotion) {
+                    1.02f
+                } else {
+                    1f
+                },
+            animationSpec =
+                if (NutsNewsTheme.reducedMotion) {
+                    snap()
+                } else {
+                    spring(dampingRatio = 0.84f, stiffness = 480f)
+                },
             label = "${mood.title} mood selection",
         )
     val foreground = if (isSelected) palette.buttonText else palette.primaryText
     val subtitle =
         if (isSelected) {
-            palette.buttonText.copy(alpha = 0.82f)
+            palette.buttonText
         } else {
             palette.secondaryText
         }
@@ -312,8 +329,9 @@ private fun GoodMoodChoice(
                     width = NutsNewsTheme.borders.hairline,
                     color = if (isSelected) Color.Transparent else palette.cardBorder,
                     shape = shape,
-                ).clickable(
-                    role = Role.Button,
+                ).selectable(
+                    selected = isSelected,
+                    role = Role.RadioButton,
                     onClick = onSelected,
                 ).testTag("good_mood_choice_${mood.id}")
                 .padding(NutsNewsTheme.spacing.small),
@@ -339,7 +357,7 @@ private fun GoodMoodChoice(
         }
         Text(
             text = mood.subtitle,
-            modifier = Modifier.height(38.dp),
+            modifier = Modifier.heightIn(min = 38.dp),
             color = subtitle,
             style = NutsNewsTheme.typography.caption,
             maxLines = 2,
@@ -355,7 +373,8 @@ private fun GoodMoodSectionTitle(title: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(top = NutsNewsTheme.spacing.xs),
+                .padding(top = NutsNewsTheme.spacing.xs)
+                .nutsNewsHeading(),
         color = NutsNewsTheme.colors.primaryText,
         style = NutsNewsTheme.typography.subheadline,
         fontWeight = FontWeight.Bold,
@@ -430,7 +449,7 @@ private fun GoodMoodFeaturedCard(
                         modifier =
                             Modifier
                                 .weight(1f)
-                                .height(42.dp)
+                                .heightIn(min = 48.dp)
                                 .clip(CircleShape)
                                 .background(nutsNewsButtonGradient())
                                 .testTag("good_mood_featured_open"),
@@ -480,7 +499,7 @@ private fun GoodMoodFeaturedThumbnail(article: Article) {
         article.thumbnailUrl?.let { thumbnailUrl ->
             AsyncImage(
                 model = thumbnailUrl.toString(),
-                contentDescription = "Thumbnail for ${article.title}",
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -525,7 +544,7 @@ private fun GoodMoodResultRow(
                         Modifier.testTag(
                             "good_mood_result_source_${article.stableId.value}",
                         ),
-                    color = NutsNewsTheme.colors.accentSoft,
+                    color = NutsNewsTheme.colors.accentText,
                     style = NutsNewsTheme.typography.caption2,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -584,7 +603,7 @@ private fun GoodMoodResultThumbnail(article: Article) {
         article.thumbnailUrl?.let { thumbnailUrl ->
             AsyncImage(
                 model = thumbnailUrl.toString(),
-                contentDescription = "Thumbnail for ${article.title}",
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -603,7 +622,10 @@ private fun GoodMoodSaveButton(
     Surface(
         modifier =
             Modifier
-                .size(size)
+                .size(size.coerceAtLeast(48.dp))
+                .semantics {
+                    stateDescription = if (isSaved) "Saved" else "Not saved"
+                }
                 .testTag("good_mood_save_${article.stableId.value}"),
         onClick = onToggleSaved,
         shape = CircleShape,
@@ -642,6 +664,7 @@ private fun GoodMoodEmptyState() {
             Modifier
                 .fillMaxWidth()
                 .padding(vertical = NutsNewsTheme.spacing.xl)
+                .nutsNewsPoliteAnnouncement()
                 .testTag("good_mood_empty"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.medium),

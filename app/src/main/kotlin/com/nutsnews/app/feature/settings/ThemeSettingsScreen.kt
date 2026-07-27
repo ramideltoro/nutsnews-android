@@ -6,7 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -65,6 +65,7 @@ import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsPalette
 import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
 import kotlinx.coroutines.launch
 
 @Composable
@@ -80,6 +81,7 @@ fun ThemeSettingsScreen(
     var glowSequence by remember { mutableIntStateOf(0) }
     val glowProgress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val reducedMotion = NutsNewsTheme.reducedMotion
 
     LaunchedEffect(selectedTheme) {
         displayedTheme = selectedTheme
@@ -94,6 +96,11 @@ fun ThemeSettingsScreen(
             displayedTheme = theme
             onThemeSelected(theme)
             scope.launch {
+                if (reducedMotion) {
+                    glowProgress.snapTo(0f)
+                    glowTheme = null
+                    return@launch
+                }
                 glowProgress.snapTo(1f)
                 glowTheme = theme
                 glowProgress.animateTo(
@@ -180,7 +187,10 @@ private fun ThemeSettingsTopBar(
         )
         Text(
             text = "Theme",
-            modifier = Modifier.align(Alignment.Center),
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             fontWeight = FontWeight.Bold,
@@ -216,7 +226,7 @@ private fun ThemeToolbarButton(
     Surface(
         modifier =
             modifier
-                .size(40.dp)
+                .size(48.dp)
                 .shadow(
                     elevation = (22f * glowProgress).dp,
                     shape = shape,
@@ -293,7 +303,8 @@ private fun ThemeOptionRow(
                             else -> palette.cardBorder
                         },
                     shape = shape,
-                ).clickable(
+                ).selectable(
+                    selected = isSelected,
                     role = Role.RadioButton,
                     onClick = onClick,
                 ).semantics {

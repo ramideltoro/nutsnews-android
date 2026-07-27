@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -45,6 +46,8 @@ import com.nutsnews.app.core.model.ReadingStatsDay
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -75,6 +78,7 @@ fun ReadingStatsScreen(
                         modifier =
                             Modifier
                                 .fillMaxSize()
+                                .nutsNewsPoliteAnnouncement()
                                 .testTag("reading_stats_loading"),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -108,14 +112,17 @@ private fun ReadingStatsTopBar(onClose: () -> Unit) {
         ) {
             Text(
                 text = "Close",
-                color = NutsNewsTheme.colors.accent,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.subheadline,
                 fontWeight = FontWeight.SemiBold,
             )
         }
         Text(
             text = "Reading Stats",
-            modifier = Modifier.align(Alignment.Center),
+            modifier =
+                Modifier
+                    .align(Alignment.Center)
+                    .nutsNewsHeading(),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.headline,
             fontWeight = FontWeight.Bold,
@@ -216,14 +223,17 @@ private fun ReadingStatsTodayCard(uiState: ReadingStatsUiState) {
             ) {
                 Text(
                     text = "Today",
-                    modifier = Modifier.weight(1f),
+                    modifier =
+                        Modifier
+                            .weight(1f)
+                            .nutsNewsHeading(),
                     color = NutsNewsTheme.colors.primaryText,
                     style = NutsNewsTheme.typography.headline,
                 )
                 Text(
                     text = uiState.todayProgressLabel,
                     modifier = Modifier.testTag("reading_stats_goal_label"),
-                    color = NutsNewsTheme.colors.accent,
+                    color = NutsNewsTheme.colors.accentText,
                     style = NutsNewsTheme.typography.caption,
                     fontWeight = FontWeight.Bold,
                 )
@@ -240,7 +250,10 @@ private fun ReadingStatsTodayCard(uiState: ReadingStatsUiState) {
             )
             Text(
                 text = uiState.todayMessage,
-                modifier = Modifier.testTag("reading_stats_today_message"),
+                modifier =
+                    Modifier
+                        .nutsNewsPoliteAnnouncement()
+                        .testTag("reading_stats_today_message"),
                 color = NutsNewsTheme.colors.secondaryText,
                 style = NutsNewsTheme.typography.subheadline,
             )
@@ -262,6 +275,7 @@ private fun ReadingStatsWeeklyChart(uiState: ReadingStatsUiState) {
         ) {
             Text(
                 text = "Last 7 days",
+                modifier = Modifier.nutsNewsHeading(),
                 color = NutsNewsTheme.colors.primaryText,
                 style = NutsNewsTheme.typography.headline,
             )
@@ -415,7 +429,7 @@ private fun ReadingStatsTile(
     StatsSurface(
         modifier =
             modifier
-                .height(144.dp)
+                .heightIn(min = 144.dp)
                 .testTag("reading_stats_tile_${data.title.lowercase(Locale.ROOT)}"),
     ) {
         Column(
@@ -443,7 +457,7 @@ private fun ReadingStatsTile(
             )
             Text(
                 text = data.title,
-                color = NutsNewsTheme.colors.accent,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.caption,
                 fontWeight = FontWeight.Bold,
             )

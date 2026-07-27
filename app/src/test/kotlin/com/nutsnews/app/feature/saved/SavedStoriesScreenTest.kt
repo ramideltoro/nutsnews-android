@@ -2,12 +2,16 @@ package com.nutsnews.app.feature.saved
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.assertHeightIsAtLeast
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.assert
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.junit4.v2.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -18,6 +22,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsProperties
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
 import com.nutsnews.app.core.model.SavedStory
 import com.nutsnews.app.core.model.StoryId
@@ -215,6 +224,33 @@ class SavedStoriesScreenTest {
         assertEquals(listOf(retained), repository.currentStories)
     }
 
+    @Test
+    fun largeTextKeepsTheScreenHeadingStatusAndCloseControlAccessible() {
+        setScreen(
+            stories = emptyList(),
+            fontScale = 2f,
+        )
+
+        composeRule
+            .onNodeWithText("Saved Stories")
+            .assertIsDisplayed()
+            .assert(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading),
+            )
+        composeRule
+            .onNodeWithTag("saved_stories_close")
+            .assertIsDisplayed()
+            .assertHeightIsAtLeast(48.dp)
+        composeRule
+            .onNodeWithTag("saved_stories_empty")
+            .assert(
+                SemanticsMatcher.expectValue(
+                    SemanticsProperties.LiveRegion,
+                    LiveRegionMode.Polite,
+                ),
+            )
+    }
+
     private fun assertSearchResult(
         query: String,
         expected: SavedStory,
@@ -244,26 +280,32 @@ class SavedStoriesScreenTest {
         onOpenStory: (SavedStory) -> Unit = {},
         onRemoveStory: (SavedStory) -> Unit = {},
         onClose: () -> Unit = {},
+        fontScale: Float = 1f,
     ) {
         composeRule.setContent {
             var query by remember { mutableStateOf("") }
-            NutsNewsTheme(updateSystemBars = false) {
-                SavedStoriesScreen(
-                    uiState =
-                        SavedStoriesUiState(
-                            isLoading = false,
-                            query = query,
-                            stories = stories,
-                            filteredStories =
-                                stories.filter { story ->
-                                    story.matchesSavedStoriesQuery(query)
-                                },
-                        ),
-                    onQueryChanged = { query = it },
-                    onOpenStory = onOpenStory,
-                    onRemoveStory = onRemoveStory,
-                    onClose = onClose,
-                )
+            val density = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density, fontScale),
+            ) {
+                NutsNewsTheme(updateSystemBars = false) {
+                    SavedStoriesScreen(
+                        uiState =
+                            SavedStoriesUiState(
+                                isLoading = false,
+                                query = query,
+                                stories = stories,
+                                filteredStories =
+                                    stories.filter { story ->
+                                        story.matchesSavedStoriesQuery(query)
+                                    },
+                            ),
+                        onQueryChanged = { query = it },
+                        onOpenStory = onOpenStory,
+                        onRemoveStory = onRemoveStory,
+                        onClose = onClose,
+                    )
+                }
             }
         }
     }

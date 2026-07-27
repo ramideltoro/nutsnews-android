@@ -9,6 +9,7 @@ data class NutsNewsPalette(
     val accentRich: Color,
     val accentDeep: Color,
     val accentSoft: Color,
+    val accentText: Color,
     val accentHighlight: Color,
     val accentGlow: Color,
     val cardBackground: Color,
@@ -68,6 +69,7 @@ object NutsNewsPalettes {
             accentRich = color(0xF59E0B),
             accentDeep = color(0xF97316),
             accentSoft = color(0xFDE68A),
+            accentText = color(0xFDE68A),
             accentHighlight = color(0xFFFFFF),
             accentGlow = color(0xFACC15, 0.34f),
             cardBackground = color(0x121212, 0.88f),
@@ -79,7 +81,7 @@ object NutsNewsPalettes {
             badgeBackground = color(0x451A03, 0.30f),
             primaryText = color(0xF5F5F4),
             secondaryText = color(0xD6D3D1),
-            mutedText = color(0x78716C),
+            mutedText = color(0x8A817B),
             buttonText = color(0x111827),
             backgroundGradient =
                 listOf(
@@ -104,6 +106,7 @@ object NutsNewsPalettes {
             accentRich = color(0x98C379),
             accentDeep = color(0x4F7F35),
             accentSoft = color(0xDCEBC9),
+            accentText = color(0x4B762F),
             accentHighlight = color(0x3F2B34),
             accentGlow = color(0xF472B6, 0.28f),
             cardBackground = color(0xFFF7FB, 0.92f),
@@ -115,7 +118,7 @@ object NutsNewsPalettes {
             badgeBackground = color(0x7AA95C, 0.16f),
             primaryText = color(0x49363D),
             secondaryText = color(0x6F5B62),
-            mutedText = color(0x9B7C86),
+            mutedText = color(0x856570),
             buttonText = color(0x17210F),
             backgroundGradient =
                 listOf(
@@ -140,6 +143,7 @@ object NutsNewsPalettes {
             accentRich = color(0x60A5FA),
             accentDeep = color(0x2563EB),
             accentSoft = color(0xBFDBFE),
+            accentText = color(0x60A5FA),
             accentHighlight = color(0xFFFFFF),
             accentGlow = color(0x3B82F6, 0.36f),
             cardBackground = color(0x1E1E1E, 0.90f),
@@ -160,7 +164,7 @@ object NutsNewsPalettes {
                     color(0x101010),
                 ),
             backgroundOverlay = color(0x3B82F6, 0.20f),
-            buttonGradient = listOf(color(0x3B82F6), color(0x2563EB)),
+            buttonGradient = listOf(color(0x2563EB), color(0x1D4ED8)),
             categoryDots =
                 listOf(
                     color(0x3B82F6),
@@ -176,6 +180,7 @@ object NutsNewsPalettes {
             accentRich = color(0xE76F51),
             accentDeep = color(0x005F73),
             accentSoft = color(0xCCEFFF),
+            accentText = color(0x005F73),
             accentHighlight = color(0x3F2415),
             accentGlow = color(0x2A9DF4, 0.30f),
             cardBackground = color(0xFFF8E5, 0.94f),
@@ -187,7 +192,7 @@ object NutsNewsPalettes {
             badgeBackground = color(0x2A9DF4, 0.14f),
             primaryText = color(0x4F3424),
             secondaryText = color(0x75513D),
-            mutedText = color(0x94684F),
+            mutedText = color(0x91654D),
             buttonText = color(0xFFFAF0),
             backgroundGradient =
                 listOf(
@@ -196,7 +201,7 @@ object NutsNewsPalettes {
                     color(0xD8F1E4),
                 ),
             backgroundOverlay = color(0xF6C453, 0.76f),
-            buttonGradient = listOf(color(0x0077B6), color(0xE76F51)),
+            buttonGradient = listOf(color(0x0077B6), color(0xB64129)),
             categoryDots =
                 listOf(
                     color(0x0077B6),
@@ -212,6 +217,7 @@ object NutsNewsPalettes {
             accentRich = color(0xA78BFA),
             accentDeep = color(0x5B21B6),
             accentSoft = color(0xDDD6FE),
+            accentText = color(0xDDD6FE),
             accentHighlight = color(0xF8FAFC),
             accentGlow = color(0x7C3AED, 0.42f),
             cardBackground = color(0x1E293B, 0.90f),
@@ -223,7 +229,7 @@ object NutsNewsPalettes {
             badgeBackground = color(0x7C3AED, 0.14f),
             primaryText = color(0xCBD5E1),
             secondaryText = color(0x94A3B8),
-            mutedText = color(0x64748B),
+            mutedText = color(0x8493A7),
             buttonText = color(0xF8FAFC),
             backgroundGradient =
                 listOf(
@@ -234,8 +240,7 @@ object NutsNewsPalettes {
             backgroundOverlay = color(0x7C3AED, 0.22f),
             buttonGradient =
                 listOf(
-                    color(0xA78BFA),
-                    color(0x7C3AED),
+                    color(0x6D28D9),
                     color(0x5B21B6),
                 ),
             categoryDots =
@@ -253,6 +258,7 @@ object NutsNewsPalettes {
             accentRich = color(0xFDE047),
             accentDeep = color(0xEAB308),
             accentSoft = color(0xFEF08A),
+            accentText = color(0xFEF08A),
             accentHighlight = color(0xF8FAFC),
             accentGlow = color(0xFACC15, 0.32f),
             cardBackground = color(0x2C362F, 0.91f),
@@ -264,7 +270,7 @@ object NutsNewsPalettes {
             badgeBackground = color(0xFACC15, 0.12f),
             primaryText = color(0xE5E7EB),
             secondaryText = color(0xCBD5C9),
-            mutedText = color(0x8B968B),
+            mutedText = color(0x98A298),
             buttonText = color(0x111827),
             backgroundGradient =
                 listOf(

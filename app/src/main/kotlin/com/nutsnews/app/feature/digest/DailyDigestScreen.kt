@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -44,6 +45,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -61,6 +63,8 @@ import com.nutsnews.app.data.article.DigestCategoryCount
 import com.nutsnews.app.designsystem.NutsNewsBackground
 import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
+import com.nutsnews.app.designsystem.nutsNewsHeading
+import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
 import java.net.URI
 
@@ -213,6 +217,7 @@ private fun DailyDigestHeader(onClose: () -> Unit) {
         ) {
             Text(
                 text = "Today’s Picks",
+                modifier = Modifier.nutsNewsHeading(),
                 color = NutsNewsTheme.colors.accentHighlight,
                 style =
                     NutsNewsTheme.typography.title.copy(
@@ -232,7 +237,7 @@ private fun DailyDigestHeader(onClose: () -> Unit) {
         Surface(
             modifier =
                 Modifier
-                    .size(36.dp)
+                    .size(48.dp)
                     .testTag("daily_digest_close"),
             onClick = onClose,
             shape = CircleShape,
@@ -296,7 +301,7 @@ private fun DailyDigestMetricTile(
     Surface(
         modifier =
             modifier
-                .height(104.dp)
+                .heightIn(min = 104.dp)
                 .testTag(testTag),
         shape = RoundedCornerShape(NutsNewsTheme.radii.medium),
         color = NutsNewsTheme.colors.cardBackgroundStrong,
@@ -408,7 +413,7 @@ private fun DailyDigestCategoryChip(
     Surface(
         modifier =
             modifier
-                .height(32.dp)
+                .heightIn(min = 32.dp)
                 .testTag("daily_digest_category_${category.label}"),
         shape = CircleShape,
         color = NutsNewsTheme.colors.badgeBackground,
@@ -434,7 +439,7 @@ private fun DailyDigestCategoryChip(
             )
             Text(
                 text = category.count.toString(),
-                color = NutsNewsTheme.colors.accent,
+                color = NutsNewsTheme.colors.accentText,
                 style = NutsNewsTheme.typography.caption2,
                 fontWeight = FontWeight.Bold,
             )
@@ -449,7 +454,8 @@ private fun DailyDigestSectionTitle(title: String) {
         modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(top = NutsNewsTheme.spacing.xs),
+                .padding(top = NutsNewsTheme.spacing.xs)
+                .nutsNewsHeading(),
         color = NutsNewsTheme.colors.primaryText,
         style = NutsNewsTheme.typography.subheadline,
         fontWeight = FontWeight.Bold,
@@ -524,7 +530,7 @@ private fun DailyDigestFeaturedCard(
                         modifier =
                             Modifier
                                 .weight(1f)
-                                .height(42.dp)
+                                .heightIn(min = 48.dp)
                                 .clip(CircleShape)
                                 .background(nutsNewsButtonGradient())
                                 .testTag("daily_digest_featured_open"),
@@ -574,7 +580,7 @@ private fun DailyDigestFeaturedThumbnail(article: Article) {
         article.thumbnailUrl?.let { thumbnailUrl ->
             AsyncImage(
                 model = thumbnailUrl.toString(),
-                contentDescription = "Thumbnail for ${article.title}",
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -594,7 +600,7 @@ private fun DailyDigestActionCard(
     Surface(
         modifier =
             modifier
-                .height(132.dp)
+                .heightIn(min = 132.dp)
                 .testTag(testTag)
                 .semantics { role = Role.Button },
         onClick = onClick,
@@ -670,7 +676,7 @@ private fun DailyDigestStoryRow(
                         Modifier.testTag(
                             "daily_digest_story_source_${article.stableId.value}",
                         ),
-                    color = NutsNewsTheme.colors.accentSoft,
+                    color = NutsNewsTheme.colors.accentText,
                     style = NutsNewsTheme.typography.caption2,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -729,7 +735,7 @@ private fun DailyDigestStoryThumbnail(article: Article) {
         article.thumbnailUrl?.let { thumbnailUrl ->
             AsyncImage(
                 model = thumbnailUrl.toString(),
-                contentDescription = "Thumbnail for ${article.title}",
+                contentDescription = null,
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -748,7 +754,10 @@ private fun DailyDigestSaveButton(
     Surface(
         modifier =
             Modifier
-                .size(size)
+                .size(size.coerceAtLeast(48.dp))
+                .semantics {
+                    stateDescription = if (isSaved) "Saved" else "Not saved"
+                }
                 .testTag("daily_digest_save_${article.stableId.value}"),
         onClick = onToggleSaved,
         shape = CircleShape,
@@ -789,6 +798,7 @@ private fun DailyDigestEmptyState(onClose: () -> Unit) {
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(NutsNewsTheme.spacing.medium)
+                .nutsNewsPoliteAnnouncement()
                 .testTag("daily_digest_empty"),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
@@ -820,7 +830,7 @@ private fun DailyDigestEmptyState(onClose: () -> Unit) {
             onClick = onClose,
             modifier =
                 Modifier
-                    .height(42.dp)
+                    .heightIn(min = 48.dp)
                     .clip(CircleShape)
                     .background(nutsNewsButtonGradient())
                     .testTag("daily_digest_back_home"),
