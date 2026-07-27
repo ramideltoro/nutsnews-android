@@ -11,14 +11,16 @@ recording_path="/sdcard/nutsnews-$matrix_id.mp4"
 recording_pid=""
 
 mkdir -p "$artifact_dir" "$log_dir"
-adb logcat -c
+adb logcat -c >/dev/null 2>&1 || true
 adb shell rm -f "$recording_path"
 
 stop_recording() {
   if [[ -z "$recording_pid" ]]; then
     return
   fi
-  recorder_process="$(adb shell pidof screenrecord 2>/dev/null | tr -d '\r')"
+  recorder_process="$(
+    adb shell pidof screenrecord 2>/dev/null | tr -d '\r' || true
+  )"
   if [[ "$recorder_process" =~ ^[0-9]+$ ]]; then
     adb shell kill -2 "$recorder_process" >/dev/null 2>&1 || true
   else

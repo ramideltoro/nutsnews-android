@@ -170,10 +170,8 @@ class NutsNewsEndToEndTest {
             .performScrollTo()
             .performClick()
         composeRule
-            .onNodeWithTag("article_detail_reflection")
-            .performScrollTo()
-        composeRule
             .onNodeWithTag("article_detail_reflection_hope")
+            .performScrollTo()
             .performClick()
 
         composeRule.waitUntil(timeoutMillis = UiTimeoutMillis) {
