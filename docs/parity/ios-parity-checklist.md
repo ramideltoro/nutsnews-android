@@ -400,9 +400,9 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T58 — Emulator-matrix CI
 
-- [ ] P-T58-01 Instrumentation passes on API 26 and API 36 phones.
-- [ ] P-T58-02 Responsive/screenshot checks pass on a tablet.
-- [ ] P-T58-03 Failure artifacts include reports, logs, screenshots, and videos.
+- [x] P-T58-01 Instrumentation passes on API 26 and API 36 phones.
+- [x] P-T58-02 Responsive/screenshot checks pass on a tablet.
+- [x] P-T58-03 Failure artifacts include reports, logs, screenshots, and videos.
 
 ## Repository security and controls
 
