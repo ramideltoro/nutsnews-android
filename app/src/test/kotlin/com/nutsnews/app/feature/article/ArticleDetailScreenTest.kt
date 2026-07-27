@@ -159,6 +159,9 @@ abstract class ArticleDetailScreenshotContract(
         isLiked: Boolean = false,
         onToggleLiked: (Article) -> Unit = {},
         onArticleShown: (Article) -> Unit = {},
+        onOpenOriginalStory: (Article, OriginalStoryColors) -> OriginalStoryOpenResult =
+            { _, _ -> OriginalStoryOpenResult.OpenedCustomTab },
+        onOriginalStoryOpened: () -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -169,6 +172,8 @@ abstract class ArticleDetailScreenshotContract(
                     isLiked = isLiked,
                     onToggleLiked = onToggleLiked,
                     onArticleShown = onArticleShown,
+                    onOpenOriginalStory = onOpenOriginalStory,
+                    onOriginalStoryOpened = onOriginalStoryOpened,
                 )
             }
         }
@@ -361,6 +366,85 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
         composeRule.onNodeWithText("SOURCE").assertIsDisplayed()
         composeRule.onNodeWithText("Recently").assertIsDisplayed()
         assertTrue(sampledColorCount(captureLargestWindow()) >= DetailGolden.MinimumGoldenColors)
+    }
+
+    @Test
+    fun validOriginalStoryUsesThemeColorsAndRecordsTheOpen() {
+        val article = contentArticle()
+        val launched = mutableListOf<Pair<Article, OriginalStoryColors>>()
+        var recordedCount = 0
+        setDetail(
+            article = article,
+            imageModel = null,
+            onOpenOriginalStory = { selectedArticle, colors ->
+                launched += selectedArticle to colors
+                OriginalStoryOpenResult.OpenedCustomTab
+            },
+            onOriginalStoryOpened = { recordedCount += 1 },
+        )
+
+        composeRule
+            .onNodeWithTag("article_detail_open_original")
+            .performScrollTo()
+            .assertIsDisplayed()
+            .performClick()
+
+        composeRule.runOnIdle {
+            assertEquals(1, launched.size)
+            assertEquals(article, launched.single().first)
+            assertTrue(launched.single().second.toolbar != 0)
+            assertTrue(launched.single().second.navigationBar != 0)
+            assertEquals(1, recordedCount)
+        }
+        composeRule.onAllNodesWithTag("article_detail_browser_status").assertCountEquals(0)
+    }
+
+    @Test
+    fun invalidOriginalStoryShowsFailureWithoutRecordingAnOpen() {
+        val article =
+            contentArticle().copy(
+                originalUrl = URI("ftp://example.com/not-a-web-story"),
+            )
+        var recordedCount = 0
+        setDetail(
+            article = article,
+            imageModel = null,
+            onOpenOriginalStory = { _, _ -> OriginalStoryOpenResult.InvalidUrl },
+            onOriginalStoryOpened = { recordedCount += 1 },
+        )
+
+        composeRule
+            .onNodeWithTag("article_detail_open_original")
+            .performScrollTo()
+            .performClick()
+
+        composeRule
+            .onNodeWithText("This story does not have a valid web address.")
+            .performScrollTo()
+            .assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, recordedCount) }
+    }
+
+    @Test
+    fun absentOriginalStoryIsDisabledAndExplainsWhy() {
+        val article = contentArticle().copy(originalUrl = null)
+        var launchCount = 0
+        setDetail(
+            article = article,
+            imageModel = null,
+            onOpenOriginalStory = { _, _ ->
+                launchCount += 1
+                OriginalStoryOpenResult.OpenedCustomTab
+            },
+        )
+
+        composeRule
+            .onNodeWithTag("article_detail_browser_status")
+            .performScrollTo()
+        composeRule
+            .onNodeWithText("Original story link unavailable.")
+            .assertIsDisplayed()
+        composeRule.runOnIdle { assertEquals(0, launchCount) }
     }
 }
 

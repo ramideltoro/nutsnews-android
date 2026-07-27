@@ -36,6 +36,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.feature.article.ArticleDetailScreen
 import com.nutsnews.app.feature.article.ArticleDetailViewModel
+import com.nutsnews.app.feature.article.AndroidOriginalStoryLauncher
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
@@ -58,6 +59,10 @@ import com.nutsnews.app.reminder.DailyReminderContract
 import com.nutsnews.app.reminder.ReminderScheduleResult
 
 class MainActivity : ComponentActivity() {
+    private val originalStoryLauncher by lazy {
+        AndroidOriginalStoryLauncher(this)
+    }
+
     private val appNavigator: AppNavigator
         get() = (application as NutsNewsApplication).container.navigator
 
@@ -272,6 +277,10 @@ class MainActivity : ComponentActivity() {
                                             articleDetailUiState.likedStoryIds,
                                     onToggleLiked = articleDetailViewModel::toggleLiked,
                                     onArticleShown = articleDetailViewModel::onArticleShown,
+                                    onOpenOriginalStory =
+                                        originalStoryLauncher::open,
+                                    onOriginalStoryOpened =
+                                        articleDetailViewModel::onOriginalStoryOpened,
                                 )
                             }
                         }
