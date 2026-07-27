@@ -387,9 +387,9 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T56 — Compose end-to-end tests
 
-- [ ] P-T56-01 F01–F18 have deterministic fake-backed UI coverage.
-- [ ] P-T56-02 Stable semantics selectors cover all primary actions/back paths.
-- [ ] P-T56-03 `connectedDebugAndroidTest` passes on the primary emulator.
+- [x] P-T56-01 F01–F18 have deterministic fake-backed UI coverage.
+- [x] P-T56-02 Stable semantics selectors cover all primary actions/back paths.
+- [x] P-T56-03 `connectedDebugAndroidTest` passes on the primary emulator.
 
 ### T57 — Screenshot parity tests
 

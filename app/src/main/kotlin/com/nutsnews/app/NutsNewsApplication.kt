@@ -16,7 +16,7 @@ import com.nutsnews.app.widget.AndroidWidgetRefreshRequester
 
 class NutsNewsApplication : Application() {
     lateinit var container: AppContainer
-        private set
+        internal set
 
     override fun onCreate() {
         super.onCreate()
