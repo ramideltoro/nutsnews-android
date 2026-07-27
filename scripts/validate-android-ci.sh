@@ -56,6 +56,7 @@ required_fragments=(
   "profile: pixel_c"
   "actions/cache/restore@"
   "actions/cache/save@"
+  "matrix.id != 'phone-api26'"
   "run-emulator-tests.sh"
   "exercise_emulator_failure"
   "validate-emulator-failure-artifacts.sh"
