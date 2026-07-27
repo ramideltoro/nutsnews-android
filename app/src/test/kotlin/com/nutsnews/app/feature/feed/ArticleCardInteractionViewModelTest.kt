@@ -54,15 +54,22 @@ class ArticleCardInteractionViewModelTest {
                     userPreferencesRepository = InMemoryUserPreferencesRepository(),
                 )
 
-            assertTrue(
-                article.stableId in
-                    viewModel.uiState.first { state -> article.stableId in state.likedStoryIds }
-                        .likedStoryIds,
+            val initiallyLikedState =
+                viewModel.uiState.first { state -> article.stableId in state.likedStoryIds }
+            assertTrue(article.stableId in initiallyLikedState.likedStoryIds)
+            assertEquals(
+                article,
+                initiallyLikedState.savedArticlesById[article.stableId],
             )
 
             viewModel.toggleLiked(article)
             advanceUntilIdle()
             assertFalse(savedStories.isLiked(article.stableId))
+            assertTrue(
+                viewModel.uiState.first { state -> state.likedStoryIds.isEmpty() }
+                    .savedArticlesById
+                    .isEmpty(),
+            )
 
             viewModel.toggleLiked(article)
             advanceUntilIdle()
