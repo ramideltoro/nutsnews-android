@@ -414,10 +414,10 @@ Screen (`Sxx`), flow (`Fxx`), and motion (`Mxx`) definitions live in
 
 ### T60 — Branch protection
 
-- [ ] P-T60-01 Main requires PRs, current branches, resolved conversations, and
+- [x] P-T60-01 Main requires PRs, current branches, resolved conversations, and
   all CI/security checks.
-- [ ] P-T60-02 Force pushes and branch deletion are blocked.
-- [ ] P-T60-03 Required-check names and any admin bypass are documented/tested.
+- [x] P-T60-02 Force pushes and branch deletion are blocked.
+- [x] P-T60-03 Required-check names and any admin bypass are documented/tested.
 
 ## Release and delivery
 
