@@ -1,0 +1,286 @@
+name: Tagged Android Release
+
+on:
+  push:
+    tags:
+      - "android-v[0-9]*.[0-9]*.[0-9]*"
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: tagged-android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release-metadata:
+    name: Validate release tag and version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      version_name: ${{ steps.version.outputs.version_name }}
+      version_code: ${{ steps.version.outputs.version_code }}
+      bundle_name: ${{ steps.version.outputs.bundle_name }}
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag, ancestry, and release contract
+        id: version
+        shell: bash
+        run: |
+          ./scripts/validate-tagged-release.sh
+          ./scripts/tests/test-tagged-release.sh
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" refs/remotes/origin/main; then
+            echo "Release tags must point to a commit contained by main." >&2
+            exit 1
+          fi
+          read -r version_name version_code < <(
+            ./scripts/release-version.sh "$GITHUB_REF_NAME"
+          )
+          bundle_name="nutsnews-android-${version_name}-${version_code}.aab"
+          echo "version_name=$version_name" >>"$GITHUB_OUTPUT"
+          echo "version_code=$version_code" >>"$GITHUB_OUTPUT"
+          echo "bundle_name=$bundle_name" >>"$GITHUB_OUTPUT"
+
+  android-validation:
+    name: Complete Android validation
+    permissions:
+      contents: read
+      actions: read
+    uses: ./.github/workflows/android-ci.yml
+
+  security-validation:
+    name: Complete security validation
+    permissions:
+      contents: read
+      actions: read
+      packages: read
+      security-events: write
+    uses: ./.github/workflows/security.yml
+
+  sign-release:
+    name: Build verified upload-signed AAB
+    needs:
+      - release-metadata
+      - android-validation
+      - security-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    environment: release-signing
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@03ad4de0992f5dab5e18fcb136590ce7c4a0ac95 # v5.6.0
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up read-only Gradle caching
+        uses: gradle/actions/setup-gradle@3f131e8634966bd73d06cc69884922b02e6faf92 # v6.2.0
+        with:
+          cache-read-only: true
+
+      - name: Build and verify release identity and upload signature
+        shell: bash
+        env:
+          VERSION_NAME: ${{ needs.release-metadata.outputs.version_name }}
+          VERSION_CODE: ${{ needs.release-metadata.outputs.version_code }}
+          BUNDLE_NAME: ${{ needs.release-metadata.outputs.bundle_name }}
+          NUTSNEWS_UPLOAD_KEYSTORE_BASE64: ${{ secrets.NUTSNEWS_UPLOAD_KEYSTORE_BASE64 }}
+          NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD: ${{ secrets.NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD }}
+          NUTSNEWS_UPLOAD_KEY_ALIAS: ${{ secrets.NUTSNEWS_UPLOAD_KEY_ALIAS }}
+          NUTSNEWS_UPLOAD_KEY_PASSWORD: ${{ secrets.NUTSNEWS_UPLOAD_KEY_PASSWORD }}
+        run: |
+          for required_value in \
+            "$NUTSNEWS_UPLOAD_KEYSTORE_BASE64" \
+            "$NUTSNEWS_UPLOAD_KEYSTORE_PASSWORD" \
+            "$NUTSNEWS_UPLOAD_KEY_ALIAS" \
+            "$NUTSNEWS_UPLOAD_KEY_PASSWORD"; do
+            if [[ -z "$required_value" ]]; then
+              echo "A protected release-signing secret is missing." >&2
+              exit 1
+            fi
+          done
+          signing_dir="$(mktemp -d)"
+          trap 'rm -rf "$signing_dir"' EXIT
+          umask 077
+          printf '%s' "$NUTSNEWS_UPLOAD_KEYSTORE_BASE64" |
+            base64 --decode >"$signing_dir/nutsnews-upload.jks"
+          NUTSNEWS_UPLOAD_KEYSTORE_PATH="$signing_dir/nutsnews-upload.jks" \
+            ./gradlew \
+              --no-daemon \
+              --no-configuration-cache \
+              --dependency-verification=strict \
+              --stacktrace \
+              --console=plain \
+              -PnutsnewsVersionName="$VERSION_NAME" \
+              -PnutsnewsVersionCode="$VERSION_CODE" \
+              bundleRelease
+          jq -e \
+            --arg version_name "$VERSION_NAME" \
+            --argjson version_code "$VERSION_CODE" \
+            '.versionName == $version_name and .versionCode == $version_code' \
+            app/build/outputs/release/release-identity.json >/dev/null
+          source_bundle="app/build/outputs/bundle/release/app-release.aab"
+          verified_bundle="app/build/outputs/bundle/release/$BUNDLE_NAME"
+          ./scripts/verify-release-bundle.sh \
+            "$source_bundle" \
+            config/signing/nutsnews-upload-certificate.pem
+          cp "$source_bundle" "$verified_bundle"
+          ./scripts/verify-release-bundle.sh \
+            "$verified_bundle" \
+            config/signing/nutsnews-upload-certificate.pem
+
+      - name: Upload verified AAB
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: verified-${{ needs.release-metadata.outputs.bundle_name }}
+          path: app/build/outputs/bundle/release/${{ needs.release-metadata.outputs.bundle_name }}
+          if-no-files-found: error
+          retention-days: 30
+
+  deploy-internal:
+    name: Deploy and verify Google Play Internal
+    needs:
+      - release-metadata
+      - sign-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    environment: play-internal
+    permissions:
+      contents: read
+      actions: read
+    outputs:
+      package_name: ${{ steps.play.outputs.package_name }}
+      track: ${{ steps.play.outputs.track }}
+      version_name: ${{ steps.play.outputs.version_name }}
+      version_code: ${{ steps.play.outputs.version_code }}
+      deployment_status: ${{ steps.play.outputs.deployment_status }}
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download verified AAB
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-${{ needs.release-metadata.outputs.bundle_name }}
+          path: app/build/outputs/bundle/release
+
+      - name: Verify, deploy, and query Internal track
+        id: play
+        shell: bash
+        env:
+          VERSION_NAME: ${{ needs.release-metadata.outputs.version_name }}
+          VERSION_CODE: ${{ needs.release-metadata.outputs.version_code }}
+          BUNDLE_NAME: ${{ needs.release-metadata.outputs.bundle_name }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing." >&2
+            exit 1
+          fi
+          credential_dir="$(mktemp -d)"
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" \
+            >"$credential_dir/service-account.json"
+          bundle_path="app/build/outputs/bundle/release/$BUNDLE_NAME"
+          result="$(
+            ./scripts/deploy-play-internal.sh \
+              "$credential_dir/service-account.json" \
+              "$bundle_path" \
+              "$VERSION_NAME" \
+              "$VERSION_CODE"
+          )"
+          mkdir -p app/build/outputs/play
+          printf '%s\n' "$result" >app/build/outputs/play/release-result.json
+          jq -e \
+            --arg version_name "$VERSION_NAME" \
+            --argjson version_code "$VERSION_CODE" \
+            '.packageName == "com.nutsnews.app" and
+             .track == "internal" and
+             .versionName == $version_name and
+             .versionCode == $version_code and
+             (.status == "deployed" or .status == "already-present")' \
+            <<<"$result" >/dev/null
+          echo "package_name=$(jq -r '.packageName' <<<"$result")" >>"$GITHUB_OUTPUT"
+          echo "track=$(jq -r '.track' <<<"$result")" >>"$GITHUB_OUTPUT"
+          echo "version_name=$(jq -r '.versionName' <<<"$result")" >>"$GITHUB_OUTPUT"
+          echo "version_code=$(jq -r '.versionCode' <<<"$result")" >>"$GITHUB_OUTPUT"
+          echo "deployment_status=$(jq -r '.status' <<<"$result")" >>"$GITHUB_OUTPUT"
+          printf 'Verified %s %s (%s) on %s.\n' \
+            "$(jq -r '.packageName' <<<"$result")" \
+            "$VERSION_NAME" \
+            "$VERSION_CODE" \
+            "$(jq -r '.track' <<<"$result")"
+
+  github-release:
+    name: Publish GitHub Release
+    needs:
+      - release-metadata
+      - deploy-internal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: Check out tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Download verified AAB
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: verified-${{ needs.release-metadata.outputs.bundle_name }}
+          path: app/build/outputs/bundle/release
+
+      - name: Publish verified bundle for the tag
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ github.ref_name }}
+          VERSION_NAME: ${{ needs.release-metadata.outputs.version_name }}
+          VERSION_CODE: ${{ needs.release-metadata.outputs.version_code }}
+          BUNDLE_NAME: ${{ needs.release-metadata.outputs.bundle_name }}
+          PLAY_PACKAGE: ${{ needs.deploy-internal.outputs.package_name }}
+          PLAY_TRACK: ${{ needs.deploy-internal.outputs.track }}
+        run: |
+          bundle_path="app/build/outputs/bundle/release/$BUNDLE_NAME"
+          ./scripts/verify-release-bundle.sh \
+            "$bundle_path" \
+            config/signing/nutsnews-upload-certificate.pem
+          notes_file="$RUNNER_TEMP/release-notes.md"
+          cat >"$notes_file" <<EOF
+          Automated NutsNews Android release.
+
+          - Package: $PLAY_PACKAGE
+          - Google Play track: $PLAY_TRACK
+          - Version name: $VERSION_NAME
+          - Version code: $VERSION_CODE
+          EOF
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" "$bundle_path" --clobber
+            gh release edit "$TAG_NAME" \
+              --title "NutsNews Android v$VERSION_NAME" \
+              --notes-file "$notes_file" \
+              --latest
+          else
+            gh release create "$TAG_NAME" "$bundle_path" \
+              --verify-tag \
+              --title "NutsNews Android v$VERSION_NAME" \
+              --notes-file "$notes_file" \
+              --latest
+          fi
