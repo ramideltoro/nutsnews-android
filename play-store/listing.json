@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.nutsnews.app",
+  "locale": "en-US",
+  "category": "NEWS_AND_MAGAZINES",
+  "privacyPolicyUrl": "https://www.nutsnews.com/privacy/android",
+  "developerWebsite": "https://www.nutsnews.com",
+  "release": {
+    "versionName": "1.1.2",
+    "versionCode": 1001002,
+    "track": "internal",
+    "releaseNotesFile": "fastlane/metadata/android/en-US/changelogs/1001002.txt"
+  },
+  "assets": {
+    "icon": "fastlane/metadata/android/en-US/images/icon.png",
+    "featureGraphic": "fastlane/metadata/android/en-US/images/featureGraphic.png",
+    "phoneScreenshots": [
+      "fastlane/metadata/android/en-US/images/phoneScreenshots/01-dashboard.png",
+      "fastlane/metadata/android/en-US/images/phoneScreenshots/02-story.png",
+      "fastlane/metadata/android/en-US/images/phoneScreenshots/03-good-mood.png",
+      "fastlane/metadata/android/en-US/images/phoneScreenshots/04-reading-stats.png"
+    ],
+    "tenInchScreenshots": [
+      "fastlane/metadata/android/en-US/images/tenInchScreenshots/01-dashboard.png",
+      "fastlane/metadata/android/en-US/images/tenInchScreenshots/02-story.png",
+      "fastlane/metadata/android/en-US/images/tenInchScreenshots/03-settings.png"
+    ]
+  }
+}

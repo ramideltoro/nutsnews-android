@@ -93,7 +93,11 @@ class HelpFaqScreenTest {
     @Test
     fun closeAndEveryActionExposeAccessibleLabels() {
         var closeCount = 0
-        setScreen(onClose = { closeCount += 1 })
+        var privacyCount = 0
+        setScreen(
+            onClose = { closeCount += 1 },
+            onOpenPrivacyPolicy = { privacyCount += 1 },
+        )
 
         composeRule
             .onNodeWithContentDescription("Close help")
@@ -107,6 +111,13 @@ class HelpFaqScreenTest {
                 .onNodeWithContentDescription(label)
                 .assertIsDisplayed()
         }
+
+        scrollTo(hasTestTag("help_action_privacy"))
+        composeRule
+            .onNodeWithContentDescription("Open Android privacy policy in browser")
+            .assertIsDisplayed()
+            .performClick()
+        assertEquals(1, privacyCount)
     }
 
     @Test
@@ -135,6 +146,7 @@ class HelpFaqScreenTest {
                     onOpenSearch = {},
                     onOpenPersonalization = {},
                     onOpenStoryFeatures = {},
+                    onOpenPrivacyPolicy = {},
                 )
             }
         }
@@ -168,6 +180,7 @@ class HelpFaqScreenTest {
         onOpenSearch: () -> Unit = {},
         onOpenPersonalization: () -> Unit = {},
         onOpenStoryFeatures: () -> Unit = {},
+        onOpenPrivacyPolicy: () -> Unit = {},
     ) {
         composeRule.setContent {
             NutsNewsTheme(updateSystemBars = false) {
@@ -180,6 +193,7 @@ class HelpFaqScreenTest {
                     onOpenSearch = onOpenSearch,
                     onOpenPersonalization = onOpenPersonalization,
                     onOpenStoryFeatures = onOpenStoryFeatures,
+                    onOpenPrivacyPolicy = onOpenPrivacyPolicy,
                 )
             }
         }
@@ -271,6 +285,9 @@ private val CompleteGuideCopy =
         "Long press the Android Home Screen, tap Widgets, find NutsNews, then add NutsNews Daily.",
         "Can I listen instead of read?",
         "Yes. Open a story and tap Play to hear the NutsNews Brief aloud. For the best listening experience, open Android Settings, search for “Text-to-speech output,” and install a high-quality English voice.",
+        "Privacy",
+        "Review how the Android app handles local data, network requests, reminders, and sharing.",
+        "Android Privacy Policy",
     )
 
 private fun sampledColorCount(bitmap: Bitmap): Int {

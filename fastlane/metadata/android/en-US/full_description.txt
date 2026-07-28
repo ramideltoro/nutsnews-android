@@ -1,0 +1,30 @@
+Take a calmer break from the news with NutsNews.
+
+NutsNews collects positive story summaries into a native Android reading experience. Browse the latest stories, open the original publisher when you want the full article, and shape the app around the topics and moods that matter to you.
+
+BUILD A POSITIVE DAILY HABIT
+
+- See personalized For You stories and the latest positive-news feed.
+- Open Today's Picks for a focused daily digest.
+- Choose a feeling in Good Mood to find a matching story.
+- Set an optional local daily reminder.
+- Add the NutsNews Daily home-screen widget.
+
+READ YOUR WAY
+
+- Use the concise NutsNews Brief for the key points and feel-good takeaway.
+- Play Listen Mode through Android text-to-speech.
+- Search the NutsNews archive.
+- Open the original publisher in your browser for the complete story.
+- Create a branded Good News Share Card with the Android Sharesheet.
+
+KEEP WHAT MATTERS ON YOUR DEVICE
+
+- Save or like stories for later.
+- Add private notes and reflections.
+- Track reading goals, streaks, and activity.
+- Choose from six visual themes.
+
+No NutsNews account is required. Saved stories, notes, reflections, reading statistics, preferences, and reminder settings stay on your Android device. An internet connection is needed to request fresh stories and archive search results; recent feed content and images may be cached for reliability.
+
+Privacy policy: https://www.nutsnews.com/privacy/android
