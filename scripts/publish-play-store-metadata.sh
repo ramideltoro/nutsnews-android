@@ -20,8 +20,14 @@ TOKEN="${GOOGLE_PLAY_ACCESS_TOKEN:-}"
 PACKAGE="$(jq -er '.packageName' "$LISTING")"
 LOCALE="$(jq -er '.locale' "$LISTING")"
 API="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/$PACKAGE/edits"
+UPLOAD_API="https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/$PACKAGE/edits"
 AUTH_HEADER="Authorization: Bearer $TOKEN"
 EDIT_ID=""
+
+fail() {
+  echo "Play Store metadata publishing failed: $*" >&2
+  exit 1
+}
 
 cleanup() {
   if [[ -n "$EDIT_ID" ]]; then
@@ -38,7 +44,7 @@ create_response="$(
     --header "Content-Type: application/json" \
     --data '{}' \
     "$API"
-)"
+)" || fail "could not create a Play edit"
 EDIT_ID="$(jq -er '.id' <<<"$create_response")"
 
 listing_payload="$(
@@ -58,7 +64,8 @@ curl --silent --show-error --fail-with-body \
   --header "$AUTH_HEADER" \
   --header "Content-Type: application/json" \
   --data "$listing_payload" \
-  "$API/$EDIT_ID/listings/$LOCALE" >/dev/null
+  "$API/$EDIT_ID/listings/$LOCALE" >/dev/null ||
+  fail "could not update the $LOCALE listing"
 
 upload_images() {
   local image_type="$1"
@@ -66,14 +73,16 @@ upload_images() {
   curl --silent --show-error --fail-with-body \
     --request DELETE \
     --header "$AUTH_HEADER" \
-    "$API/$EDIT_ID/listings/$LOCALE/$image_type" >/dev/null
+    "$API/$EDIT_ID/listings/$LOCALE/$image_type" >/dev/null ||
+    fail "could not clear existing $image_type images"
   local image_path
   for image_path in "$@"; do
     curl --silent --show-error --fail-with-body \
       --request POST \
       --header "$AUTH_HEADER" \
       --form "image=@$ROOT/$image_path;type=image/png" \
-      "$API/$EDIT_ID/listings/$LOCALE/$image_type" >/dev/null
+      "$UPLOAD_API/$EDIT_ID/listings/$LOCALE/$image_type" >/dev/null ||
+      fail "could not upload $image_type image"
   done
 }
 
@@ -89,7 +98,9 @@ upload_images tenInchScreenshots "${tablet_screenshots[@]}"
 curl --silent --show-error --fail-with-body \
   --request POST \
   --header "$AUTH_HEADER" \
-  "$API/$EDIT_ID:commit" >/dev/null
+  "$API/$EDIT_ID:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
+  >/dev/null ||
+  fail "could not commit metadata without disrupting changes in review"
 EDIT_ID=""
 
 verify_response="$(
@@ -99,20 +110,21 @@ verify_response="$(
     --header "Content-Type: application/json" \
     --data '{}' \
     "$API"
-)"
+)" || fail "could not create a verification edit"
 EDIT_ID="$(jq -er '.id' <<<"$verify_response")"
 
 remote_listing="$(
   curl --silent --show-error --fail-with-body \
     --header "$AUTH_HEADER" \
     "$API/$EDIT_ID/listings/$LOCALE"
-)"
+)" || fail "could not query the committed $LOCALE listing"
 jq -e \
   --argjson expected "$listing_payload" \
   '.title == $expected.title and
    .shortDescription == $expected.shortDescription and
    .fullDescription == $expected.fullDescription' \
-  <<<"$remote_listing" >/dev/null
+  <<<"$remote_listing" >/dev/null ||
+  fail "committed listing text does not match the repository"
 
 verify_image_count() {
   local image_type="$1"
@@ -122,8 +134,9 @@ verify_image_count() {
     curl --silent --show-error --fail-with-body \
       --header "$AUTH_HEADER" \
       "$API/$EDIT_ID/listings/$LOCALE/$image_type"
-  )"
-  [[ "$(jq '.images | length' <<<"$remote_images")" == "$expected_count" ]]
+  )" || fail "could not query committed $image_type images"
+  [[ "$(jq '.images | length' <<<"$remote_images")" == "$expected_count" ]] ||
+    fail "committed $image_type image count does not match the repository"
 }
 
 verify_image_count icon 1

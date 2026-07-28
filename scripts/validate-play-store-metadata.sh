@@ -7,6 +7,7 @@ LISTING="$ROOT/play-store/listing.json"
 POLICY="$ROOT/play-store/policy-declarations.json"
 WORKFLOW="$ROOT/.github/workflows/play-store-metadata.yml"
 TOKEN_MINTER="$ROOT/scripts/mint-google-play-access-token.sh"
+PUBLISHER="$ROOT/scripts/publish-play-store-metadata.sh"
 EXPECTED_PRIVACY_URL="https://www.nutsnews.com/privacy/android"
 
 fail() {
@@ -48,6 +49,7 @@ require_file "$LISTING"
 require_file "$POLICY"
 require_file "$WORKFLOW"
 require_file "$TOKEN_MINTER"
+require_file "$PUBLISHER"
 require_file "$METADATA/assets.sha256"
 
 [[ "$(character_count "$METADATA/title.txt")" -le 30 ]] || fail "title exceeds 30 characters"
@@ -147,5 +149,13 @@ fi
 if grep -Eq 'environment:[[:space:]]*release-signing|tracks/(production|beta|alpha)' "$WORKFLOW"; then
   fail "metadata publishing crosses a protected environment or track boundary"
 fi
+grep -Fq \
+  'UPLOAD_API="https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/$PACKAGE/edits"' \
+  "$PUBLISHER" ||
+  fail "Play images are not sent through the media upload endpoint"
+grep -Fq \
+  'changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW' \
+  "$PUBLISHER" ||
+  fail "metadata commits could disrupt or prematurely submit changes in review"
 
 echo "Play Store listing, policy declarations, assets, and workflow contracts are valid."

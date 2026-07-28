@@ -30,6 +30,7 @@ mkdir -p "$TEMP_ROOT/play-store" "$TEMP_ROOT/.github/workflows" \
 cp "$ROOT/play-store/"*.json "$TEMP_ROOT/play-store/"
 cp "$ROOT/.github/workflows/play-store-metadata.yml" "$TEMP_ROOT/.github/workflows/"
 cp "$TOKEN_MINTER" "$TEMP_ROOT/scripts/"
+cp "$ROOT/scripts/publish-play-store-metadata.sh" "$TEMP_ROOT/scripts/"
 cp "$ROOT/app/src/main/kotlin/com/nutsnews/app/MainActivity.kt" \
   "$TEMP_ROOT/app/src/main/kotlin/com/nutsnews/app/"
 cp "$ROOT/app/src/main/kotlin/com/nutsnews/app/feature/personalization/PersonalizationScreen.kt" \
@@ -45,6 +46,89 @@ if "$TOKEN_MINTER" "$TEMP_ROOT/invalid-service-account.json" >/dev/null 2>&1; th
   echo "Expected token minting with an untrusted token endpoint to fail." >&2
   exit 1
 fi
+
+mkdir -p "$TEMP_ROOT/bin" "$TEMP_ROOT/curl-state"
+cat >"$TEMP_ROOT/bin/curl" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+
+state_dir="${FAKE_CURL_STATE_DIR:?}"
+method="GET"
+url=""
+data=""
+form=""
+
+while (($#)); do
+  case "$1" in
+    --request)
+      method="$2"
+      shift 2
+      ;;
+    --data | --data-binary)
+      data="$2"
+      shift 2
+      ;;
+    --form)
+      form="$2"
+      shift 2
+      ;;
+    --header)
+      shift 2
+      ;;
+    --silent | --show-error | --fail-with-body)
+      shift
+      ;;
+    http*)
+      url="$1"
+      shift
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+api="https://androidpublisher.googleapis.com/androidpublisher/v3/applications/com.nutsnews.app/edits"
+upload_api="https://androidpublisher.googleapis.com/upload/androidpublisher/v3/applications/com.nutsnews.app/edits"
+
+if [[ "$method" == "POST" && "$url" == "$api" ]]; then
+  printf '{"id":"metadata-edit"}\n'
+elif [[ "$method" == "PUT" && "$url" == "$api/metadata-edit/listings/en-US" ]]; then
+  printf '%s\n' "$data" >"$state_dir/listing.json"
+  printf '{}\n'
+elif [[ "$method" == "DELETE" && "$url" == "$api/metadata-edit/listings/en-US/"* ]]; then
+  image_type="${url##*/}"
+  printf '0\n' >"$state_dir/$image_type.count"
+  printf '{}\n'
+elif [[ "$method" == "POST" && "$url" == "$upload_api/metadata-edit/listings/en-US/"* ]]; then
+  [[ "$form" == image=@*";type=image/png" ]]
+  image_type="${url##*/}"
+  count_file="$state_dir/$image_type.count"
+  count="$(cat "$count_file")"
+  printf '%s\n' "$((count + 1))" >"$count_file"
+  printf '{"image":{"id":"uploaded-image"}}\n'
+elif [[ "$method" == "POST" &&
+  "$url" == "$api/metadata-edit:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" ]]; then
+  printf '{"id":"metadata-edit"}\n'
+elif [[ "$method" == "GET" && "$url" == "$api/metadata-edit/listings/en-US" ]]; then
+  cat "$state_dir/listing.json"
+elif [[ "$method" == "GET" && "$url" == "$api/metadata-edit/listings/en-US/"* ]]; then
+  image_type="${url##*/}"
+  count="$(cat "$state_dir/$image_type.count")"
+  jq -nc --argjson count "$count" '{images: [range(0; $count) | {}]}'
+elif [[ "$method" == "DELETE" && "$url" == "$api/metadata-edit" ]]; then
+  printf '{}\n'
+else
+  echo "Unexpected fake Play request: $method $url" >&2
+  exit 64
+fi
+EOF
+chmod 0755 "$TEMP_ROOT/bin/curl"
+
+FAKE_CURL_STATE_DIR="$TEMP_ROOT/curl-state" \
+  PATH="$TEMP_ROOT/bin:$PATH" \
+  GOOGLE_PLAY_ACCESS_TOKEN="test-access-token" \
+  "$ROOT/scripts/publish-play-store-metadata.sh" >/dev/null
 
 printf '%090d\n' 0 > "$TEMP_ROOT/fastlane/metadata/android/en-US/short_description.txt"
 if "$VALIDATOR" "$TEMP_ROOT" >/dev/null 2>&1; then
