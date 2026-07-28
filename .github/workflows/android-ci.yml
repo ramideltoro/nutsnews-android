@@ -70,6 +70,9 @@ jobs:
           ./scripts/validate-tagged-release.sh
           ./scripts/tests/test-tagged-release.sh
 
+      - name: Validate developer and release documentation
+        run: ./scripts/validate-documentation.sh
+
       - name: Validate brand assets
         run: ./scripts/validate-brand-assets.sh
 

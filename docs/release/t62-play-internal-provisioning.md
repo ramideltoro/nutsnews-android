@@ -28,11 +28,13 @@ subscription permissions.
 
 ## Protected GitHub environment
 
-`play-internal` accepts deployments only from protected branches. After the
-Play Console service account is linked, add its complete JSON key as the
-environment secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Do not split, print,
-commit, upload as an artifact, or place that JSON in repository/environment
-files.
+`play-internal` uses the explicit deployment policies versioned by T63: the
+`main` branch for controlled Security probes and `android-v*.*.*` tags for
+release delivery. Validate the exact remote policy with
+`./scripts/configure-release-environments.sh --check`. Add the complete service
+account JSON key as the environment secret
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Do not split, print, commit, upload as an
+artifact, or place that JSON in repository/environment files.
 
 The credential-free contract runs on every pull request. The protected API
 probe runs only through an explicit Security workflow dispatch:
@@ -48,20 +50,26 @@ The probe exchanges a signed service-account JWT for an OAuth token, creates a
 temporary Android Publisher edit, reads the `internal` track for exactly
 `com.nutsnews.app`, and deletes the edit without committing changes.
 
-## Current external blocker
+## Verified provisioning state
 
-As of T62 implementation, no authenticated Play Console session or
-service-account JSON is available, so the application, Play App Signing,
-least-privilege grant, tester group, and controlled API probe cannot be
-verified. The `play-internal` environment exists and is protected, but its
-required secret is intentionally absent.
+T62 is complete. `com.nutsnews.app` is active on Google Play Internal Testing,
+Play App Signing recognizes the pinned upload certificate, internal tester
+access is configured, and the dedicated service account has only the scoped
+app-information and testing-release permissions described above.
 
-An administrator must complete the five Play Console steps above and set the
-environment secret. Then run:
+The `play-internal` environment contains
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Security run `30352051909` passed the
+controlled package and Internal-track API probe. Tagged release run
+`30355469046` later uploaded and queried version `1.1.2` (`1001002`) on the
+`internal` track without exposing the credential.
+
+Revalidate the non-secret contract and controlled access after any Play role,
+service-account key, environment policy, package, or track change:
 
 ```sh
 ./scripts/validate-play-internal-provisioning.sh --remote
+gh workflow run security.yml \
+  --ref main \
+  -f run_protected_signing=false \
+  -f run_play_verification=true
 ```
-
-and dispatch the protected API probe. T62 remains incomplete until both
-commands pass.
