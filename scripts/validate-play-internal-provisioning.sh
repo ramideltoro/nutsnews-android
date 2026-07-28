@@ -56,10 +56,13 @@ if [[ "${1:-}" == "--remote" ]]; then
     gh api "repos/${repository}/environments/play-internal"
   )"
   jq -e '
-    .deployment_branch_policy.protected_branches == true and
-    .deployment_branch_policy.custom_branch_policies == false
+    .deployment_branch_policy.protected_branches == false and
+    .deployment_branch_policy.custom_branch_policies == true
   ' <<<"$environment_json" >/dev/null ||
-    fail "play-internal must allow protected branches only"
+    fail "play-internal must use explicit branch and tag deployment policies"
+
+  ./scripts/configure-release-environments.sh --check >/dev/null ||
+    fail "release environment deployment policies differ from the tagged-release contract"
 
   secret_names="$(
     gh secret list \

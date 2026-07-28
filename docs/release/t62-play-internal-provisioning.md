@@ -28,11 +28,13 @@ subscription permissions.
 
 ## Protected GitHub environment
 
-`play-internal` accepts deployments only from protected branches. After the
-Play Console service account is linked, add its complete JSON key as the
-environment secret `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Do not split, print,
-commit, upload as an artifact, or place that JSON in repository/environment
-files.
+`play-internal` uses the explicit deployment policies versioned by T63: the
+`main` branch for controlled Security probes and `android-v*.*.*` tags for
+release delivery. Validate the exact remote policy with
+`./scripts/configure-release-environments.sh --check`. Add the complete service
+account JSON key as the environment secret
+`GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Do not split, print, commit, upload as an
+artifact, or place that JSON in repository/environment files.
 
 The credential-free contract runs on every pull request. The protected API
 probe runs only through an explicit Security workflow dispatch:
