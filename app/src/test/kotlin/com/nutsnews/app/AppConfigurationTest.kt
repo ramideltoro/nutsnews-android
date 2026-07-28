@@ -10,7 +10,7 @@ class AppConfigurationTest {
         assertEquals("com.nutsnews.app", BuildConfig.APPLICATION_ID)
         assertEquals("debug", BuildConfig.BUILD_TYPE)
         assertEquals("1.1.1", BuildConfig.VERSION_NAME)
-        assertEquals(1, BuildConfig.VERSION_CODE)
+        assertEquals(2, BuildConfig.VERSION_CODE)
         assertTrue(BuildConfig.DEBUG)
     }
 }
