@@ -6,6 +6,7 @@ METADATA="$ROOT/fastlane/metadata/android/en-US"
 LISTING="$ROOT/play-store/listing.json"
 POLICY="$ROOT/play-store/policy-declarations.json"
 WORKFLOW="$ROOT/.github/workflows/play-store-metadata.yml"
+TOKEN_MINTER="$ROOT/scripts/mint-google-play-access-token.sh"
 EXPECTED_PRIVACY_URL="https://www.nutsnews.com/privacy/android"
 
 fail() {
@@ -46,6 +47,7 @@ require_file "$METADATA/changelogs/1001002.txt"
 require_file "$LISTING"
 require_file "$POLICY"
 require_file "$WORKFLOW"
+require_file "$TOKEN_MINTER"
 require_file "$METADATA/assets.sha256"
 
 [[ "$(character_count "$METADATA/title.txt")" -le 30 ]] || fail "title exceeds 30 characters"
@@ -126,10 +128,22 @@ grep -Fq "github.ref == 'refs/heads/main'" "$WORKFLOW" ||
   fail "metadata publishing is not restricted to main"
 grep -Fq "environment: play-internal" "$WORKFLOW" ||
   fail "metadata publishing does not use play-internal"
-grep -Fq "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" "$WORKFLOW" ||
+[[ "$(grep -Fc 'secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON' "$WORKFLOW")" == "1" ]] ||
   fail "metadata publishing does not use the Play credential contract"
-grep -Fq "create_credentials_file: false" "$WORKFLOW" ||
-  fail "Google credentials could be written into the checkout"
+grep -Fq 'credential_dir="$(mktemp -d)"' "$WORKFLOW" ||
+  fail "Play credentials are not isolated in a temporary directory"
+grep -Fq 'rm -rf "$credential_dir"' "$WORKFLOW" ||
+  fail "temporary Play credentials are not deleted"
+grep -Fq "mint-google-play-access-token.sh" "$WORKFLOW" ||
+  fail "metadata publishing does not mint a short-lived Play token"
+grep -Fq 'GOOGLE_PLAY_ACCESS_TOKEN="$access_token"' "$WORKFLOW" ||
+  fail "metadata publishing does not confine the token to the publishing process"
+if grep -Fq "google-github-actions/auth" "$WORKFLOW"; then
+  fail "metadata publishing must not depend on the IAM Credentials API"
+fi
+if grep -Fq "GITHUB_OUTPUT" "$WORKFLOW"; then
+  fail "Play tokens must not cross steps through workflow outputs"
+fi
 if grep -Eq 'environment:[[:space:]]*release-signing|tracks/(production|beta|alpha)' "$WORKFLOW"; then
   fail "metadata publishing crosses a protected environment or track boundary"
 fi

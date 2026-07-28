@@ -30,17 +30,27 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Obtain short-lived Android Publisher token
-        id: play-auth
-        uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3
-        with:
-          credentials_json: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          token_format: access_token
-          access_token_scopes: https://www.googleapis.com/auth/androidpublisher
-          create_credentials_file: false
-          export_environment_variables: false
-
       - name: Publish and verify Internal Testing store listing
+        shell: bash
         env:
-          GOOGLE_PLAY_ACCESS_TOKEN: ${{ steps.play-auth.outputs.access_token }}
-        run: ./scripts/publish-play-store-metadata.sh
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          set -euo pipefail
+          if [[ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing." >&2
+            exit 1
+          fi
+          credential_dir="$(mktemp -d)"
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          credential_path="$credential_dir/service-account.json"
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" >"$credential_path"
+          access_token="$(
+            ./scripts/mint-google-play-access-token.sh "$credential_path"
+          )"
+          [[ -n "$access_token" ]] || {
+            echo "Android Publisher token minting returned an empty token." >&2
+            exit 1
+          }
+          GOOGLE_PLAY_ACCESS_TOKEN="$access_token" \
+            ./scripts/publish-play-store-metadata.sh
