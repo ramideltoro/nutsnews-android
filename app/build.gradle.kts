@@ -17,6 +17,23 @@ val releaseTaskRequested = gradle.startParameter.taskNames.any {
 val releaseSigningValues = releaseSigningVariableNames.associateWith { variableName ->
     providers.environmentVariable(variableName).orNull?.takeIf(String::isNotBlank)
 }
+val configuredVersionName = providers.gradleProperty("nutsnewsVersionName")
+    .orElse("1.1.1")
+    .map { value ->
+        check(Regex("^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$").matches(value)) {
+            "nutsnewsVersionName must be a stable semantic version."
+        }
+        value
+    }
+val configuredVersionCode = providers.gradleProperty("nutsnewsVersionCode")
+    .orElse("2")
+    .map { value ->
+        val parsedValue = value.toIntOrNull()
+        check(parsedValue != null && parsedValue in 1..2_100_000_000) {
+            "nutsnewsVersionCode must be an Android version code from 1 through 2100000000."
+        }
+        parsedValue
+    }
 
 if (releaseTaskRequested) {
     val missingVariables = releaseSigningValues.filterValues { it == null }.keys
@@ -37,6 +54,20 @@ tasks.withType<Test>().configureEach {
     )
 }
 
+val writeNutsNewsBuildIdentity = tasks.register("writeNutsNewsBuildIdentity") {
+    val identityFile = layout.buildDirectory.file("outputs/release/release-identity.json")
+    outputs.file(identityFile)
+    doLast {
+        identityFile.get().asFile.apply {
+            parentFile.mkdirs()
+            writeText(
+                """{"versionName":"${configuredVersionName.get()}","versionCode":${configuredVersionCode.get()}}""" +
+                    "\n",
+            )
+        }
+    }
+}
+
 android {
     namespace = "com.nutsnews.app"
     compileSdk = 36
@@ -45,8 +76,8 @@ android {
         applicationId = "com.nutsnews.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1.1"
+        versionCode = configuredVersionCode.get()
+        versionName = configuredVersionName.get()
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -109,6 +140,9 @@ android {
 }
 
 tasks.configureEach {
+    if (name == "bundleRelease") {
+        finalizedBy(writeNutsNewsBuildIdentity)
+    }
     if (name.contains("release", ignoreCase = true)) {
         notCompatibleWithConfigurationCache(
             "Release signing credentials must never be retained in configuration-cache state.",

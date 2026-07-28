@@ -1,6 +1,13 @@
 name: Android CI
 
 on:
+  workflow_call:
+    inputs:
+      exercise_emulator_failure:
+        description: Capture and validate a real emulator failure-artifact bundle
+        required: false
+        type: boolean
+        default: false
   pull_request:
   push:
     branches:
@@ -57,6 +64,11 @@ jobs:
 
       - name: Validate CI workflow contract
         run: ./scripts/validate-android-ci.sh
+
+      - name: Validate tagged-release contract
+        run: |
+          ./scripts/validate-tagged-release.sh
+          ./scripts/tests/test-tagged-release.sh
 
       - name: Validate brand assets
         run: ./scripts/validate-brand-assets.sh

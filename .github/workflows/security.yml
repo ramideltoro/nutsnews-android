@@ -1,6 +1,18 @@
 name: Security
 
 on:
+  workflow_call:
+    inputs:
+      run_protected_signing:
+        description: Build and verify an AAB with protected upload-key secrets
+        required: false
+        type: boolean
+        default: false
+      run_play_verification:
+        description: Verify protected service-account access to Play Internal
+        required: false
+        type: boolean
+        default: false
   pull_request:
   push:
     branches:
