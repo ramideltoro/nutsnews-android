@@ -154,6 +154,17 @@ grep -Fq \
   "$PUBLISHER" ||
   fail "Play images are not sent through the media upload endpoint"
 grep -Fq \
+  '$UPLOAD_API/$EDIT_ID/listings/$LOCALE/$image_type?uploadType=media' \
+  "$PUBLISHER" ||
+  fail "Play images do not use the simple media upload protocol"
+grep -Fq -- '--header "Content-Type: image/png"' "$PUBLISHER" ||
+  fail "Play image uploads do not declare the PNG media type"
+grep -Fq -- '--data-binary "@$ROOT/$image_path"' "$PUBLISHER" ||
+  fail "Play image uploads do not send raw media bytes"
+if grep -Fq -- "--form" "$PUBLISHER"; then
+  fail "Play simple media uploads must not use multipart form encoding"
+fi
+grep -Fq \
   'changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW' \
   "$PUBLISHER" ||
   fail "metadata commits could disrupt or prematurely submit changes in review"

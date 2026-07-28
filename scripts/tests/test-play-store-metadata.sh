@@ -56,7 +56,7 @@ state_dir="${FAKE_CURL_STATE_DIR:?}"
 method="GET"
 url=""
 data=""
-form=""
+content_type=""
 
 while (($#)); do
   case "$1" in
@@ -68,11 +68,10 @@ while (($#)); do
       data="$2"
       shift 2
       ;;
-    --form)
-      form="$2"
-      shift 2
-      ;;
     --header)
+      if [[ "$2" == "Content-Type: "* ]]; then
+        content_type="${2#Content-Type: }"
+      fi
       shift 2
       ;;
     --silent | --show-error | --fail-with-body)
@@ -100,9 +99,12 @@ elif [[ "$method" == "DELETE" && "$url" == "$api/metadata-edit/listings/en-US/"*
   image_type="${url##*/}"
   printf '0\n' >"$state_dir/$image_type.count"
   printf '{}\n'
-elif [[ "$method" == "POST" && "$url" == "$upload_api/metadata-edit/listings/en-US/"* ]]; then
-  [[ "$form" == image=@*";type=image/png" ]]
-  image_type="${url##*/}"
+elif [[ "$method" == "POST" &&
+  "$url" == "$upload_api/metadata-edit/listings/en-US/"*"?uploadType=media" ]]; then
+  [[ "$content_type" == "image/png" ]]
+  [[ "$data" == @* && -f "${data#@}" ]]
+  image_type="${url%%\?*}"
+  image_type="${image_type##*/}"
   count_file="$state_dir/$image_type.count"
   count="$(cat "$count_file")"
   printf '%s\n' "$((count + 1))" >"$count_file"
