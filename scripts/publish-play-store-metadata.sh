@@ -80,8 +80,10 @@ upload_images() {
     curl --silent --show-error --fail-with-body \
       --request POST \
       --header "$AUTH_HEADER" \
-      --form "image=@$ROOT/$image_path;type=image/png" \
-      "$UPLOAD_API/$EDIT_ID/listings/$LOCALE/$image_type" >/dev/null ||
+      --header "Content-Type: image/png" \
+      --data-binary "@$ROOT/$image_path" \
+      "$UPLOAD_API/$EDIT_ID/listings/$LOCALE/$image_type?uploadType=media" \
+      >/dev/null ||
       fail "could not upload $image_type image"
   done
 }
