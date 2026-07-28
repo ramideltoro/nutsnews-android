@@ -70,6 +70,7 @@ fun HelpFaqScreen(
     onOpenSearch: () -> Unit,
     onOpenPersonalization: () -> Unit,
     onOpenStoryFeatures: () -> Unit,
+    onOpenPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     NutsNewsBackground(
@@ -239,6 +240,23 @@ fun HelpFaqScreen(
                                 HelpFaqRow(item)
                             }
                         }
+                    }
+                }
+                item(key = "privacy") {
+                    HelpFeatureSection(
+                        icon = Icons.Filled.Description,
+                        title = "Privacy",
+                        subtitle =
+                            "Review how the Android app handles local data, " +
+                                "network requests, reminders, and sharing.",
+                    ) {
+                        HelpActionButton(
+                            title = "Android Privacy Policy",
+                            icon = Icons.Filled.Description,
+                            testTag = "help_action_privacy",
+                            accessibilityLabel = "Open Android privacy policy in browser",
+                            onClick = onOpenPrivacyPolicy,
+                        )
                     }
                 }
                 }
@@ -678,6 +696,7 @@ private fun HelpFaqPreview() {
             onOpenSearch = {},
             onOpenPersonalization = {},
             onOpenStoryFeatures = {},
+            onOpenPrivacyPolicy = {},
         )
     }
 }

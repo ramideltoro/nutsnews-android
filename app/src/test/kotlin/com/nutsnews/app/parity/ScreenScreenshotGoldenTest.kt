@@ -367,7 +367,7 @@ private fun phoneGoldenScenes(): List<GoldenScene> {
             WidgetSettingsScreen(true, {}, {}, {})
         })
         add(GoldenScene("phone_s22_help") {
-            HelpFaqScreen({}, {}, {}, {}, {}, {}, {}, {})
+            HelpFaqScreen({}, {}, {}, {}, {}, {}, {}, {}, {})
         })
         add(GoldenScene("phone_s23_notification_reminder_entry") {
             Personalization(

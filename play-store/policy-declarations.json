@@ -1,0 +1,87 @@
+{
+  "schemaVersion": 1,
+  "packageName": "com.nutsnews.app",
+  "privacyPolicyUrl": "https://www.nutsnews.com/privacy/android",
+  "appAccess": {
+    "requiresLogin": false,
+    "instructions": "All app features are available without an account."
+  },
+  "ads": {
+    "containsAds": false
+  },
+  "dataSafety": {
+    "encryptedInTransit": true,
+    "accountCreationAvailable": false,
+    "dataShared": [],
+    "dataCollected": [
+      {
+        "category": "App activity",
+        "type": "In-app search history",
+        "required": false,
+        "purposes": [
+          "App functionality"
+        ],
+        "handling": "Archive Search sends entered terms over HTTPS to return matching stories. Standard service logs can contain the requested URL or query."
+      },
+      {
+        "category": "Device or other IDs",
+        "type": "IP address and user agent",
+        "required": true,
+        "purposes": [
+          "App functionality",
+          "Analytics",
+          "Fraud prevention, security, and compliance"
+        ],
+        "handling": "Standard HTTPS service logs can contain IP address, user agent, request time, URL, response status, and performance timing for operations, reliability, and abuse prevention."
+      }
+    ],
+    "localOnlyData": [
+      "Saved and liked stories",
+      "Private notes and reflections",
+      "Reading goals, streaks, and activity",
+      "Topics, mood, theme, haptics, widget, and reminder preferences",
+      "Cached article feed and image data"
+    ],
+    "deletion": {
+      "accountDeletionRequired": false,
+      "localDataControls": "Remove individual saved data in the app, clear app storage in Android Settings, or uninstall the app.",
+      "serviceLogRequestsUrl": "https://www.nutsnews.com/contact"
+    }
+  },
+  "contentRating": {
+    "appType": "News and magazines",
+    "dynamicNewsContent": true,
+    "externalPublisherLinks": true,
+    "userGeneratedContent": false,
+    "userInteraction": false,
+    "locationSharing": false,
+    "digitalPurchases": false,
+    "gambling": false,
+    "ads": false,
+    "questionnaireNote": "NutsNews curates changing current-events summaries and links to original publisher sites. Publisher pages are outside the app and can contain material not controlled by NutsNews."
+  },
+  "notifications": {
+    "permission": "android.permission.POST_NOTIFICATIONS",
+    "optional": true,
+    "remotePush": false,
+    "requestedAfterUserOptIn": true,
+    "inAppDisclosure": "A local Android notification brings you back to Today's Picks.",
+    "purpose": "Optional Daily good-news reset reminder"
+  },
+  "targetAudience": {
+    "ageGroups": [
+      "13-15",
+      "16-17",
+      "18+"
+    ],
+    "designedForChildren": false,
+    "rationale": "A general-audience current-events newsreader with links to independent publisher sites; it is not designed for children under 13."
+  },
+  "sdkDeclarations": {
+    "advertising": [],
+    "analytics": [],
+    "authentication": [],
+    "payments": [],
+    "remotePush": []
+  }
+}

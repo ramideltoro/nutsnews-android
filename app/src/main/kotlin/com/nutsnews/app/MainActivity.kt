@@ -678,6 +678,16 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
                                 },
+                                onOpenPrivacyPolicy = {
+                                    startActivity(
+                                        android.content.Intent(
+                                            android.content.Intent.ACTION_VIEW,
+                                            android.net.Uri.parse(
+                                                "https://www.nutsnews.com/privacy/android",
+                                            ),
+                                        ),
+                                    )
+                                },
                             )
                         }
 
