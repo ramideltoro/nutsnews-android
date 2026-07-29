@@ -97,12 +97,21 @@ IFS=$'\n' read -r -d '' -a tablet_screenshots \
 upload_images phoneScreenshots "${phone_screenshots[@]}"
 upload_images tenInchScreenshots "${tablet_screenshots[@]}"
 
-curl --silent --show-error --fail-with-body \
-  --request POST \
-  --header "$AUTH_HEADER" \
-  "$API/$EDIT_ID:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" \
-  >/dev/null ||
-  fail "could not commit metadata without disrupting changes in review"
+commit_response=""
+if ! commit_response="$(
+  curl --silent --show-error --fail-with-body \
+    --request POST \
+    --header "$AUTH_HEADER" \
+    "$API/$EDIT_ID:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW"
+)"; then
+  commit_error_message="$(
+    jq -er '.error.message | strings | select(length > 0)' \
+      <<<"$commit_response" 2>/dev/null || true
+  )"
+  [[ -n "$commit_error_message" ]] ||
+    commit_error_message="Play returned no structured error message."
+  fail "Play rejected metadata commit: $commit_error_message"
+fi
 EDIT_ID=""
 
 verify_response="$(
