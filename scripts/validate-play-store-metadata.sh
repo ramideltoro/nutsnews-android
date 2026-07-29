@@ -165,8 +165,11 @@ if grep -Fq -- "--form" "$PUBLISHER"; then
   fail "Play simple media uploads must not use multipart form encoding"
 fi
 grep -Fq \
-  'changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW' \
+  'changesInReviewBehavior=ERROR_IF_IN_REVIEW' \
   "$PUBLISHER" ||
-  fail "metadata commits could disrupt or prematurely submit changes in review"
+  fail "metadata commits could disrupt changes in review"
+if grep -Fq 'changesNotSentForReview=' "$PUBLISHER"; then
+  fail "metadata commits use unsupported review submission behavior"
+fi
 
 echo "Play Store listing, policy declarations, assets, and workflow contracts are valid."

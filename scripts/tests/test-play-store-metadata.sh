@@ -110,7 +110,7 @@ elif [[ "$method" == "POST" &&
   printf '%s\n' "$((count + 1))" >"$count_file"
   printf '{"image":{"id":"uploaded-image"}}\n'
 elif [[ "$method" == "POST" &&
-  "$url" == "$api/metadata-edit:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" ]]; then
+  "$url" == "$api/metadata-edit:commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW" ]]; then
   if [[ "${FAKE_PLAY_COMMIT_ERROR:-}" == "true" ]]; then
     printf '{"error":{"code":400,"message":"Simulated Play commit rejection."}}\n'
     exit 22

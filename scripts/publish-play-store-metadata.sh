@@ -102,7 +102,7 @@ if ! commit_response="$(
   curl --silent --show-error --fail-with-body \
     --request POST \
     --header "$AUTH_HEADER" \
-    "$API/$EDIT_ID:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW"
+    "$API/$EDIT_ID:commit?changesInReviewBehavior=ERROR_IF_IN_REVIEW"
 )"; then
   commit_error_message="$(
     jq -er '.error.message | strings | select(length > 0)' \
