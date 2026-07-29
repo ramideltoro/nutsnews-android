@@ -111,6 +111,10 @@ elif [[ "$method" == "POST" &&
   printf '{"image":{"id":"uploaded-image"}}\n'
 elif [[ "$method" == "POST" &&
   "$url" == "$api/metadata-edit:commit?changesNotSentForReview=true&changesInReviewBehavior=ERROR_IF_IN_REVIEW" ]]; then
+  if [[ "${FAKE_PLAY_COMMIT_ERROR:-}" == "true" ]]; then
+    printf '{"error":{"code":400,"message":"Simulated Play commit rejection."}}\n'
+    exit 22
+  fi
   printf '{"id":"metadata-edit"}\n'
 elif [[ "$method" == "GET" && "$url" == "$api/metadata-edit/listings/en-US" ]]; then
   cat "$state_dir/listing.json"
@@ -131,6 +135,23 @@ FAKE_CURL_STATE_DIR="$TEMP_ROOT/curl-state" \
   PATH="$TEMP_ROOT/bin:$PATH" \
   GOOGLE_PLAY_ACCESS_TOKEN="test-access-token" \
   "$ROOT/scripts/publish-play-store-metadata.sh" >/dev/null
+
+commit_error_log="$TEMP_ROOT/commit-error.log"
+if FAKE_PLAY_COMMIT_ERROR=true \
+  FAKE_CURL_STATE_DIR="$TEMP_ROOT/curl-state" \
+  PATH="$TEMP_ROOT/bin:$PATH" \
+  GOOGLE_PLAY_ACCESS_TOKEN="test-access-token" \
+  "$ROOT/scripts/publish-play-store-metadata.sh" \
+  >/dev/null 2>"$commit_error_log"; then
+  echo "Expected a rejected Play commit to fail." >&2
+  exit 1
+fi
+if ! grep -Fq \
+  "Play Store metadata publishing failed: Play rejected metadata commit: Simulated Play commit rejection." \
+  "$commit_error_log"; then
+  echo "Expected the structured Play commit error to be reported." >&2
+  exit 1
+fi
 
 printf '%090d\n' 0 > "$TEMP_ROOT/fastlane/metadata/android/en-US/short_description.txt"
 if "$VALIDATOR" "$TEMP_ROOT" >/dev/null 2>&1; then
