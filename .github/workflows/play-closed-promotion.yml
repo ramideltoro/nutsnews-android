@@ -39,7 +39,7 @@ jobs:
       - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Replace current review with verified Alpha release
+      - name: Promote verified Alpha release
         id: play
         shell: bash
         env:
@@ -81,7 +81,9 @@ jobs:
              .versionName == $version_name and
              .versionCode == $version_code and
              .reviewBehavior == "CANCEL_IN_REVIEW_AND_SUBMIT" and
-             (.status == "submitted" or .status == "already-present")' \
+             (.status == "submitted" or
+              .status == "already-present" or
+              .status == "pending-console-review")' \
             <<<"$result" >/dev/null
           {
             echo "### Google Play closed release"
@@ -91,4 +93,7 @@ jobs:
             echo "- Version: $(jq -r '.versionName' <<<"$result") ($(jq -r '.versionCode' <<<"$result"))"
             echo "- Status: $(jq -r '.status' <<<"$result")"
             echo "- Review behavior: $(jq -r '.reviewBehavior' <<<"$result")"
+            if [[ "$(jq -r '.status' <<<"$result")" == "pending-console-review" ]]; then
+              echo "- Required action: Send changes for review from Google Play Console"
+            fi
           } >>"$GITHUB_STEP_SUMMARY"

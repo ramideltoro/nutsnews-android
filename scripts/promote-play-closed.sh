@@ -158,6 +158,7 @@ curl --silent --show-error --fail \
   >/dev/null || fail "could not assign the verified bundle to Alpha"
 
 commit_response="$work_dir/commit-response.json"
+promotion_status="submitted"
 if ! commit_http_status="$(
   curl --silent --show-error \
     --output "$commit_response" \
@@ -176,7 +177,35 @@ if [[ ! "$commit_http_status" =~ ^2[0-9][0-9]$ ]]; then
   )"
   [[ -n "$commit_error_message" ]] ||
     commit_error_message="Play returned no structured error message."
-  fail "Play rejected the Alpha release commit (HTTP $commit_http_status): $commit_error_message"
+  console_review_message="Changes cannot be sent for review automatically. Please set the query parameter changesNotSentForReview to true. Once committed, the changes in this edit can be sent for review from the Google Play Console UI."
+  if [[ "$commit_http_status" == "400" &&
+    "$commit_error_message" == "$console_review_message" ]]; then
+    deferred_commit_response="$work_dir/deferred-commit-response.json"
+    if ! deferred_commit_http_status="$(
+      curl --silent --show-error \
+        --output "$deferred_commit_response" \
+        --write-out '%{http_code}' \
+        --request POST \
+        --header "Authorization: Bearer $access_token" \
+        --header "Content-Type: application/json" \
+        --data '{}' \
+        "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit?changesNotSentForReview=true"
+    )"; then
+      fail "could not reach Play while staging Alpha for Console review"
+    fi
+    if [[ ! "$deferred_commit_http_status" =~ ^2[0-9][0-9]$ ]]; then
+      deferred_commit_error_message="$(
+        jq -r '.error.message // empty' "$deferred_commit_response" \
+          2>/dev/null || true
+      )"
+      [[ -n "$deferred_commit_error_message" ]] ||
+        deferred_commit_error_message="Play returned no structured error message."
+      fail "Play rejected the deferred Alpha commit (HTTP $deferred_commit_http_status): $deferred_commit_error_message"
+    fi
+    promotion_status="pending-console-review"
+  else
+    fail "Play rejected the Alpha release commit (HTTP $commit_http_status): $commit_error_message"
+  fi
 fi
 edit_id=""
 
@@ -200,11 +229,12 @@ jq -nc \
   --arg name "$version_name" \
   --argjson code "$version_code" \
   --arg behavior "$review_behavior" \
+  --arg status "$promotion_status" \
   '{
     packageName:$package,
     track:$track,
     versionName:$name,
     versionCode:$code,
     reviewBehavior:$behavior,
-    status:"submitted"
+    status:$status
   }'
