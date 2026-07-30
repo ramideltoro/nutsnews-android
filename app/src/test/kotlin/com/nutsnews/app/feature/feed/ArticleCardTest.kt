@@ -11,6 +11,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.InputMode
 import androidx.compose.ui.platform.testTag
@@ -33,8 +35,11 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performKeyInput
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.pressKey
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.nutsnews.app.core.model.Article
+import com.nutsnews.app.designsystem.NutsNewsDimensions
 import com.nutsnews.app.designsystem.NutsNewsMotion
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import java.net.URI
@@ -56,6 +61,22 @@ import org.robolectric.annotation.GraphicsMode
 class ArticleCardTest {
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()
+
+    @Test
+    fun readStoryButtonUsesTheStandardControlShapeInsteadOfCapsuleGeometry() {
+        val outline =
+            readStoryButtonShape(NutsNewsDimensions())
+                .createOutline(
+                    size = Size(width = 120f, height = 48f),
+                    layoutDirection = LayoutDirection.Ltr,
+                    density = Density(1f),
+                )
+        val roundedOutline = outline as Outline.Rounded
+        val cornerRadius = roundedOutline.roundRect.topLeftCornerRadius.x
+
+        assertEquals(16f, cornerRadius)
+        assertTrue(cornerRadius < roundedOutline.roundRect.height / 2f)
+    }
 
     @Test
     fun regularGoldenScreenshotMatchesIosReferenceCompositionAndControls() {

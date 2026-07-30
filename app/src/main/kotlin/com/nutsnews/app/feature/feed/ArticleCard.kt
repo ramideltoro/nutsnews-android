@@ -59,8 +59,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import com.nutsnews.app.core.model.Article
-import com.nutsnews.app.designsystem.NutsNewsPalettes
+import com.nutsnews.app.designsystem.NutsNewsDimensions
 import com.nutsnews.app.designsystem.NutsNewsMotion
+import com.nutsnews.app.designsystem.NutsNewsPalettes
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsButtonGradient
@@ -646,6 +647,7 @@ private fun ReadStoryButton(
         }
     }
     val glowProgress = glow.value
+    val shape = readStoryButtonShape(NutsNewsTheme.dimensions)
 
     Text(
         text = "Read Story",
@@ -654,7 +656,7 @@ private fun ReadStoryButton(
                 .heightIn(min = MinimumTouchTarget)
                 .shadow(
                     elevation = (NutsNewsMotion.ActionGlowRadiusDp * glowProgress).dp,
-                    shape = CircleShape,
+                    shape = shape,
                     ambientColor =
                         palette.accentHighlight.copy(alpha = glowProgress * 0.72f),
                     spotColor = palette.accentGlow.copy(alpha = glowProgress * 0.55f),
@@ -663,13 +665,13 @@ private fun ReadStoryButton(
                     scaleX = 1f + (glowProgress * 0.035f)
                     scaleY = 1f + (glowProgress * 0.035f)
                 }
-                .clip(CircleShape)
+                .clip(shape)
                 .background(nutsNewsButtonGradient())
                 .border(
                     width = if (glowProgress > 0f) 2.dp else 0.dp,
                     color =
                         palette.accentHighlight.copy(alpha = glowProgress * 0.86f),
-                    shape = CircleShape,
+                    shape = shape,
                 )
                 .clickable(
                     role = Role.Button,
@@ -682,6 +684,9 @@ private fun ReadStoryButton(
         fontWeight = FontWeight.SemiBold,
     )
 }
+
+internal fun readStoryButtonShape(dimensions: NutsNewsDimensions): RoundedCornerShape =
+    RoundedCornerShape(dimensions.controlCornerRadius)
 
 @Composable
 private fun LikeStoryButton(
