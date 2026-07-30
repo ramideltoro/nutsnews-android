@@ -231,19 +231,12 @@ private func renderIcon() throws {
         try bitmap(width: 512, height: 512, hasAlpha: true) {
             NSColor.clear.setFill()
             NSRect(x: 0, y: 0, width: 512, height: 512).fill()
-            NSGraphicsContext.saveGraphicsState()
-            NSBezierPath(
-                roundedRect: NSRect(x: 0, y: 0, width: 512, height: 512),
-                xRadius: 112,
-                yRadius: 112
-            ).addClip()
             source.draw(
                 in: NSRect(x: 0, y: 0, width: 512, height: 512),
                 from: NSRect(origin: .zero, size: source.size),
                 operation: .copy,
                 fraction: 1
             )
-            NSGraphicsContext.restoreGraphicsState()
         }
     try writePNG(rendered, relativePath: "icon.png")
 }

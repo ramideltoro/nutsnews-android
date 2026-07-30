@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<bitmap xmlns:android="http://schemas.android.com/apk/res/android"
-    android:antialias="true"
-    android:filter="true"
-    android:gravity="fill"
-    android:src="@drawable/brand_icon" />
+<!--
+    Adaptive icons render from a 108dp layer but guarantee only the centered
+    66dp safe zone across launcher masks. Keep the complete iOS composition in
+    that safe zone so its upper-right highlights are not enlarged or clipped.
+-->
+<inset xmlns:android="http://schemas.android.com/apk/res/android"
+    android:insetLeft="19.4444%"
+    android:insetTop="19.4444%"
+    android:insetRight="19.4444%"
+    android:insetBottom="19.4444%">
+    <bitmap
+        android:antialias="true"
+        android:filter="true"
+        android:gravity="fill"
+        android:src="@drawable/brand_icon" />
+</inset>

@@ -16,11 +16,12 @@ and retain the transparent corners approved in the iOS artwork.
 
 ## Android rendering
 
-- Legacy square and round resource families are deterministic proportional
-  resizes at 48, 72, 96, 144, and 192 pixels. Legacy squares keep six percent
-  transparent breathing room; round variants use a true circular clip.
-- API 26 adaptive launchers render the approved icon over the source amber
-  background so launcher-specific masks never introduce a dark halo.
+- Legacy square and round resource families are deterministic full-composition
+  resizes at 48, 72, 96, 144, and 192 pixels. Square variants retain the exact
+  iOS framing; round variants apply only the circular clip Android requires.
+- API 26 adaptive launchers fit the complete iOS composition into Android's
+  centered 66dp safe zone over the source amber background. Launcher-specific
+  masks can no longer enlarge or clip the upper-right highlights.
 - API 33 themed launchers use a simplified two-chestnut `NN` alpha mark. It is
   only a monochrome mask; the launcher supplies the user's chosen color.
 - API 26–30 use the approved 220dp splash mark over the iOS three-stop amber
