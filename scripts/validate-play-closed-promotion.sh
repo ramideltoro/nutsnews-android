@@ -59,6 +59,13 @@ grep -Fq \
   "changesInReviewBehavior=\${review_behavior}" \
   "$promotion_script" ||
   fail "promotion does not explicitly control the existing review"
+for fragment in \
+  '--output "$commit_response"' \
+  "--write-out '%{http_code}'" \
+  "Play rejected the Alpha release commit (HTTP"; do
+  grep -Fq -- "$fragment" "$promotion_script" ||
+    fail "promotion does not report structured Play commit errors: $fragment"
+done
 grep -Fq \
   '.reviewBehavior == "CANCEL_IN_REVIEW_AND_SUBMIT"' \
   "$workflow" ||

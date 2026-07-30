@@ -57,4 +57,14 @@ assert_failure \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
   "$fixture/scripts/validate-play-closed-promotion.sh"
 
+prepare_fixture
+sed -i.bak \
+  's/Play rejected the Alpha release commit/Play rejected the release commit/' \
+  "$fixture/scripts/promote-play-closed.sh"
+rm "$fixture/scripts/promote-play-closed.sh.bak"
+assert_failure \
+  "missing structured Play commit error reporting" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
+  "$fixture/scripts/validate-play-closed-promotion.sh"
+
 echo "Google Play closed promotion tests passed."
