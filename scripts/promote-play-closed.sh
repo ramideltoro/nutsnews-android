@@ -157,13 +157,27 @@ curl --silent --show-error --fail \
   "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}/tracks/${target_track}" \
   >/dev/null || fail "could not assign the verified bundle to Alpha"
 
-curl --silent --show-error --fail \
-  --request POST \
-  --header "Authorization: Bearer $access_token" \
-  --header "Content-Type: application/json" \
-  --data '{}' \
-  "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit?changesInReviewBehavior=${review_behavior}" \
-  >/dev/null || fail "could not replace and resubmit the current Play review"
+commit_response="$work_dir/commit-response.json"
+if ! commit_http_status="$(
+  curl --silent --show-error \
+    --output "$commit_response" \
+    --write-out '%{http_code}' \
+    --request POST \
+    --header "Authorization: Bearer $access_token" \
+    --header "Content-Type: application/json" \
+    --data '{}' \
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit?changesInReviewBehavior=${review_behavior}"
+)"; then
+  fail "could not reach Play while committing the Alpha release"
+fi
+if [[ ! "$commit_http_status" =~ ^2[0-9][0-9]$ ]]; then
+  commit_error_message="$(
+    jq -r '.error.message // empty' "$commit_response" 2>/dev/null || true
+  )"
+  [[ -n "$commit_error_message" ]] ||
+    commit_error_message="Play returned no structured error message."
+  fail "Play rejected the Alpha release commit (HTTP $commit_http_status): $commit_error_message"
+fi
 edit_id=""
 
 verify_edit_response="$work_dir/verify-edit-response.json"
