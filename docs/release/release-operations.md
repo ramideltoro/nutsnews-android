@@ -1,7 +1,9 @@
 # NutsNews Android release operations
 
-This runbook covers automated delivery to Google Play Internal Testing. It
-does not authorize or automate production promotion.
+This runbook covers automated delivery to Google Play Internal Testing and a
+separate, explicitly confirmed promotion of an already verified bundle to the
+Alpha closed-testing track. It does not authorize or automate production
+promotion.
 
 ## Release contract
 
@@ -103,6 +105,33 @@ The tagged workflow performs these gates in order:
 6. Create the GitHub Release and attach that same verified AAB only after Play verification succeeds.
 
 No workflow job deploys or promotes to production.
+
+## Replace an Alpha release that is in review
+
+First wait for the tagged release to finish successfully. The desired version
+must already be verified on the Internal track; the Alpha promotion workflow
+does not upload or sign an artifact.
+
+Google Play normally cancels the current review when a new edit is committed
+while changes are in review. This workflow makes that behavior explicit and
+requires the exact `REPLACE_ALPHA_REVIEW` confirmation. It then assigns the
+verified Internal bundle to the `alpha` track, performs a full closed-testing
+rollout, cancels the superseded review, submits the updated changes, and
+queries Alpha to verify the new version code.
+
+```sh
+gh workflow run play-closed-promotion.yml \
+  --repo ramideltoro/nutsnews-android \
+  --ref main \
+  -f version_name=1.1.3 \
+  -f version_code=1001003 \
+  -f release_notes='Improves the Read Story button shape on article cards.' \
+  -f review_replacement=REPLACE_ALPHA_REVIEW
+```
+
+Run this workflow only when replacing the existing Alpha review is intended.
+Submitting another app change can restart Google Play's review wait time. The
+workflow has no production path and receives no release-signing credential.
 
 ## Post-release verification
 
