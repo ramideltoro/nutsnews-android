@@ -43,6 +43,7 @@ required_workflow_fragments=(
   'refs/heads/main'
   "promote-play-closed.sh"
   "CANCEL_IN_REVIEW_AND_SUBMIT"
+  "pending-console-review"
   "cancel-in-progress: false"
 )
 for fragment in "${required_workflow_fragments[@]}"; do
@@ -62,7 +63,9 @@ grep -Fq \
 for fragment in \
   '--output "$commit_response"' \
   "--write-out '%{http_code}'" \
-  "Play rejected the Alpha release commit (HTTP"; do
+  "Play rejected the Alpha release commit (HTTP" \
+  "changesNotSentForReview=true" \
+  "pending-console-review"; do
   grep -Fq -- "$fragment" "$promotion_script" ||
     fail "promotion does not report structured Play commit errors: $fragment"
 done

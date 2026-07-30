@@ -67,4 +67,13 @@ assert_failure \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
   "$fixture/scripts/validate-play-closed-promotion.sh"
 
+prepare_fixture
+sed -i.bak 's/changesNotSentForReview=true/changesNotSentForReview=false/' \
+  "$fixture/scripts/promote-play-closed.sh"
+rm "$fixture/scripts/promote-play-closed.sh.bak"
+assert_failure \
+  "missing Console-review fallback" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
+  "$fixture/scripts/validate-play-closed-promotion.sh"
+
 echo "Google Play closed promotion tests passed."
