@@ -70,6 +70,11 @@ jobs:
           ./scripts/validate-tagged-release.sh
           ./scripts/tests/test-tagged-release.sh
 
+      - name: Validate Play closed-promotion contract
+        run: |
+          ./scripts/validate-play-closed-promotion.sh
+          ./scripts/tests/test-play-closed-promotion.sh
+
       - name: Validate developer and release documentation
         run: ./scripts/validate-documentation.sh
 

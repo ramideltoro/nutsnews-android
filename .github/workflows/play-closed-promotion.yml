@@ -1,0 +1,94 @@
+name: Promote Google Play Closed Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: Existing verified Internal version name
+        required: true
+        type: string
+      version_code:
+        description: Existing verified Internal version code
+        required: true
+        type: string
+      release_notes:
+        description: English (United States) release notes
+        required: true
+        type: string
+      review_replacement:
+        description: Enter REPLACE_ALPHA_REVIEW to cancel the current review and submit this build
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: play-closed-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote-alpha:
+    name: Promote verified Internal bundle to Alpha
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: play-internal
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Replace current review with verified Alpha release
+        id: play
+        shell: bash
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          REVIEW_REPLACEMENT: ${{ inputs.review_replacement }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Closed-track promotion must run from main." >&2
+            exit 1
+          fi
+          if [[ "$REVIEW_REPLACEMENT" != "REPLACE_ALPHA_REVIEW" ]]; then
+            echo "Review replacement confirmation does not match." >&2
+            exit 1
+          fi
+          if [[ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing." >&2
+            exit 1
+          fi
+          credential_dir="$(mktemp -d)"
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" \
+            >"$credential_dir/service-account.json"
+          result="$(
+            ./scripts/promote-play-closed.sh \
+              "$credential_dir/service-account.json" \
+              "$VERSION_NAME" \
+              "$VERSION_CODE" \
+              "$RELEASE_NOTES"
+          )"
+          jq -e \
+            --arg version_name "$VERSION_NAME" \
+            --argjson version_code "$VERSION_CODE" \
+            '.packageName == "com.nutsnews.app" and
+             .track == "alpha" and
+             .versionName == $version_name and
+             .versionCode == $version_code and
+             .reviewBehavior == "CANCEL_IN_REVIEW_AND_SUBMIT" and
+             (.status == "submitted" or .status == "already-present")' \
+            <<<"$result" >/dev/null
+          {
+            echo "### Google Play closed release"
+            echo
+            echo "- Package: $(jq -r '.packageName' <<<"$result")"
+            echo "- Track: $(jq -r '.track' <<<"$result")"
+            echo "- Version: $(jq -r '.versionName' <<<"$result") ($(jq -r '.versionCode' <<<"$result"))"
+            echo "- Status: $(jq -r '.status' <<<"$result")"
+            echo "- Review behavior: $(jq -r '.reviewBehavior' <<<"$result")"
+          } >>"$GITHUB_STEP_SUMMARY"
