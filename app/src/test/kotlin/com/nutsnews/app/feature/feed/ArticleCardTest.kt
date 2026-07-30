@@ -79,6 +79,27 @@ class ArticleCardTest {
     }
 
     @Test
+    fun readStoryButtonIsWiderAndCentersItsLabel() {
+        setCard(
+            article = representativeArticle(),
+            layout = ArticleCardLayout.Regular,
+            widthDp = IosCardGolden.RegularCardWidthDp,
+        )
+
+        val buttonBounds = bounds("article_read_story")
+        val labelBounds =
+            composeRule
+                .onNodeWithText("Read Story", useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+
+        assertNear(expected = ReadStoryButtonWidth.value, actual = buttonBounds.width.toDp())
+        assertNear(expected = 48, actual = buttonBounds.height.toDp())
+        assertNear(expected = buttonBounds.center.x, actual = labelBounds.center.x)
+        assertNear(expected = buttonBounds.center.y, actual = labelBounds.center.y)
+    }
+
+    @Test
     fun regularGoldenScreenshotMatchesIosReferenceCompositionAndControls() {
         val article = representativeArticle()
         val readStories = mutableListOf<Article>()

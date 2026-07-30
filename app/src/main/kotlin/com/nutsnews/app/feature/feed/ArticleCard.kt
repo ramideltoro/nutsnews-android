@@ -649,11 +649,11 @@ private fun ReadStoryButton(
     val glowProgress = glow.value
     val shape = readStoryButtonShape(NutsNewsTheme.dimensions)
 
-    Text(
-        text = "Read Story",
+    Box(
         modifier =
             modifier
-                .heightIn(min = MinimumTouchTarget)
+                .width(ReadStoryButtonWidth)
+                .height(MinimumTouchTarget)
                 .shadow(
                     elevation = (NutsNewsMotion.ActionGlowRadiusDp * glowProgress).dp,
                     shape = shape,
@@ -678,11 +678,19 @@ private fun ReadStoryButton(
                     onClick = trigger,
                 )
                 .testTag("article_read_story")
-                .padding(horizontal = 18.dp, vertical = 9.dp),
-        color = NutsNewsTheme.colors.buttonText,
-        style = NutsNewsTheme.typography.caption,
-        fontWeight = FontWeight.SemiBold,
-    )
+                .padding(horizontal = 18.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = "Read Story",
+            modifier = Modifier.fillMaxWidth(),
+            color = NutsNewsTheme.colors.buttonText,
+            style = NutsNewsTheme.typography.caption,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            textAlign = TextAlign.Center,
+        )
+    }
 }
 
 internal fun readStoryButtonShape(dimensions: NutsNewsDimensions): RoundedCornerShape =
@@ -837,3 +845,4 @@ private enum class ThumbnailLoadState {
 private const val ThumbnailAspectRatio = 3f / 2f
 private const val MaximumVisibleCategories = 6
 private val MinimumTouchTarget = 48.dp
+internal val ReadStoryButtonWidth = 160.dp
