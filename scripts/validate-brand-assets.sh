@@ -94,6 +94,15 @@ for icon_xml in \
   assert_contains "$icon_xml" "@drawable/ic_launcher_foreground"
 done
 
+for inset_edge in insetLeft insetTop insetRight insetBottom; do
+  assert_contains \
+    "app/src/main/res/drawable/ic_launcher_foreground.xml" \
+    "android:${inset_edge}=\"19.4444%\""
+done
+assert_contains \
+  "app/src/main/res/drawable/ic_launcher_foreground.xml" \
+  "android:src=\"@drawable/brand_icon\""
+
 for icon_xml in \
   app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml \
   app/src/main/res/mipmap-anydpi-v33/ic_launcher_round.xml; do
@@ -109,4 +118,4 @@ assert_contains "app/src/main/res/values-v31/themes.xml" "android:windowSplashSc
 assert_contains "app/src/main/res/values/colors.xml" "#F28A0F"
 assert_contains "app/src/main/res/values-night/colors.xml" "#F28A0F"
 
-echo "Brand asset validation passed: approved sources, 10 legacy icons, adaptive/round/monochrome launchers, and light/dark splash resources."
+echo "Brand asset validation passed: approved iOS sources, 10 legacy icons, safe-zone adaptive/round/monochrome launchers, and light/dark splash resources."

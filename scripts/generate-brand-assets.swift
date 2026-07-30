@@ -59,13 +59,12 @@ func render(size: Int, circular: Bool) throws -> Data {
         graphicsContext?.cgContext.clip()
     }
 
-    let padding = circular ? 0 : CGFloat(size) * 0.06
     source.draw(
         in: NSRect(
-            x: padding,
-            y: padding,
-            width: CGFloat(size) - (padding * 2),
-            height: CGFloat(size) - (padding * 2)
+            x: 0,
+            y: 0,
+            width: CGFloat(size),
+            height: CGFloat(size)
         ),
         from: .zero,
         operation: .sourceOver,
@@ -99,4 +98,4 @@ for (density, size) in densitySizes {
     )
 }
 
-print("Generated proportional legacy and circular round launcher icons.")
+print("Generated full-composition legacy and circular round launcher icons.")
