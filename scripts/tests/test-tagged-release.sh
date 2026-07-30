@@ -94,4 +94,13 @@ assert_failure \
   "missing signing-secret reference" \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" "$fixture/scripts/validate-tagged-release.sh"
 
+prepare_fixture
+sed -i.bak \
+  's/:commit?changesNotSentForReview=true/:commit/' \
+  "$fixture/scripts/deploy-play-internal.sh"
+rm "$fixture/scripts/deploy-play-internal.sh.bak"
+assert_failure \
+  "review-disrupting internal deployment" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" "$fixture/scripts/validate-tagged-release.sh"
+
 echo "Tagged release tests passed."
