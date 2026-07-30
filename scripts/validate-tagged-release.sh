@@ -127,6 +127,10 @@ done
 if grep -Fiq 'production' "$workflow" "$deploy_script"; then
   fail "tagged release automation must not contain a production deployment path"
 fi
+grep -Fq ':commit?changesNotSentForReview=true' "$deploy_script" ||
+  fail "internal deployment must not disrupt a Play review in progress"
+grep -Fq 'Play rejected the internal release commit' "$deploy_script" ||
+  fail "internal deployment must report structured Play commit failures"
 
 action_revisions="$(
   sed -nE 's/^[[:space:]]*uses:[[:space:]]+[^@]+@([^[:space:]#]+).*$/\1/p' "$workflow"

@@ -174,13 +174,28 @@ curl --silent --show-error --fail \
   --data-binary "@$track_update" \
   "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}/tracks/${track_name}" \
   >/dev/null || fail "could not assign the bundle to the internal track"
-curl --silent --show-error --fail \
-  --request POST \
-  --header "Authorization: Bearer $access_token" \
-  --header "Content-Type: application/json" \
-  --data '{}' \
-  "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit" \
-  >/dev/null || fail "could not commit the internal release"
+
+commit_response="$work_dir/commit-response.json"
+if ! commit_http_status="$(
+  curl --silent --show-error \
+    --output "$commit_response" \
+    --write-out '%{http_code}' \
+    --request POST \
+    --header "Authorization: Bearer $access_token" \
+    --header "Content-Type: application/json" \
+    --data '{}' \
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit?changesNotSentForReview=true"
+)"; then
+  fail "could not reach Play while committing the internal release"
+fi
+if [[ ! "$commit_http_status" =~ ^2[0-9][0-9]$ ]]; then
+  commit_error_message="$(
+    jq -r '.error.message // empty' "$commit_response" 2>/dev/null || true
+  )"
+  [[ -n "$commit_error_message" ]] ||
+    commit_error_message="Play returned no structured error message."
+  fail "Play rejected the internal release commit (HTTP $commit_http_status): $commit_error_message"
+fi
 edit_id=""
 
 verify_edit_response="$work_dir/verify-edit-response.json"
