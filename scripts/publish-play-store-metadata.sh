@@ -98,6 +98,7 @@ upload_images phoneScreenshots "${phone_screenshots[@]}"
 upload_images tenInchScreenshots "${tablet_screenshots[@]}"
 
 commit_response=""
+metadata_status="submitted"
 if ! commit_response="$(
   curl --silent --show-error --fail-with-body \
     --request POST \
@@ -110,7 +111,17 @@ if ! commit_response="$(
   )"
   [[ -n "$commit_error_message" ]] ||
     commit_error_message="Play returned no structured error message."
-  fail "Play rejected metadata commit: $commit_error_message"
+  console_review_message="Changes cannot be sent for review automatically. Please set the query parameter changesNotSentForReview to true. Once committed, the changes in this edit can be sent for review from the Google Play Console UI."
+  if [[ "$commit_error_message" == "$console_review_message" ]]; then
+    curl --silent --show-error --fail-with-body \
+      --request POST \
+      --header "$AUTH_HEADER" \
+      "$API/$EDIT_ID:commit?changesNotSentForReview=true" >/dev/null ||
+      fail "Play rejected the deferred metadata commit"
+    metadata_status="pending-console-review"
+  else
+    fail "Play rejected metadata commit: $commit_error_message"
+  fi
 fi
 EDIT_ID=""
 
@@ -155,4 +166,8 @@ verify_image_count featureGraphic 1
 verify_image_count phoneScreenshots "${#phone_screenshots[@]}"
 verify_image_count tenInchScreenshots "${#tablet_screenshots[@]}"
 
-echo "Verified Google Play listing and graphics for $PACKAGE ($LOCALE)."
+if [[ "$metadata_status" == "pending-console-review" ]]; then
+  echo "Verified Google Play listing and graphics for $PACKAGE ($LOCALE); changes are staged for Console review."
+else
+  echo "Verified Google Play listing and graphics for $PACKAGE ($LOCALE)."
+fi

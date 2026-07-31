@@ -114,7 +114,14 @@ elif [[ "$method" == "POST" &&
   if [[ "${FAKE_PLAY_COMMIT_ERROR:-}" == "true" ]]; then
     printf '{"error":{"code":400,"message":"Simulated Play commit rejection."}}\n'
     exit 22
+  elif [[ "${FAKE_PLAY_COMMIT_ERROR:-}" == "console-review" ]]; then
+    printf '{"error":{"code":400,"message":"Changes cannot be sent for review automatically. Please set the query parameter changesNotSentForReview to true. Once committed, the changes in this edit can be sent for review from the Google Play Console UI."}}\n'
+    exit 22
   fi
+  printf '{"id":"metadata-edit"}\n'
+elif [[ "$method" == "POST" &&
+  "$url" == "$api/metadata-edit:commit?changesNotSentForReview=true" ]]; then
+  printf 'true\n' >"$state_dir/deferred-commit"
   printf '{"id":"metadata-edit"}\n'
 elif [[ "$method" == "GET" && "$url" == "$api/metadata-edit/listings/en-US" ]]; then
   cat "$state_dir/listing.json"
@@ -135,6 +142,16 @@ FAKE_CURL_STATE_DIR="$TEMP_ROOT/curl-state" \
   PATH="$TEMP_ROOT/bin:$PATH" \
   GOOGLE_PLAY_ACCESS_TOKEN="test-access-token" \
   "$ROOT/scripts/publish-play-store-metadata.sh" >/dev/null
+
+FAKE_PLAY_COMMIT_ERROR=console-review \
+  FAKE_CURL_STATE_DIR="$TEMP_ROOT/curl-state" \
+  PATH="$TEMP_ROOT/bin:$PATH" \
+  GOOGLE_PLAY_ACCESS_TOKEN="test-access-token" \
+  "$ROOT/scripts/publish-play-store-metadata.sh" >/dev/null
+if [[ "$(cat "$TEMP_ROOT/curl-state/deferred-commit")" != "true" ]]; then
+  echo "Expected Console-review metadata to be committed without submission." >&2
+  exit 1
+fi
 
 commit_error_log="$TEMP_ROOT/commit-error.log"
 if FAKE_PLAY_COMMIT_ERROR=true \
