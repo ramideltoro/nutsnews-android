@@ -30,6 +30,7 @@ import com.nutsnews.app.feature.article.PositiveShareCardRenderer
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.article.buildArticleListenScript
 import com.nutsnews.app.feature.article.deriveArticleBrief
+import com.nutsnews.app.feature.contact.ContactUsScreen
 import com.nutsnews.app.feature.digest.DailyDigestScreen
 import com.nutsnews.app.feature.feed.ArticleFeedContent
 import com.nutsnews.app.feature.feed.ArticleFeedUiState
@@ -382,6 +383,9 @@ private fun phoneGoldenScenes(): List<GoldenScene> {
                 ),
             )
         })
+        add(GoldenScene("phone_s24_contact") {
+            ContactUsScreen({}, {}, {}, {})
+        })
     }
 }
 
@@ -622,6 +626,7 @@ private fun Settings(uiState: SettingsUiState) {
         onAppearance = {},
         onHaptics = {},
         onWidget = {},
+        onContact = {},
         onGoHome = {},
     )
 }

@@ -45,6 +45,7 @@ class SettingsScreenTest {
             onAppearance = { navigator.navigate(AppDestination.ThemePicker) },
             onHaptics = { navigator.navigate(AppDestination.HapticsSettings) },
             onWidget = { navigator.navigate(AppDestination.WidgetSettings) },
+            onContact = { navigator.navigate(AppDestination.ContactUs) },
         )
 
         val destinations =
@@ -52,6 +53,7 @@ class SettingsScreenTest {
                 "settings_row_theme" to AppDestination.ThemePicker,
                 "settings_row_haptics" to AppDestination.HapticsSettings,
                 "settings_row_widget" to AppDestination.WidgetSettings,
+                "settings_row_contact" to AppDestination.ContactUs,
             )
         destinations.forEach { (tag, destination) ->
             composeRule.onNodeWithTag(tag).performClick()
@@ -71,6 +73,7 @@ class SettingsScreenTest {
                     onAppearance = {},
                     onHaptics = {},
                     onWidget = {},
+                    onContact = {},
                     onGoHome = {},
                 )
             }
@@ -116,6 +119,7 @@ class SettingsScreenTest {
                     onAppearance = {},
                     onHaptics = {},
                     onWidget = {},
+                    onContact = {},
                     onGoHome = {},
                 )
             }
@@ -129,6 +133,7 @@ class SettingsScreenTest {
             composeRule.onNodeWithTag("settings_row_theme").assertIsDisplayed()
             composeRule.onNodeWithTag("settings_row_haptics").assertIsDisplayed()
             composeRule.onNodeWithTag("settings_row_widget").assertIsDisplayed()
+            composeRule.onNodeWithTag("settings_row_contact").assertIsDisplayed()
             composeRule
                 .onNodeWithTag("settings_subtitle_theme", useUnmergedTree = true)
                 .assertTextEquals(theme.title)
@@ -153,6 +158,7 @@ class SettingsScreenTest {
         onAppearance: () -> Unit = {},
         onHaptics: () -> Unit = {},
         onWidget: () -> Unit = {},
+        onContact: () -> Unit = {},
         onGoHome: () -> Unit = {},
     ) {
         composeRule.setContent {
@@ -162,6 +168,7 @@ class SettingsScreenTest {
                     onAppearance = onAppearance,
                     onHaptics = onHaptics,
                     onWidget = onWidget,
+                    onContact = onContact,
                     onGoHome = onGoHome,
                 )
             }

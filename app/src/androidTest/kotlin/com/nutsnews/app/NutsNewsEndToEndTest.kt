@@ -294,6 +294,12 @@ class NutsNewsEndToEndTest {
         pressSystemBack()
         waitForTag("settings_screen")
 
+        composeRule.onNodeWithTag("settings_row_contact").performClick()
+        waitForTag("contact_screen")
+        composeRule.onNodeWithText("rami.deltoro@nutsnews.com").assertIsDisplayed()
+        composeRule.onNodeWithTag("contact_back").performClick()
+        waitForTag("settings_screen")
+
         composeRule.onNodeWithTag("settings_row_widget").performClick()
         waitForTag("widget_settings_screen")
         composeRule

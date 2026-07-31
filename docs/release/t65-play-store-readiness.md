@@ -13,6 +13,9 @@ credentials or secret values.
 - App category: News & Magazines
 - Privacy policy: <https://www.nutsnews.com/privacy/android>
 - Developer website: <https://www.nutsnews.com>
+- Developer email: <rami.deltoro@nutsnews.com>
+- Public contact page and News declaration URL:
+  <https://www.nutsnews.com/contact>
 - Internal release represented by the initial release notes: `1.1.2`
   (`1001002`)
 - Listing text and changelog:
@@ -106,6 +109,11 @@ rating in metadata before Play calculates it.
   independent publisher sites.
 - Identify NutsNews as a News & Magazines app that summarizes positive stories
   and attributes and links to original publishers.
+- Mark NutsNews as a news aggregator.
+- Use <https://www.nutsnews.com/contact> as the News and Magazines declaration
+  contact URL and `rami.deltoro@nutsnews.com` as the public contact email.
+- Reviewers and users can find the same details in the app under
+  **Settings > Contact us**.
 
 ## Publishing workflow
 

@@ -105,6 +105,7 @@ class NutsNewsWindowInfoTest {
                 "article/ArticleDetailScreen.kt",
                 "digest/DailyDigestScreen.kt",
                 "feed/FeedScreen.kt",
+                "contact/ContactUsScreen.kt",
                 "help/HelpFaqScreen.kt",
                 "mood/GoodMoodScreen.kt",
                 "personalization/PersonalizationScreen.kt",

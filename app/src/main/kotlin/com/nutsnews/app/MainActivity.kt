@@ -2,8 +2,9 @@ package com.nutsnews.app
 
 import android.Manifest
 import android.content.Intent
-import android.view.HapticFeedbackConstants
+import android.net.Uri
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -55,6 +56,8 @@ import com.nutsnews.app.feature.article.ArticleShareCardController
 import com.nutsnews.app.feature.article.UnavailableArticleDetailScreen
 import com.nutsnews.app.feature.bootstrap.BootstrapUiState
 import com.nutsnews.app.feature.bootstrap.BootstrapViewModel
+import com.nutsnews.app.feature.contact.ContactUsScreen
+import com.nutsnews.app.feature.contact.NutsNewsContactDetails
 import com.nutsnews.app.feature.digest.DailyDigestScreen
 import com.nutsnews.app.feature.feed.ArticleCardInteractionViewModel
 import com.nutsnews.app.feature.feed.ArticleFeedContent
@@ -604,6 +607,11 @@ class MainActivity : ComponentActivity() {
                                         AppDestination.WidgetSettings,
                                     )
                                 },
+                                onContact = {
+                                    bootstrapViewModel.onDestinationRequested(
+                                        AppDestination.ContactUs,
+                                    )
+                                },
                                 onGoHome = bootstrapViewModel::onHomeRequested,
                             )
                         }
@@ -633,6 +641,22 @@ class MainActivity : ComponentActivity() {
                                     settingsUiState.showStatsOnLargeWidget,
                                 onShowStatsChanged =
                                     settingsViewModel::setShowStatsOnLargeWidget,
+                                onBack = bootstrapViewModel::onNavigateUp,
+                                onGoHome = bootstrapViewModel::onHomeRequested,
+                            )
+                        }
+
+                        AppDestination.ContactUs -> {
+                            ContactUsScreen(
+                                onEmail = {
+                                    openExternalUri(
+                                        "mailto:${NutsNewsContactDetails.EMAIL}",
+                                        Intent.ACTION_SENDTO,
+                                    )
+                                },
+                                onOpenContactPage = {
+                                    openExternalUri(NutsNewsContactDetails.CONTACT_URL)
+                                },
                                 onBack = bootstrapViewModel::onNavigateUp,
                                 onGoHome = bootstrapViewModel::onHomeRequested,
                             )
@@ -702,6 +726,15 @@ class MainActivity : ComponentActivity() {
     override fun onStop() {
         articleListenController.stop()
         super.onStop()
+    }
+
+    private fun openExternalUri(
+        uri: String,
+        action: String = Intent.ACTION_VIEW,
+    ) {
+        runCatching {
+            startActivity(Intent(action, Uri.parse(uri)))
+        }
     }
 
     override fun onDestroy() {
