@@ -9,6 +9,8 @@ WORKFLOW="$ROOT/.github/workflows/play-store-metadata.yml"
 TOKEN_MINTER="$ROOT/scripts/mint-google-play-access-token.sh"
 PUBLISHER="$ROOT/scripts/publish-play-store-metadata.sh"
 EXPECTED_PRIVACY_URL="https://www.nutsnews.com/privacy/android"
+EXPECTED_CONTACT_URL="https://www.nutsnews.com/contact"
+EXPECTED_CONTACT_EMAIL="rami.deltoro@nutsnews.com"
 
 fail() {
   echo "Play Store metadata validation failed: $*" >&2
@@ -64,11 +66,16 @@ jq -e \
   --arg package "com.nutsnews.app" \
   --arg locale "en-US" \
   --arg url "$EXPECTED_PRIVACY_URL" \
+  --arg contactUrl "$EXPECTED_CONTACT_URL" \
+  --arg contactEmail "$EXPECTED_CONTACT_EMAIL" \
   '.schemaVersion == 1 and
    .packageName == $package and
    .locale == $locale and
    .category == "NEWS_AND_MAGAZINES" and
    .privacyPolicyUrl == $url and
+   .developerWebsite == "https://www.nutsnews.com" and
+   .developerEmail == $contactEmail and
+   .contactPageUrl == $contactUrl and
    .release.track == "internal" and
    .release.versionName == "1.1.2" and
    .release.versionCode == 1001002' \
@@ -77,6 +84,8 @@ jq -e \
 jq -e \
   --arg package "com.nutsnews.app" \
   --arg url "$EXPECTED_PRIVACY_URL" \
+  --arg contactUrl "$EXPECTED_CONTACT_URL" \
+  --arg contactEmail "$EXPECTED_CONTACT_EMAIL" \
   '.schemaVersion == 1 and
    .packageName == $package and
    .privacyPolicyUrl == $url and
@@ -88,6 +97,10 @@ jq -e \
    .contentRating.dynamicNewsContent == true and
    .contentRating.externalPublisherLinks == true and
    .contentRating.userGeneratedContent == false and
+   .newsAndMagazines.isNewsAggregator == true and
+   .newsAndMagazines.contactEmail == $contactEmail and
+   .newsAndMagazines.contactUrl == $contactUrl and
+   .newsAndMagazines.contactLocationInApp == "Settings > Contact us" and
    .notifications.optional == true and
    .notifications.remotePush == false and
    .notifications.requestedAfterUserOptIn == true and
@@ -97,6 +110,16 @@ jq -e \
 
 grep -Fq "$EXPECTED_PRIVACY_URL" "$METADATA/full_description.txt" ||
   fail "full description does not include the privacy URL"
+grep -Fq "$EXPECTED_CONTACT_EMAIL" "$METADATA/full_description.txt" ||
+  fail "full description does not include the developer contact email"
+grep -Fq "$EXPECTED_CONTACT_URL" "$METADATA/full_description.txt" ||
+  fail "full description does not include the contact page URL"
+grep -Fq "$EXPECTED_CONTACT_EMAIL" \
+  "$ROOT/app/src/main/kotlin/com/nutsnews/app/feature/contact/ContactUsScreen.kt" ||
+  fail "the app does not expose the developer contact email"
+grep -Fq "$EXPECTED_CONTACT_URL" \
+  "$ROOT/app/src/main/kotlin/com/nutsnews/app/feature/contact/ContactUsScreen.kt" ||
+  fail "the app does not expose the contact page URL"
 grep -Fq "$EXPECTED_PRIVACY_URL" "$ROOT/app/src/main/kotlin/com/nutsnews/app/MainActivity.kt" ||
   fail "the app does not expose the Android privacy URL"
 grep -Fq \

@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Vibration
@@ -40,6 +41,7 @@ import com.nutsnews.app.designsystem.NutsNewsAdaptivePane
 import com.nutsnews.app.designsystem.NutsNewsTheme
 import com.nutsnews.app.designsystem.nutsNewsHeading
 import com.nutsnews.app.designsystem.nutsNewsPoliteAnnouncement
+import com.nutsnews.app.feature.contact.NutsNewsContactDetails
 import java.util.Locale
 
 @Composable
@@ -48,6 +50,7 @@ fun SettingsScreen(
     onAppearance: () -> Unit,
     onHaptics: () -> Unit,
     onWidget: () -> Unit,
+    onContact: () -> Unit,
     onGoHome: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -85,6 +88,7 @@ fun SettingsScreen(
                         onAppearance = onAppearance,
                         onHaptics = onHaptics,
                         onWidget = onWidget,
+                        onContact = onContact,
                     )
                 }
             }
@@ -144,6 +148,7 @@ private fun SettingsContent(
     onAppearance: () -> Unit,
     onHaptics: () -> Unit,
     onWidget: () -> Unit,
+    onContact: () -> Unit,
 ) {
     LazyColumn(
         modifier =
@@ -178,6 +183,15 @@ private fun SettingsContent(
                 subtitle = uiState.widgetSubtitle,
                 testTag = "settings_row_widget",
                 onClick = onWidget,
+            )
+        }
+        item(key = "contact") {
+            SettingsRow(
+                icon = Icons.Filled.Email,
+                title = "Contact us",
+                subtitle = NutsNewsContactDetails.EMAIL,
+                testTag = "settings_row_contact",
+                onClick = onContact,
             )
         }
     }
@@ -268,6 +282,7 @@ private fun SettingsPreview() {
             onAppearance = {},
             onHaptics = {},
             onWidget = {},
+            onContact = {},
             onGoHome = {},
         )
     }

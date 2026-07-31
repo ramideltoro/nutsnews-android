@@ -56,6 +56,9 @@ sealed interface AppDestination {
     data object WidgetSettings :
         StaticDestination("settings/widget", AppPresentation.Stack, "Widget")
 
+    data object ContactUs :
+        StaticDestination("settings/contact", AppPresentation.Stack, "Contact us")
+
     data object Help :
         StaticDestination("help", AppPresentation.FullScreen, "Help & F.A.Q.")
 
@@ -83,6 +86,7 @@ sealed interface AppDestination {
                 ThemePicker,
                 HapticsSettings,
                 WidgetSettings,
+                ContactUs,
                 Help,
             )
 

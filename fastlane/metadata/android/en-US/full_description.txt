@@ -28,3 +28,6 @@ KEEP WHAT MATTERS ON YOUR DEVICE
 No NutsNews account is required. Saved stories, notes, reflections, reading statistics, preferences, and reminder settings stay on your Android device. An internet connection is needed to request fresh stories and archive search results; recent feed content and images may be cached for reliability.
 
 Privacy policy: https://www.nutsnews.com/privacy/android
+
+Contact us: rami.deltoro@nutsnews.com
+https://www.nutsnews.com/contact

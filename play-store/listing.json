@@ -5,6 +5,8 @@
   "category": "NEWS_AND_MAGAZINES",
   "privacyPolicyUrl": "https://www.nutsnews.com/privacy/android",
   "developerWebsite": "https://www.nutsnews.com",
+  "developerEmail": "rami.deltoro@nutsnews.com",
+  "contactPageUrl": "https://www.nutsnews.com/contact",
   "release": {
     "versionName": "1.1.2",
     "versionCode": 1001002,

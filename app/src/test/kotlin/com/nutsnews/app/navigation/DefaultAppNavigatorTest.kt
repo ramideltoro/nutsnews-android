@@ -41,6 +41,7 @@ class DefaultAppNavigatorTest {
                 AppDestination.ThemePicker,
                 AppDestination.HapticsSettings,
                 AppDestination.WidgetSettings,
+                AppDestination.ContactUs,
                 AppDestination.Help,
                 AppDestination.ListenMode(storyId),
                 AppDestination.ShareCard(storyId),

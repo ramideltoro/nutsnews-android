@@ -60,6 +60,13 @@
     "ads": false,
     "questionnaireNote": "NutsNews curates changing current-events summaries and links to original publisher sites. Publisher pages are outside the app and can contain material not controlled by NutsNews."
   },
+  "newsAndMagazines": {
+    "isNewsAggregator": true,
+    "contactEmail": "rami.deltoro@nutsnews.com",
+    "contactUrl": "https://www.nutsnews.com/contact",
+    "contactLocationInApp": "Settings > Contact us",
+    "sourceAttribution": "Every story names its original publisher and links to the original article."
+  },
   "notifications": {
     "permission": "android.permission.POST_NOTIFICATIONS",
     "optional": true,

@@ -23,6 +23,7 @@ class AppDestinationTest {
                 "settings/theme",
                 "settings/haptics",
                 "settings/widget",
+                "settings/contact",
                 "help",
             ),
             AppDestination.staticDestinations.map(AppDestination::route),
