@@ -191,8 +191,11 @@ grep -Fq \
   'changesInReviewBehavior=ERROR_IF_IN_REVIEW' \
   "$PUBLISHER" ||
   fail "metadata commits could disrupt changes in review"
-if grep -Fq 'changesNotSentForReview=' "$PUBLISHER"; then
-  fail "metadata commits use unsupported review submission behavior"
-fi
+[[ "$(grep -Fc 'changesNotSentForReview=true' "$PUBLISHER")" == "1" ]] ||
+  fail "metadata Console-review fallback is missing or ambiguous"
+grep -Fq \
+  'Changes cannot be sent for review automatically. Please set the query parameter changesNotSentForReview to true.' \
+  "$PUBLISHER" ||
+  fail "metadata Console-review fallback is not guarded by Play's exact response"
 
 echo "Play Store listing, policy declarations, assets, and workflow contracts are valid."
