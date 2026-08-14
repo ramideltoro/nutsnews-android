@@ -33,7 +33,7 @@ class BootstrapViewModelTest {
             assertFalse(onboardingState.canNavigateUp)
             assertEquals(AppPresentation.Root, onboardingState.presentation)
 
-            preferences.setOnboardingCompleted(true)
+            viewModel.onOnboardingCompleted()
 
             val feedState =
                 viewModel.uiState.first { state ->
@@ -41,6 +41,16 @@ class BootstrapViewModelTest {
                 }
             assertFalse(feedState.canNavigateUp)
             assertEquals(AppPresentation.Root, feedState.presentation)
+            assertTrue(preferences.preferences.first().hasCompletedOnboarding)
+
+            val relaunchedNavigator = DefaultAppNavigator()
+            val relaunchedViewModel =
+                BootstrapViewModel(relaunchedNavigator, preferences)
+            val relaunchedState =
+                relaunchedViewModel.uiState.first { state ->
+                    state.destination != AppDestination.Startup
+                }
+            assertEquals(AppDestination.Feed, relaunchedState.destination)
         }
 
     @Test
