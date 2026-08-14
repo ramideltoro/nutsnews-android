@@ -101,7 +101,7 @@ The tagged workflow performs these gates in order:
 2. Run the complete Android build, lint, unit-test, screenshot, and three-cell emulator workflow.
 3. Run wrapper, dependency-integrity, CodeQL, branch, signing, and Play contracts.
 4. Enter `release-signing`, build the AAB, verify its build identity and pinned upload certificate, and retain the verified AAB as a 30-day Actions artifact.
-5. Enter `play-internal`, re-verify the AAB, upload and commit only to `internal`, then query package, track, version name, and version code.
+5. Enter `play-internal`, re-verify the AAB, upload and commit only to `internal` using Play's automatic review-submission behavior, then query package, track, version name, and version code.
 6. Create the GitHub Release and attach that same verified AAB only after Play verification succeeds.
 
 No workflow job deploys or promotes to production.
@@ -199,6 +199,14 @@ not download or echo the keystore or passwords.
 The code was already used or a higher code exists. Do not reuse the tag or
 lower the code. Correct any source issue through a PR, choose a higher SemVer,
 and create a new tag.
+
+### Play rejects the edit commit review parameter
+
+Internal releases commit without `changesNotSentForReview`; current Play apps
+whose changes are submitted for review automatically reject that legacy query
+parameter. If a bundle was uploaded before the commit failed, treat its version
+code as consumed, fix the automation through a PR, and create a higher SemVer
+tag rather than reusing the failed release identity.
 
 ### Play succeeds but GitHub Release publication fails
 
