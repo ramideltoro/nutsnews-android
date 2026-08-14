@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -1272,6 +1273,7 @@ private fun RegularArticleDetail(
     Column(
         modifier =
             modifier
+                .navigationBarsPadding()
                 .verticalScroll(rememberScrollState())
                 .padding(NutsNewsTheme.spacing.medium)
                 .shadow(
@@ -1421,6 +1423,7 @@ private fun CompactLandscapeArticleDetail(
                     Modifier
                         .fillMaxHeight()
                         .weight(1f)
+                        .navigationBarsPadding()
                         .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xs),
             ) {

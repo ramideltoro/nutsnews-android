@@ -3,7 +3,9 @@ package com.nutsnews.app.feature.article
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Insets
 import android.view.View
+import android.view.WindowInsets
 import androidx.activity.ComponentActivity
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.test.assertContentDescriptionEquals
@@ -40,6 +42,7 @@ import java.net.URI
 import java.time.Instant
 import kotlin.math.abs
 import kotlin.math.max
+import kotlin.math.roundToInt
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
@@ -279,6 +282,38 @@ abstract class ArticleDetailScreenshotContract(
             .fetchSemanticsNode()
             .boundsInRoot
 
+    protected fun applyNavigationBarInset(bottomInsetDp: Int) {
+        val insetPixels =
+            (bottomInsetDp * composeRule.activity.resources.displayMetrics.density).roundToInt()
+        composeRule.runOnUiThread {
+            val navigationBars = WindowInsets.Type.navigationBars()
+            composeRule.activity.window.decorView.dispatchApplyWindowInsets(
+                WindowInsets
+                    .Builder()
+                    .setInsets(
+                        navigationBars,
+                        Insets.of(0, 0, 0, insetPixels),
+                    ).setVisible(navigationBars, true)
+                    .build(),
+            )
+        }
+        composeRule.waitForIdle()
+    }
+
+    protected fun assertAboveNavigationBar(
+        tag: String,
+        bottomInsetDp: Int,
+    ) {
+        val insetPixels =
+            bottomInsetDp * composeRule.activity.resources.displayMetrics.density
+        val screenBottom = bounds("article_detail").bottom
+        val contentBottom = bounds(tag).bottom
+        assertTrue(
+            contentBottom <= screenBottom - insetPixels + 1f,
+            "$tag ended at $contentBottom; expected it above ${screenBottom - insetPixels}",
+        )
+    }
+
     private fun Float.toDp(): Float =
         this / composeRule.activity.resources.displayMetrics.density
 
@@ -326,6 +361,23 @@ abstract class ArticleDetailScreenshotContract(
 @Config(sdk = [35], qualifiers = "w393dp-h852dp-port")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpected = false) {
+    @Test
+    fun regularContentEndsAboveTheNavigationBarInset() {
+        val bottomInsetDp = 48
+        setDetail(
+            article = contentArticle(),
+            imageModel = null,
+        )
+        applyNavigationBarInset(bottomInsetDp)
+
+        composeRule
+            .onNodeWithTag("article_detail_open_original")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        assertAboveNavigationBar("article_detail_open_original", bottomInsetDp)
+    }
+
     @Test
     fun detailToolbarLikeUpdatesImmediatelyAndAppearanceRecordsOnce() {
         val article = contentArticle()
@@ -883,6 +935,23 @@ class PhoneArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpe
 @Config(sdk = [35], qualifiers = "w1024dp-h768dp-land")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class TabletArticleDetailScreenTest : ArticleDetailScreenshotContract(compactExpected = true) {
+    @Test
+    fun compactContentEndsAboveTheNavigationBarInset() {
+        val bottomInsetDp = 48
+        setDetail(
+            article = contentArticle(),
+            imageModel = null,
+        )
+        applyNavigationBarInset(bottomInsetDp)
+
+        composeRule
+            .onNodeWithTag("article_detail_open_original")
+            .performScrollTo()
+            .assertIsDisplayed()
+
+        assertAboveNavigationBar("article_detail_open_original", bottomInsetDp)
+    }
+
     @Test
     fun compactTabletBriefSummaryAndSourceMatchIosScreenshot() {
         val article = contentArticle()
