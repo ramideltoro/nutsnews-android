@@ -96,11 +96,11 @@ assert_failure \
 
 prepare_fixture
 sed -i.bak \
-  's/:commit?changesNotSentForReview=true/:commit/' \
+  's/:commit"/:commit?changesNotSentForReview=true"/' \
   "$fixture/scripts/deploy-play-internal.sh"
 rm "$fixture/scripts/deploy-play-internal.sh.bak"
 assert_failure \
-  "review-disrupting internal deployment" \
+  "obsolete deferred-review parameter" \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" "$fixture/scripts/validate-tagged-release.sh"
 
 echo "Tagged release tests passed."

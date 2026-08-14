@@ -184,7 +184,7 @@ if ! commit_http_status="$(
     --header "Authorization: Bearer $access_token" \
     --header "Content-Type: application/json" \
     --data '{}' \
-    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit?changesNotSentForReview=true"
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}:commit"
 )"; then
   fail "could not reach Play while committing the internal release"
 fi
