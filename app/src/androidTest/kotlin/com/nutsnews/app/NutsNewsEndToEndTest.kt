@@ -18,6 +18,7 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
+import androidx.test.espresso.Espresso
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nutsnews.app.core.model.Article
@@ -252,6 +253,16 @@ class NutsNewsEndToEndTest {
         composeRule
             .onNodeWithTag("saved_story_remove_${ScienceStoryId.value}")
             .performClick()
+        waitForTag("favorite_remove_dialog")
+        pressSystemBack()
+        waitForTag("saved_stories_screen")
+        assertTrue(runBlocking { fixture.savedStories.isLiked(ScienceStoryId) })
+        composeRule
+            .onNodeWithTag("saved_story_remove_${ScienceStoryId.value}")
+            .performClick()
+        composeRule
+            .onNodeWithTag("favorite_remove_confirm")
+            .performClick()
         composeRule.waitUntil(timeoutMillis = UiTimeoutMillis) {
             runBlocking { !fixture.savedStories.isLiked(ScienceStoryId) }
         }
@@ -374,9 +385,7 @@ class NutsNewsEndToEndTest {
     }
 
     private fun pressSystemBack() {
-        requireNotNull(activityScenario).onActivity { activity ->
-            activity.onBackPressedDispatcher.onBackPressed()
-        }
+        Espresso.pressBack()
         composeRule.waitForIdle()
     }
 

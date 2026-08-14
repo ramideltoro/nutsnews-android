@@ -21,11 +21,13 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
@@ -221,8 +223,94 @@ class SavedStoriesScreenTest {
     }
 
     @Test
+    fun removeDialogIdentifiesTheFavoriteAndCancelKeepsIt() {
+        val story = savedStory(id = "cancel", title = "A story worth keeping")
+        val removals = mutableListOf<SavedStory>()
+        setScreen(
+            stories = listOf(story),
+            onRemoveStory = removals::add,
+        )
+
+        scrollToStory(story)
+        composeRule
+            .onNodeWithTag("saved_story_remove_${story.id.value}")
+            .performClick()
+
+        composeRule.onNodeWithTag("favorite_remove_dialog").assertIsDisplayed()
+        composeRule
+            .onNodeWithText("Remove from Favorites?")
+            .assertIsDisplayed()
+            .assert(
+                SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading),
+            )
+        composeRule
+            .onNodeWithText("Remove “${story.article.title}” from your Favorites?")
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("favorite_remove_cancel")
+            .assertHeightIsAtLeast(48.dp)
+        composeRule
+            .onNodeWithTag("favorite_remove_confirm")
+            .assertHeightIsAtLeast(48.dp)
+        assertEquals(emptyList(), removals)
+
+        composeRule.onNodeWithTag("favorite_remove_cancel").performClick()
+
+        composeRule.onAllNodesWithTag("favorite_remove_dialog").assertCountEquals(0)
+        composeRule.onNodeWithTag(storyTag(story)).assertIsDisplayed()
+        assertEquals(emptyList(), removals)
+    }
+
+    @Test
+    fun confirmDispatchesOneRemovalAndClosesTheDialog() {
+        val story = savedStory(id = "confirm")
+        val removals = mutableListOf<SavedStory>()
+        setScreen(
+            stories = listOf(story),
+            onRemoveStory = removals::add,
+        )
+
+        scrollToStory(story)
+        composeRule
+            .onNodeWithTag("saved_story_remove_${story.id.value}")
+            .performClick()
+        composeRule.onNodeWithTag("favorite_remove_confirm").performClick()
+
+        composeRule.onAllNodesWithTag("favorite_remove_dialog").assertCountEquals(0)
+        assertEquals(listOf(story), removals)
+    }
+
+    @Test
+    fun dismissActionCancelsRemoval() {
+        val story = savedStory(id = "back-dismiss")
+        val removals = mutableListOf<SavedStory>()
+        setScreen(
+            stories = listOf(story),
+            onRemoveStory = removals::add,
+        )
+
+        scrollToStory(story)
+        composeRule
+            .onNodeWithTag("saved_story_remove_${story.id.value}")
+            .performClick()
+        composeRule
+            .onNodeWithTag("favorite_remove_dialog")
+            .performSemanticsAction(SemanticsActions.Dismiss)
+        composeRule.waitUntil(timeoutMillis = 5_000) {
+            composeRule
+                .onAllNodesWithTag("favorite_remove_dialog")
+                .fetchSemanticsNodes()
+                .isEmpty()
+        }
+
+        composeRule.onAllNodesWithTag("favorite_remove_dialog").assertCountEquals(0)
+        composeRule.onNodeWithTag(storyTag(story)).assertIsDisplayed()
+        assertEquals(emptyList(), removals)
+    }
+
+    @Test
     fun removalPersistsWhenTheSavedStoriesViewModelIsRecreated() {
-        val removed = savedStory(id = "removed")
+        val removed = savedStory(id = "removed", title = "Removed favorite")
         val retained = savedStory(id = "retained")
         val repository = PersistentFakeSavedStoryRepository(listOf(removed, retained))
         val activeViewModel = mutableStateOf(SavedStoriesViewModel(repository))
@@ -247,16 +335,21 @@ class SavedStoriesScreenTest {
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
+        enterSearch("removed")
         scrollToStory(removed)
         composeRule
             .onNodeWithTag("saved_story_remove_${removed.id.value}")
             .performClick()
+        composeRule.onNodeWithTag("favorite_remove_dialog").assertIsDisplayed()
+        assertEquals(listOf(removed, retained), repository.currentStories)
+        composeRule.onNodeWithTag("favorite_remove_confirm").performClick()
         composeRule.waitUntil(timeoutMillis = 5_000) {
             composeRule
                 .onAllNodesWithTag(storyTag(removed))
                 .fetchSemanticsNodes()
                 .isEmpty()
         }
+        composeRule.onNodeWithTag("saved_stories_empty_search").assertIsDisplayed()
         composeRule
             .onNodeWithTag("saved_stories_list")
             .performScrollToNode(hasTestTag("saved_stories_stats"))
