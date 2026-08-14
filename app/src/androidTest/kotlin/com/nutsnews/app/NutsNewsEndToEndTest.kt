@@ -93,33 +93,19 @@ class NutsNewsEndToEndTest {
     fun onboardingFeedAndArticleUserDataJourney() {
         val fixture = launchJourney(hasCompletedOnboarding = false)
 
-        waitForTag("personalization_screen")
+        waitForTag("onboarding_screen")
         composeRule
-            .onNodeWithTag("topic_nature")
-            .performScrollTo()
-            .performClick()
+            .onNodeWithTag("onboarding_heading_categories")
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("onboarding_next").performClick()
         composeRule
-            .onNodeWithTag("mood_curious")
-            .performScrollTo()
-            .performClick()
-        repeat(2) {
-            composeRule
-                .onNodeWithTag("goal_increase")
-                .performScrollTo()
-                .performClick()
-        }
+            .onNodeWithTag("onboarding_heading_favorites")
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("onboarding_next").performClick()
         composeRule
-            .onNodeWithTag("reminder_toggle")
-            .performScrollTo()
-            .performClick()
-        composeRule
-            .onNodeWithTag("reminder_time_20")
-            .performScrollTo()
-            .performClick()
-        composeRule
-            .onNodeWithTag("personalization_save")
-            .performScrollTo()
-            .performClick()
+            .onNodeWithTag("onboarding_heading_reading")
+            .assertIsDisplayed()
+        composeRule.onNodeWithTag("onboarding_get_started").performClick()
 
         waitForTag("feed_article_list")
         composeRule.waitUntil(timeoutMillis = UiTimeoutMillis) {
@@ -129,12 +115,7 @@ class NutsNewsEndToEndTest {
                     .hasCompletedOnboarding
             }
         }
-        val preferences =
-            runBlocking { fixture.preferencesRepository.preferences.first() }
-        assertTrue("nature" in preferences.selectedTopicIds)
-        assertEquals("curious", preferences.selectedMoodId)
-        assertEquals(5, preferences.dailyGoal)
-        assertEquals(listOf(20), fixture.reminderManager.scheduledHours)
+        assertTrue(fixture.reminderManager.scheduledHours.isEmpty())
 
         composeRule
             .onNodeWithTag("feed_category_science")

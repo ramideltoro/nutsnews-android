@@ -16,8 +16,9 @@ import kotlinx.coroutines.launch
 
 class BootstrapViewModel(
     private val navigator: AppNavigator,
-    userPreferencesRepository: UserPreferencesRepository,
+    private val userPreferencesRepository: UserPreferencesRepository,
 ) : ViewModel() {
+    private var onboardingCompletionRequested = false
     private var selectedTheme = NutsNewsAppTheme.Default
     private val mutableUiState =
         MutableStateFlow(
@@ -66,6 +67,18 @@ class BootstrapViewModel(
 
     fun onHomeRequested() {
         navigator.resetTo(AppDestination.Feed)
+    }
+
+    fun onOnboardingCompleted() {
+        if (onboardingCompletionRequested) return
+        onboardingCompletionRequested = true
+        viewModelScope.launch {
+            runCatching {
+                userPreferencesRepository.setOnboardingCompleted(true)
+            }.onFailure {
+                onboardingCompletionRequested = false
+            }
+        }
     }
 
     fun onDailyReminderNotificationOpened() {

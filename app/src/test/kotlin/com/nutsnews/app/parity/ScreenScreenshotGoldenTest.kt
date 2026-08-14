@@ -39,6 +39,7 @@ import com.nutsnews.app.feature.help.HelpFaqScreen
 import com.nutsnews.app.feature.home.HomeDashboard
 import com.nutsnews.app.feature.home.HomeDashboardUiState
 import com.nutsnews.app.feature.mood.GoodMoodScreen
+import com.nutsnews.app.feature.onboarding.OnboardingScreen
 import com.nutsnews.app.feature.personalization.PersonalizationMode
 import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationUiState
@@ -174,6 +175,11 @@ private fun phoneGoldenScenes(): List<GoldenScene> {
                 },
             )
         }
+        add(
+            GoldenScene("phone_s02_onboarding_page_1") {
+                Onboarding(initialPage = 0)
+            },
+        )
         add(
             GoldenScene("phone_s02_personalization_loading") {
                 Personalization(PersonalizationUiState(isLoading = true))
@@ -394,6 +400,17 @@ private fun phoneGoldenScenes(): List<GoldenScene> {
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class TabletScreenScreenshotGoldenTest : ComposeScreenshotGoldenContract() {
     @Test
+    fun tabletOnboardingRemainsAdaptivelyBounded() {
+        captureScenes(
+            listOf(
+                GoldenScene("tablet_s02_onboarding_page_3") {
+                    Onboarding(initialPage = 2)
+                },
+            ),
+        )
+    }
+
+    @Test
     fun tabletFeedRemainsAdaptivelyBounded() {
         captureScenes(
             listOf(
@@ -446,6 +463,19 @@ class TabletScreenScreenshotGoldenTest : ComposeScreenshotGoldenContract() {
 @Config(sdk = [35], qualifiers = "en-rUS-w393dp-h852dp-mdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class LargeTextScreenScreenshotGoldenTest : ComposeScreenshotGoldenContract() {
+    @Test
+    fun largeTextFeatureWalkthroughStaysReadable() {
+        captureScenes(
+            scenes =
+                listOf(
+                    GoldenScene("large_text_s02_onboarding_page_2") {
+                        Onboarding(initialPage = 1)
+                    },
+                ),
+            fontScale = 1.5f,
+        )
+    }
+
     @Test
     fun largeTextOnboardingStaysReadable() {
         captureScenes(
@@ -514,6 +544,14 @@ private fun Personalization(uiState: PersonalizationUiState) {
         onReminderHourSelected = {},
         onSave = {},
         onClose = {},
+    )
+}
+
+@Composable
+private fun Onboarding(initialPage: Int) {
+    OnboardingScreen(
+        onComplete = {},
+        initialPage = initialPage,
     )
 }
 

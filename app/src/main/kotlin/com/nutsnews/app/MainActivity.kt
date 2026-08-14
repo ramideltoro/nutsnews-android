@@ -67,6 +67,7 @@ import com.nutsnews.app.feature.help.HelpFaqScreen
 import com.nutsnews.app.feature.home.HomeDashboard
 import com.nutsnews.app.feature.home.HomeDashboardViewModel
 import com.nutsnews.app.feature.mood.GoodMoodScreen
+import com.nutsnews.app.feature.onboarding.OnboardingScreen
 import com.nutsnews.app.feature.personalization.PersonalizationMode
 import com.nutsnews.app.feature.personalization.PersonalizationScreen
 import com.nutsnews.app.feature.personalization.PersonalizationViewModel
@@ -451,15 +452,15 @@ class MainActivity : ComponentActivity() {
                             }
                         }
 
-                        AppDestination.Onboarding,
-                        AppDestination.Personalization,
-                        -> {
-                            val mode =
-                                if (destination == AppDestination.Onboarding) {
-                                    PersonalizationMode.FirstRun
-                                } else {
-                                    PersonalizationMode.Editor
-                                }
+                        AppDestination.Onboarding -> {
+                            OnboardingScreen(
+                                onComplete =
+                                    bootstrapViewModel::onOnboardingCompleted,
+                            )
+                        }
+
+                        AppDestination.Personalization -> {
+                            val mode = PersonalizationMode.Editor
                             PersonalizationScreen(
                                 uiState = personalizationUiState,
                                 mode = mode,
