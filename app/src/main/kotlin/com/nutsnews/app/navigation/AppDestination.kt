@@ -30,7 +30,7 @@ sealed interface AppDestination {
     ) : StoryDestination("article", storyId, AppPresentation.FullScreen, "Story")
 
     data object SavedStories :
-        StaticDestination("saved", AppPresentation.FullScreen, "Saved Stories")
+        StaticDestination("saved", AppPresentation.FullScreen, "Favorites")
 
     data object ArchiveSearch :
         StaticDestination("search", AppPresentation.FullScreen, "Search")

@@ -29,7 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.Notes
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Newspaper
@@ -230,8 +230,8 @@ private fun DashboardHero(uiState: HomeDashboardUiState) {
                     tag = "dashboard_mood",
                 )
                 DashboardPill(
-                    icon = Icons.Filled.Bookmark,
-                    text = "${uiState.savedCount} saved",
+                    icon = Icons.Filled.Favorite,
+                    text = "${uiState.savedCount} favorites",
                     tag = "dashboard_saved_count",
                 )
                 DashboardPill(
@@ -348,9 +348,9 @@ private fun QuickActions(
                 onReadingStats,
             ),
             DashboardAction(
-                Icons.Filled.Bookmark,
-                "Saved Library",
-                "Your feel-good archive",
+                Icons.Filled.Favorite,
+                "Favorites",
+                "Stories you hearted",
                 "saved",
                 onSavedStories,
             ),

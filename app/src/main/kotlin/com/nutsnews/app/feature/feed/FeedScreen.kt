@@ -25,7 +25,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Search
@@ -432,7 +432,7 @@ internal val FeedMenuEntries =
         ),
         FeedMenuEntry("Good Mood", AppDestination.GoodMood, Icons.Filled.AutoAwesome),
         FeedMenuEntry("Reading Stats", AppDestination.ReadingStats, Icons.Filled.BarChart),
-        FeedMenuEntry("Saved", AppDestination.SavedStories, Icons.Filled.Bookmark),
+        FeedMenuEntry("Favorites", AppDestination.SavedStories, Icons.Filled.Favorite),
         FeedMenuEntry("Search", AppDestination.ArchiveSearch, Icons.Filled.Search),
         FeedMenuEntry("Personalize", AppDestination.Personalization, Icons.Filled.Tune),
         FeedMenuEntry("Settings", AppDestination.Settings, Icons.Filled.Settings),

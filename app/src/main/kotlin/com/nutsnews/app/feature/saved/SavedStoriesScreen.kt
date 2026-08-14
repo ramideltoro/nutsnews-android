@@ -25,12 +25,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -117,7 +117,7 @@ private fun SavedStoriesTopBar(onClose: () -> Unit) {
     ) {
         Spacer(modifier = Modifier.width(64.dp))
         Text(
-            text = "Saved Stories",
+            text = "Favorites",
             modifier =
                 Modifier
                     .weight(1f)
@@ -176,13 +176,13 @@ private fun EmptySavedStories() {
         verticalArrangement = Arrangement.Center,
     ) {
         Icon(
-            imageVector = Icons.Outlined.BookmarkBorder,
+            imageVector = Icons.Outlined.FavoriteBorder,
             contentDescription = null,
             modifier = Modifier.size(48.dp),
             tint = NutsNewsTheme.colors.accent,
         )
         Text(
-            text = "No saved stories yet",
+            text = "No favorites yet",
             modifier = Modifier.padding(top = NutsNewsTheme.spacing.medium),
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.title3,
@@ -190,8 +190,7 @@ private fun EmptySavedStories() {
         )
         Text(
             text =
-                "Tap the heart on any story to build your own calm, " +
-                    "positive reading list.",
+                "Tap the heart on any story to add it to your Favorites.",
             modifier =
                 Modifier.padding(
                     top = NutsNewsTheme.spacing.small,
@@ -271,7 +270,7 @@ private fun SavedStoriesSearch(
                 .testTag("saved_stories_search"),
         placeholder = {
             Text(
-                text = "Search saved stories",
+                text = "Search favorites",
                 color = palette.mutedText,
             )
         },
@@ -290,7 +289,7 @@ private fun SavedStoriesSearch(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Close,
-                            contentDescription = "Clear saved story search",
+                            contentDescription = "Clear favorites search",
                             tint = palette.secondaryText,
                         )
                     }
@@ -341,7 +340,7 @@ private fun SavedStoriesStats(savedCount: Int) {
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = Icons.Filled.Bookmark,
+                    imageVector = Icons.Filled.Favorite,
                     contentDescription = null,
                     modifier = Modifier.size(20.dp),
                     tint = palette.accentHighlight,
@@ -358,9 +357,9 @@ private fun SavedStoriesStats(savedCount: Int) {
                 Text(
                     text =
                         if (savedCount == 1) {
-                            "1 story saved on this device"
+                            "1 favorite on this device"
                         } else {
-                            "$savedCount stories saved on this device"
+                            "$savedCount favorites on this device"
                         },
                     color = palette.secondaryText,
                     style = NutsNewsTheme.typography.subheadline,
@@ -391,7 +390,7 @@ private fun EmptySavedStoriesSearch() {
             tint = NutsNewsTheme.colors.accent,
         )
         Text(
-            text = "No saved stories found",
+            text = "No favorites found",
             color = NutsNewsTheme.colors.primaryText,
             style = NutsNewsTheme.typography.title3,
             fontWeight = FontWeight.Bold,
@@ -564,7 +563,7 @@ private fun SavedStoryFooter(
             verticalArrangement = Arrangement.spacedBy(NutsNewsTheme.spacing.xxs),
         ) {
             Text(
-                text = "Saved ${story.savedDateText()}",
+                text = "Favorited ${story.savedDateText()}",
                 modifier = Modifier.testTag("saved_story_date"),
                 color = NutsNewsTheme.colors.mutedText,
                 style = NutsNewsTheme.typography.caption,
@@ -613,7 +612,7 @@ private fun SavedStoryFooter(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Filled.Delete,
-                    contentDescription = "Remove saved story",
+                    contentDescription = "Remove from Favorites",
                     modifier = Modifier.size(16.dp),
                     tint = NutsNewsTheme.colors.accentHighlight,
                 )

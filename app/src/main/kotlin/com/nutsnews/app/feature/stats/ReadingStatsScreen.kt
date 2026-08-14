@@ -21,7 +21,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Note
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Newspaper
@@ -196,7 +196,7 @@ private fun ReadingStatsHeaderCard() {
                 Text(
                     text =
                         "Private on-device stats from the stories you open, " +
-                            "save, and note.",
+                            "favorite, and note.",
                     color = NutsNewsTheme.colors.secondaryText,
                     style = NutsNewsTheme.typography.subheadline,
                 )
@@ -376,10 +376,10 @@ private fun ReadingStatsTotals(uiState: ReadingStatsUiState) {
                 icon = Icons.Filled.Newspaper,
             ),
             StatsTileData(
-                title = "Saved",
+                title = "Favorites",
                 value = uiState.savedStoryCount.toString(),
                 subtitle = "library",
-                icon = Icons.Filled.Bookmark,
+                icon = Icons.Filled.Favorite,
             ),
             StatsTileData(
                 title = "Notes",
