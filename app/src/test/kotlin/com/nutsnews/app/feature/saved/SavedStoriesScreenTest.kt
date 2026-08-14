@@ -1,5 +1,7 @@
 package com.nutsnews.app.feature.saved
 
+import android.graphics.Insets
+import android.view.WindowInsets
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
@@ -36,7 +38,9 @@ import com.nutsnews.app.navigation.AppDestination
 import com.nutsnews.app.navigation.DefaultAppNavigator
 import java.net.URI
 import java.time.Instant
+import kotlin.math.roundToInt
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.map
@@ -106,6 +110,50 @@ class SavedStoriesScreenTest {
             composeRule.onNodeWithTag("saved_story_category_$index").assertExists()
         }
         composeRule.onAllNodesWithTag("saved_story_category_5").assertCountEquals(0)
+    }
+
+    @Test
+    fun finalStoryEndsAboveTheNavigationBarInset() {
+        val bottomInsetDp = 48
+        val stories =
+            (1..8).map { index ->
+                savedStory(
+                    id = "story-$index",
+                    title = "Hopeful story $index",
+                )
+            }
+        val finalStory = stories.last()
+        setScreen(stories = stories)
+        applyNavigationBarInset(bottomInsetDp)
+
+        scrollToStory(finalStory)
+        composeRule.onNodeWithTag(storyTag(finalStory)).assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("saved_story_open_${finalStory.id.value}")
+            .assertIsDisplayed()
+        composeRule
+            .onNodeWithTag("saved_story_remove_${finalStory.id.value}")
+            .assertIsDisplayed()
+
+        val screenBottom =
+            composeRule
+                .onNodeWithTag("saved_stories_screen", useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+                .bottom
+        val finalStoryBottom =
+            composeRule
+                .onNodeWithTag(storyTag(finalStory), useUnmergedTree = true)
+                .fetchSemanticsNode()
+                .boundsInRoot
+                .bottom
+        val insetPixels =
+            bottomInsetDp * composeRule.activity.resources.displayMetrics.density
+        assertTrue(
+            finalStoryBottom <= screenBottom - insetPixels + 1f,
+            "Final story ended at $finalStoryBottom; expected it above " +
+                "${screenBottom - insetPixels}",
+        )
     }
 
     @Test
@@ -273,6 +321,24 @@ class SavedStoriesScreenTest {
         composeRule
             .onNodeWithTag("saved_stories_list")
             .performScrollToNode(hasTestTag(storyTag(story)))
+    }
+
+    private fun applyNavigationBarInset(bottomInsetDp: Int) {
+        val insetPixels =
+            (bottomInsetDp * composeRule.activity.resources.displayMetrics.density).roundToInt()
+        composeRule.runOnUiThread {
+            val navigationBars = WindowInsets.Type.navigationBars()
+            composeRule.activity.window.decorView.dispatchApplyWindowInsets(
+                WindowInsets
+                    .Builder()
+                    .setInsets(
+                        navigationBars,
+                        Insets.of(0, 0, 0, insetPixels),
+                    ).setVisible(navigationBars, true)
+                    .build(),
+            )
+        }
+        composeRule.waitForIdle()
     }
 
     private fun setScreen(
