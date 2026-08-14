@@ -235,7 +235,7 @@ private val HelpActionLabels =
         "Open Good Mood",
         "Open a story",
         "Open Reading Stats",
-        "Open Saved Stories",
+        "Open Favorites",
         "Open Archive Search",
     )
 
@@ -272,7 +272,7 @@ private val CompleteGuideCopy =
         "Native sharing",
         "Share positive story cards through the built-in Android Sharesheet.",
         "Private on-device choices",
-        "Your saved stories, reflections, stats, theme, and preferences stay on your device.",
+        "Your favorite stories, reflections, stats, theme, and preferences stay on your device.",
         "FAQ",
         "Common questions about NutsNews.",
         "What is NutsNews for?",

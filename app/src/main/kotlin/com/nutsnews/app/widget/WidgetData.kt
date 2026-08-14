@@ -39,7 +39,7 @@ data class WidgetArticle(
                 storyId = "nutsnews-widget-fallback",
                 title = "Open NutsNews for today’s positive story",
                 summary =
-                    "Your good-news dashboard, saved stories, mood picker, and " +
+                    "Your good-news dashboard, favorite stories, mood picker, and " +
                         "daily reset are waiting.",
                 source = "",
                 mood = "Good News",

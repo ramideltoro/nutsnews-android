@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Android
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
@@ -196,8 +195,8 @@ fun HelpFaqScreen(
                                 onClick = onOpenReadingStats,
                             )
                             HelpActionButton(
-                                title = "Saved Stories",
-                                icon = Icons.Filled.Bookmark,
+                                title = "Favorites",
+                                icon = Icons.Filled.Favorite,
                                 testTag = "help_action_saved",
                                 onClick = onOpenSavedStories,
                             )
@@ -634,7 +633,7 @@ private val AndroidFeatureChecklist =
         HelpChecklistItem(
             title = "Private on-device choices",
             subtitle =
-                "Your saved stories, reflections, stats, theme, and preferences " +
+                "Your favorite stories, reflections, stats, theme, and preferences " +
                     "stay on your device.",
         ),
     )

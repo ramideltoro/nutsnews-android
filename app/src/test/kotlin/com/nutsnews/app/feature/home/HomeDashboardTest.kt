@@ -59,7 +59,7 @@ class HomeDashboardTest {
 
         composeRule.onNodeWithText("Goal complete ✨").assertIsDisplayed()
         composeRule.onNodeWithText("100%").assertIsDisplayed()
-        composeRule.onNodeWithText("9 saved").assertIsDisplayed()
+        composeRule.onNodeWithText("9 favorites").assertIsDisplayed()
         composeRule.onNodeWithText("4 notes").assertIsDisplayed()
         composeRule.onNodeWithText("6 day streak").assertIsDisplayed()
 

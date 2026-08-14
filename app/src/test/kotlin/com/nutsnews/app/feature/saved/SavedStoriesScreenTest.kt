@@ -66,12 +66,12 @@ class SavedStoriesScreenTest {
             onClose = { closeCount += 1 },
         )
 
-        composeRule.onNodeWithText("Saved Stories").assertIsDisplayed()
+        composeRule.onNodeWithText("Favorites").assertIsDisplayed()
         composeRule.onNodeWithTag("saved_stories_empty").assertIsDisplayed()
-        composeRule.onNodeWithText("No saved stories yet").assertIsDisplayed()
+        composeRule.onNodeWithText("No favorites yet").assertIsDisplayed()
         composeRule
             .onNodeWithText(
-                "Tap the heart on any story to build your own calm, positive reading list.",
+                "Tap the heart on any story to add it to your Favorites.",
             ).assertIsDisplayed()
         composeRule.onAllNodesWithTag("saved_stories_search").assertCountEquals(0)
         composeRule.onNodeWithTag("saved_stories_close").performClick()
@@ -99,12 +99,12 @@ class SavedStoriesScreenTest {
         setScreen(stories = listOf(story))
 
         composeRule.onNodeWithText("Your good-news library").assertIsDisplayed()
-        composeRule.onNodeWithText("1 story saved on this device").assertIsDisplayed()
+        composeRule.onNodeWithText("1 favorite on this device").assertIsDisplayed()
         scrollToStory(story)
         composeRule.onNodeWithText(story.article.title).assertIsDisplayed()
         composeRule.onNodeWithText(story.article.summary).assertIsDisplayed()
         composeRule.onNodeWithText(story.article.source).assertIsDisplayed()
-        composeRule.onNodeWithText("Saved Jul 26, 2026").assertIsDisplayed()
+        composeRule.onNodeWithText("Favorited Jul 26, 2026").assertIsDisplayed()
         composeRule.onNodeWithTag("saved_story_thumbnail").assertIsDisplayed()
         repeat(5) { index ->
             composeRule.onNodeWithTag("saved_story_category_$index").assertExists()
@@ -184,11 +184,11 @@ class SavedStoriesScreenTest {
 
         enterSearch("volcano")
         composeRule.onNodeWithTag("saved_stories_empty_search").assertIsDisplayed()
-        composeRule.onNodeWithText("No saved stories found").assertIsDisplayed()
+        composeRule.onNodeWithText("No favorites found").assertIsDisplayed()
         composeRule
             .onNodeWithText("Try searching by title, summary, source, or category.")
             .assertIsDisplayed()
-        composeRule.onNodeWithContentDescription("Clear saved story search").performClick()
+        composeRule.onNodeWithContentDescription("Clear favorites search").performClick()
         scrollToStory(first)
         composeRule.onNodeWithTag(storyTag(first)).assertIsDisplayed()
         scrollToStory(second)
@@ -260,7 +260,7 @@ class SavedStoriesScreenTest {
         composeRule
             .onNodeWithTag("saved_stories_list")
             .performScrollToNode(hasTestTag("saved_stories_stats"))
-        composeRule.onNodeWithText("1 story saved on this device").assertIsDisplayed()
+        composeRule.onNodeWithText("1 favorite on this device").assertIsDisplayed()
 
         composeRule.runOnIdle {
             activeViewModel.value = SavedStoriesViewModel(repository)
@@ -280,7 +280,7 @@ class SavedStoriesScreenTest {
         )
 
         composeRule
-            .onNodeWithText("Saved Stories")
+            .onNodeWithText("Favorites")
             .assertIsDisplayed()
             .assert(
                 SemanticsMatcher.keyIsDefined(SemanticsProperties.Heading),

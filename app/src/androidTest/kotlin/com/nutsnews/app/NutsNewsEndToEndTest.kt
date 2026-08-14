@@ -237,6 +237,24 @@ class NutsNewsEndToEndTest {
                 .fetchSemanticsNodes()
                 .isNotEmpty()
         }
+        composeRule
+            .onNodeWithTag("saved_stories_list")
+            .performScrollToNode(hasTestTag("saved_story_${ScienceStoryId.value}"))
+        composeRule
+            .onNodeWithTag("saved_story_open_${ScienceStoryId.value}")
+            .performClick()
+        waitForTag("article_detail")
+        pressSystemBack()
+        waitForTag("saved_stories_screen")
+        composeRule
+            .onNodeWithTag("saved_stories_list")
+            .performScrollToNode(hasTestTag("saved_story_${ScienceStoryId.value}"))
+        composeRule
+            .onNodeWithTag("saved_story_remove_${ScienceStoryId.value}")
+            .performClick()
+        composeRule.waitUntil(timeoutMillis = UiTimeoutMillis) {
+            runBlocking { !fixture.savedStories.isLiked(ScienceStoryId) }
+        }
         composeRule.onNodeWithTag("saved_stories_close").performClick()
         waitForTag("feed_article_list")
 

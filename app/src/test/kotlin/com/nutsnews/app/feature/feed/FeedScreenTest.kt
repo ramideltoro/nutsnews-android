@@ -8,7 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Newspaper
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
@@ -63,7 +63,7 @@ class FeedScreenTest {
                 "Today’s Picks",
                 "Good Mood",
                 "Reading Stats",
-                "Saved",
+                "Favorites",
                 "Search",
                 "Personalize",
                 "Settings",
@@ -89,7 +89,7 @@ class FeedScreenTest {
                 Icons.Filled.Newspaper,
                 Icons.Filled.AutoAwesome,
                 Icons.Filled.BarChart,
-                Icons.Filled.Bookmark,
+                Icons.Filled.Favorite,
                 Icons.Filled.Search,
                 Icons.Filled.Tune,
                 Icons.Filled.Settings,
