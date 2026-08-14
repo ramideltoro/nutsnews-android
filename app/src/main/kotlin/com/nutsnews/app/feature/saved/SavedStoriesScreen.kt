@@ -216,6 +216,7 @@ private fun SavedStoriesLibrary(
         modifier =
             Modifier
                 .fillMaxSize()
+                .navigationBarsPadding()
                 .animateContentSize()
                 .testTag("saved_stories_list"),
         contentPadding =
