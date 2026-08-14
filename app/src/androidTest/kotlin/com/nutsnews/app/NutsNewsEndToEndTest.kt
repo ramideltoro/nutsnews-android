@@ -1,5 +1,6 @@
 package com.nutsnews.app
 
+import android.view.KeyEvent
 import androidx.compose.ui.test.assertContentDescriptionEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsOff
@@ -18,7 +19,6 @@ import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextInput
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
-import androidx.test.espresso.Espresso
 import androidx.test.filters.LargeTest
 import androidx.test.platform.app.InstrumentationRegistry
 import com.nutsnews.app.core.model.Article
@@ -254,7 +254,7 @@ class NutsNewsEndToEndTest {
             .onNodeWithTag("saved_story_remove_${ScienceStoryId.value}")
             .performClick()
         waitForTag("favorite_remove_dialog")
-        pressSystemBack()
+        dismissDialogWithSystemBack()
         waitForTag("saved_stories_screen")
         assertTrue(runBlocking { fixture.savedStories.isLiked(ScienceStoryId) })
         composeRule
@@ -385,7 +385,19 @@ class NutsNewsEndToEndTest {
     }
 
     private fun pressSystemBack() {
-        Espresso.pressBack()
+        val scenario = checkNotNull(activityScenario) {
+            "The journey activity must be running before pressing Back."
+        }
+        scenario.onActivity { activity ->
+            activity.onBackPressedDispatcher.onBackPressed()
+        }
+        composeRule.waitForIdle()
+    }
+
+    private fun dismissDialogWithSystemBack() {
+        InstrumentationRegistry
+            .getInstrumentation()
+            .sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
         composeRule.waitForIdle()
     }
 
