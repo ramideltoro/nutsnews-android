@@ -84,4 +84,13 @@ assert_failure \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
   "$fixture/scripts/validate-play-production-promotion.sh"
 
+prepare_fixture
+sed -i.bak 's,countryAvailability/${target_track},countryAvailability/alpha,' \
+  "$fixture/scripts/promote-play-production.sh"
+rm "$fixture/scripts/promote-play-production.sh.bak"
+assert_failure \
+  "missing Production country-availability preflight" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
+  "$fixture/scripts/validate-play-production-promotion.sh"
+
 echo "Google Play Production promotion tests passed."

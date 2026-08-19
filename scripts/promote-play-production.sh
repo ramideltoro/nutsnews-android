@@ -65,12 +65,42 @@ umask 077
 structured_error() {
   local response_path="$1"
   local fallback="$2"
+  local detail_summary
   local message
+  local status
   message="$(jq -r '.error.message // empty' "$response_path" 2>/dev/null || true)"
-  if [[ -n "$message" ]]; then
-    printf '%s' "$message"
+  status="$(jq -r '.error.status // empty' "$response_path" 2>/dev/null || true)"
+  detail_summary="$(
+    jq -r '
+      [
+        .error.details[]? |
+        objects |
+        (.reason? // empty),
+        (.violations[]? |
+          objects |
+          [(.type // empty), (.subject // empty), (.description // empty)] |
+          map(select(type == "string" and length > 0)) |
+          join(": ")),
+        (.fieldViolations[]? |
+          objects |
+          [(.field // empty), (.description // empty)] |
+          map(select(type == "string" and length > 0)) |
+          join(": "))
+      ] |
+      map(select(type == "string" and length > 0)) |
+      unique |
+      join("; ")
+    ' "$response_path" 2>/dev/null || true
+  )"
+  [[ -n "$message" ]] || message="$fallback"
+  if [[ -n "$status" && -n "$detail_summary" ]]; then
+    printf '%s [status: %s; details: %s]' "$message" "$status" "$detail_summary"
+  elif [[ -n "$status" ]]; then
+    printf '%s [status: %s]' "$message" "$status"
+  elif [[ -n "$detail_summary" ]]; then
+    printf '%s [details: %s]' "$message" "$detail_summary"
   else
-    printf '%s' "$fallback"
+    printf '%s' "$message"
   fi
 }
 
@@ -216,6 +246,28 @@ if [[ ! "$target_track_http_status" =~ ^2[0-9][0-9]$ ]]; then
 fi
 [[ "$(jq -er '.track' "$target_track_response")" == "$target_track" ]] ||
   fail "Play returned an unexpected target track"
+
+country_availability_response="$work_dir/country-availability.json"
+if ! country_availability_http_status="$(
+  curl --silent --show-error \
+    --output "$country_availability_response" \
+    --write-out '%{http_code}' \
+    --header "Authorization: Bearer $access_token" \
+    "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits/${edit_id}/countryAvailability/${target_track}"
+)"; then
+  fail "could not reach Play while querying Production country availability"
+fi
+if [[ ! "$country_availability_http_status" =~ ^2[0-9][0-9]$ ]]; then
+  fail "Play rejected the Production country-availability query (HTTP $country_availability_http_status): $(
+    structured_error "$country_availability_response" "Play returned no structured error message."
+  )"
+fi
+country_count="$(jq -er '(.countries // []) | length' "$country_availability_response")"
+rest_of_world="$(jq -er '.restOfWorld // false' "$country_availability_response")"
+if (( country_count == 0 )) && [[ "$rest_of_world" != "true" ]]; then
+  fail "Production has no selected countries or regions; configure App availability in Play Console before promotion"
+fi
+
 if jq -e --arg name "$version_name" --arg code "$version_code" '
   any(.releases[]?; .name == $name and any(.versionCodes[]?; . == $code))
 ' "$target_track_response" >/dev/null; then
