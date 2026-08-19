@@ -152,9 +152,10 @@ Production promotion is allowed only after all of the following are true:
 The Production workflow first queries the release-lifecycle API. It refuses an
 Alpha candidate that is merely drafted, staged, in review, or rejected. It also
 uses `ERROR_IF_IN_REVIEW`, so it never cancels or replaces an unrelated Play
-review. The release is a full rollout (`completed`) because the workflow is for
-an explicit Production launch; later staged update policy can be added as a
-separate reviewed change.
+review. Before mutation it also confirms that Production has at least one
+selected country or region. The release is a full rollout (`completed`) because
+the workflow is for an explicit Production launch; later staged update policy
+can be added as a separate reviewed change.
 
 For version `1.1.9` (`1001009`), run:
 
