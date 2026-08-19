@@ -24,11 +24,21 @@ for command_name in curl jq; do
     fail "$command_name is required"
 done
 
-package_name="$(jq -er '.packageName' "$configuration")"
-source_track="$(jq -er '.sourceTrack' "$configuration")"
-target_track="$(jq -er '.targetTrack' "$configuration")"
-release_status="$(jq -er '.releaseStatus' "$configuration")"
-review_behavior="$(jq -er '.reviewBehavior' "$configuration")"
+if ! package_name="$(jq -er '.packageName' "$configuration")"; then
+  fail "Production configuration is missing packageName"
+fi
+if ! source_track="$(jq -er '.sourceTrack' "$configuration")"; then
+  fail "Production configuration is missing sourceTrack"
+fi
+if ! target_track="$(jq -er '.targetTrack' "$configuration")"; then
+  fail "Production configuration is missing targetTrack"
+fi
+if ! release_status="$(jq -er '.releaseStatus' "$configuration")"; then
+  fail "Production configuration is missing releaseStatus"
+fi
+if ! review_behavior="$(jq -er '.reviewBehavior' "$configuration")"; then
+  fail "Production configuration is missing reviewBehavior"
+fi
 [[ "$package_name" == "com.nutsnews.app" ]] || fail "unexpected package"
 [[ "$source_track" == "alpha" ]] || fail "source track must be Alpha"
 [[ "$target_track" == "production" ]] || fail "target track must be Production"
@@ -215,7 +225,9 @@ create_edit() {
     --data '{}' \
     "https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${package_name}/edits" \
     >"$response_path" || fail "could not create a controlled Play edit"
-  edit_id="$(jq -er '.id' "$response_path")"
+  if ! edit_id="$(jq -er '.id | strings | select(length > 0)' "$response_path")"; then
+    fail "Play create-edit response did not include an edit id"
+  fi
 }
 
 delete_edit() {
@@ -244,7 +256,12 @@ if [[ ! "$target_track_http_status" =~ ^2[0-9][0-9]$ ]]; then
     structured_error "$target_track_response" "Play returned no structured error message."
   )"
 fi
-[[ "$(jq -er '.track' "$target_track_response")" == "$target_track" ]] ||
+if ! returned_target_track="$(
+  jq -er '.track | strings | select(length > 0)' "$target_track_response"
+)"; then
+  fail "Production-track response did not include a track name"
+fi
+[[ "$returned_target_track" == "$target_track" ]] ||
   fail "Play returned an unexpected target track"
 
 country_availability_response="$work_dir/country-availability.json"
@@ -262,8 +279,19 @@ if [[ ! "$country_availability_http_status" =~ ^2[0-9][0-9]$ ]]; then
     structured_error "$country_availability_response" "Play returned no structured error message."
   )"
 fi
-country_count="$(jq -er '(.countries // []) | length' "$country_availability_response")"
-rest_of_world="$(jq -r '.restOfWorld // false' "$country_availability_response")"
+if ! country_count="$(
+  jq -er '(.countries // []) | arrays | length' "$country_availability_response"
+)"; then
+  fail "Production country-availability response did not include a valid countries list"
+fi
+if ! rest_of_world="$(
+  jq -r '
+    (.restOfWorld // false) as $value |
+    if ($value | type) == "boolean" then $value else error("invalid boolean") end
+  ' "$country_availability_response"
+)"; then
+  fail "Production country-availability response did not include a valid restOfWorld state"
+fi
 if (( country_count == 0 )) && [[ "$rest_of_world" != "true" ]]; then
   fail "Production has no selected countries or regions; configure App availability in Play Console before promotion"
 fi

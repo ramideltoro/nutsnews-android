@@ -63,7 +63,12 @@ required_script_fragments=(
   'review_behavior" == "ERROR_IF_IN_REVIEW"'
   '/tracks/${track_name}/releases'
   '/countryAvailability/${target_track}'
-  'rest_of_world="$(jq -r'
+  'Production configuration is missing packageName'
+  'Play create-edit response did not include an edit id'
+  'Production-track response did not include a track name'
+  'Production country-availability response did not include a valid countries list'
+  'Production country-availability response did not include a valid restOfWorld state'
+  'rest_of_world'
   'RELEASE_LIFECYCLE_STATE_PUBLISHED'
   'changesInReviewBehavior=${review_behavior}'
   'changesNotSentForReview=true'
@@ -78,6 +83,18 @@ for fragment in "${required_script_fragments[@]}"; do
   grep -Fq -- "$fragment" "$promotion_script" ||
     fail "promotion script is missing: $fragment"
 done
+rest_of_world_parser="$(
+  awk '
+    /if ! rest_of_world="\$\(/ { capture = 1 }
+    capture { print }
+    capture && /\)"; then/ { exit }
+  ' "$promotion_script"
+)"
+grep -Fq 'jq -r ' <<<"$rest_of_world_parser" ||
+  fail "restOfWorld must be parsed without jq exit-status evaluation"
+if grep -Fq 'jq -er ' <<<"$rest_of_world_parser"; then
+  fail "restOfWorld false must not fail JSON extraction"
+fi
 
 action_revisions="$(
   sed -nE 's/^[[:space:]]*uses:[[:space:]]+[^@]+@([^[:space:]#]+).*$/\1/p' \
