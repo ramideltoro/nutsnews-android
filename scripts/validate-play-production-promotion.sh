@@ -63,6 +63,7 @@ required_script_fragments=(
   'review_behavior" == "ERROR_IF_IN_REVIEW"'
   '/tracks/${track_name}/releases'
   '/countryAvailability/${target_track}'
+  'rest_of_world="$(jq -r'
   'RELEASE_LIFECYCLE_STATE_PUBLISHED'
   'changesInReviewBehavior=${review_behavior}'
   'changesNotSentForReview=true'
