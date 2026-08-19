@@ -95,11 +95,21 @@ assert_failure \
 
 prepare_fixture
 sed -i.bak \
-  's/rest_of_world="$(jq -r/rest_of_world="$(jq -er/' \
+  '/if ! rest_of_world="$(/,/)"; then/ s/jq -r /jq -er /' \
   "$fixture/scripts/promote-play-production.sh"
 rm "$fixture/scripts/promote-play-production.sh.bak"
 assert_failure \
   "false rest-of-world parser" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
+  "$fixture/scripts/validate-play-production-promotion.sh"
+
+prepare_fixture
+sed -i.bak \
+  '/Play create-edit response did not include an edit id/d' \
+  "$fixture/scripts/promote-play-production.sh"
+rm "$fixture/scripts/promote-play-production.sh.bak"
+assert_failure \
+  "missing create-edit response diagnostic" \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
   "$fixture/scripts/validate-play-production-promotion.sh"
 
