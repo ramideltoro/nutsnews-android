@@ -1,0 +1,109 @@
+name: Promote Google Play Production Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: Existing published Alpha version name
+        required: true
+        type: string
+      version_code:
+        description: Existing published Alpha version code
+        required: true
+        type: string
+      release_notes:
+        description: English (United States) release notes
+        required: true
+        type: string
+      production_confirmation:
+        description: Enter PROMOTE_TO_PRODUCTION to request a full Production rollout
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
+
+concurrency:
+  group: play-production-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote-production:
+    name: Promote published Alpha bundle to Production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment: play-internal
+
+    steps:
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Promote verified Production release
+        id: play
+        shell: bash
+        env:
+          VERSION_NAME: ${{ inputs.version_name }}
+          VERSION_CODE: ${{ inputs.version_code }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          PRODUCTION_CONFIRMATION: ${{ inputs.production_confirmation }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [[ "$GITHUB_REF" != "refs/heads/main" ]]; then
+            echo "Production promotion must run from main." >&2
+            exit 1
+          fi
+          if [[ "$PRODUCTION_CONFIRMATION" != "PROMOTE_TO_PRODUCTION" ]]; then
+            echo "Production confirmation does not match." >&2
+            exit 1
+          fi
+          if [[ -z "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" ]]; then
+            echo "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON is missing." >&2
+            exit 1
+          fi
+          credential_dir="$(mktemp -d)"
+          trap 'rm -rf "$credential_dir"' EXIT
+          umask 077
+          printf '%s' "$GOOGLE_PLAY_SERVICE_ACCOUNT_JSON" \
+            >"$credential_dir/service-account.json"
+          result="$(
+            ./scripts/promote-play-production.sh \
+              "$credential_dir/service-account.json" \
+              "$VERSION_NAME" \
+              "$VERSION_CODE" \
+              "$RELEASE_NOTES"
+          )"
+          jq -e \
+            --arg version_name "$VERSION_NAME" \
+            --argjson version_code "$VERSION_CODE" \
+            '.packageName == "com.nutsnews.app" and
+             .sourceTrack == "alpha" and
+             .track == "production" and
+             .versionName == $version_name and
+             .versionCode == $version_code and
+             .reviewBehavior == "ERROR_IF_IN_REVIEW" and
+             (.status == "submitted" or
+              .status == "in-review" or
+              .status == "published" or
+              .status == "pending-console-review" or
+              .status == "approved-not-published")' \
+            <<<"$result" >/dev/null
+          {
+            echo "### Google Play Production release"
+            echo
+            echo "- Package: $(jq -r '.packageName' <<<"$result")"
+            echo "- Source track: $(jq -r '.sourceTrack' <<<"$result")"
+            echo "- Target track: $(jq -r '.track' <<<"$result")"
+            echo "- Version: $(jq -r '.versionName' <<<"$result") ($(jq -r '.versionCode' <<<"$result"))"
+            echo "- Status: $(jq -r '.status' <<<"$result")"
+            echo "- Lifecycle: $(jq -r '.releaseLifecycleState // "not-yet-reported"' <<<"$result")"
+            echo "- Review behavior: $(jq -r '.reviewBehavior' <<<"$result")"
+            case "$(jq -r '.status' <<<"$result")" in
+              pending-console-review)
+                echo "- Required action: Send the Production change for review from Play Console"
+                ;;
+              approved-not-published)
+                echo "- Required action: Publish the approved change from Play Console because managed publishing is enabled"
+                ;;
+            esac
+          } >>"$GITHUB_STEP_SUMMARY"
