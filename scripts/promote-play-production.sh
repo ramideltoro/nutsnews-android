@@ -263,7 +263,7 @@ if [[ ! "$country_availability_http_status" =~ ^2[0-9][0-9]$ ]]; then
   )"
 fi
 country_count="$(jq -er '(.countries // []) | length' "$country_availability_response")"
-rest_of_world="$(jq -er '.restOfWorld // false' "$country_availability_response")"
+rest_of_world="$(jq -r '.restOfWorld // false' "$country_availability_response")"
 if (( country_count == 0 )) && [[ "$rest_of_world" != "true" ]]; then
   fail "Production has no selected countries or regions; configure App availability in Play Console before promotion"
 fi

@@ -93,4 +93,14 @@ assert_failure \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
   "$fixture/scripts/validate-play-production-promotion.sh"
 
+prepare_fixture
+sed -i.bak \
+  's/rest_of_world="$(jq -r/rest_of_world="$(jq -er/' \
+  "$fixture/scripts/promote-play-production.sh"
+rm "$fixture/scripts/promote-play-production.sh.bak"
+assert_failure \
+  "false rest-of-world parser" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
+  "$fixture/scripts/validate-play-production-promotion.sh"
+
 echo "Google Play Production promotion tests passed."
