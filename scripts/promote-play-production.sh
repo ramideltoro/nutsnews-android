@@ -114,6 +114,22 @@ structured_error() {
   fi
 }
 
+json_shape() {
+  local response_path="$1"
+  if [[ ! -s "$response_path" ]]; then
+    printf '{"topLevelType":"empty","fieldTypes":{}}'
+    return
+  fi
+  jq -c '
+    if type == "object" then
+      {topLevelType:type, fieldTypes:with_entries(.value |= type)}
+    else
+      {topLevelType:type, fieldTypes:{}}
+    end
+  ' "$response_path" 2>/dev/null ||
+    printf '{"topLevelType":"invalid-json","fieldTypes":{}}'
+}
+
 list_track_releases() {
   local track_name="$1"
   local response_path="$2"
@@ -279,10 +295,14 @@ if [[ ! "$country_availability_http_status" =~ ^2[0-9][0-9]$ ]]; then
     structured_error "$country_availability_response" "Play returned no structured error message."
   )"
 fi
+country_availability_bytes="$(
+  wc -c <"$country_availability_response" | tr -d '[:space:]'
+)"
+country_availability_shape="$(json_shape "$country_availability_response")"
 if ! country_count="$(
   jq -er '(.countries // []) | arrays | length' "$country_availability_response"
 )"; then
-  fail "Production country-availability response did not include a valid countries list"
+  fail "Production country-availability response did not include a valid countries list (HTTP $country_availability_http_status; bytes $country_availability_bytes; shape $country_availability_shape)"
 fi
 if ! rest_of_world="$(
   jq -r '
@@ -290,7 +310,7 @@ if ! rest_of_world="$(
     if ($value | type) == "boolean" then $value else error("invalid boolean") end
   ' "$country_availability_response"
 )"; then
-  fail "Production country-availability response did not include a valid restOfWorld state"
+  fail "Production country-availability response did not include a valid restOfWorld state (HTTP $country_availability_http_status; bytes $country_availability_bytes; shape $country_availability_shape)"
 fi
 if (( country_count == 0 )) && [[ "$rest_of_world" != "true" ]]; then
   fail "Production has no selected countries or regions; configure App availability in Play Console before promotion"

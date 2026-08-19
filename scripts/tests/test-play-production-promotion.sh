@@ -113,4 +113,14 @@ assert_failure \
   env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
   "$fixture/scripts/validate-play-production-promotion.sh"
 
+prepare_fixture
+sed -i.bak \
+  's/fieldTypes:with_entries(.value |= type)/fieldValues:./' \
+  "$fixture/scripts/promote-play-production.sh"
+rm "$fixture/scripts/promote-play-production.sh.bak"
+assert_failure \
+  "country response values exposed by diagnostic" \
+  env NUTSNEWS_REPOSITORY_ROOT="$fixture" \
+  "$fixture/scripts/validate-play-production-promotion.sh"
+
 echo "Google Play Production promotion tests passed."
