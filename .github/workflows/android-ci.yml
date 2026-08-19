@@ -75,6 +75,11 @@ jobs:
           ./scripts/validate-play-closed-promotion.sh
           ./scripts/tests/test-play-closed-promotion.sh
 
+      - name: Validate Play Production-promotion contract
+        run: |
+          ./scripts/validate-play-production-promotion.sh
+          ./scripts/tests/test-play-production-promotion.sh
+
       - name: Validate developer and release documentation
         run: ./scripts/validate-documentation.sh
 

@@ -81,10 +81,10 @@ if find "$repository_root/docs" -type f \
   fail "documentation tree must not contain signing material"
 fi
 
-grep -Fq 'promotion is intentionally manual' "$readme" ||
+grep -Fq 'Production promotions are separate, explicitly confirmed manual workflows' "$readme" ||
   fail "README must state the production boundary"
-grep -Fq 'No workflow job deploys or promotes to production.' "$release_runbook" ||
-  fail "release runbook must forbid automated production promotion"
+grep -Fq 'PROMOTE_TO_PRODUCTION' "$release_runbook" ||
+  fail "release runbook must document the guarded Production confirmation"
 grep -Fq 'Deleting a GitHub Release or tag does not remove a Play release' "$release_runbook" ||
   fail "release rollback must describe immutable Play delivery"
 grep -Fq 'T62 is complete.' "$play_provisioning" ||

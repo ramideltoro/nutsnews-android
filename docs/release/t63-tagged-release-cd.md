@@ -40,7 +40,8 @@ The later `play-internal` job receives only
 rejects a non-monotonic version code, uploads only to `internal`, commits the
 edit, then creates a new read edit and verifies package, track, release name,
 and version code. An exact existing release is treated as a verified
-idempotent retry. There is no production deployment path.
+idempotent retry. The tagged workflow has no Alpha or Production deployment
+path; those promotions are independently confirmed manual workflows.
 
 Only after the Play query succeeds does a job with `contents: write` create or
 update the GitHub Release and attach the same verified AAB.

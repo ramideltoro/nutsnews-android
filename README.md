@@ -25,6 +25,6 @@ API 26 and the project compiles and targets API 36.
   compileDebugKotlin lintDebug testDebugUnitTest assembleDebug
 ```
 
-Release delivery is automated only to Google Play Internal Testing. Production
-promotion is intentionally manual and is not implemented by repository
-automation.
+Tagged release delivery is automated to Google Play Internal Testing. Alpha
+and Production promotions are separate, explicitly confirmed manual workflows;
+neither workflow rebuilds the signed candidate or receives signing credentials.

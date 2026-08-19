@@ -1,0 +1,9 @@
+{
+  "packageName": "com.nutsnews.app",
+  "sourceTrack": "alpha",
+  "targetTrack": "production",
+  "releaseStatus": "completed",
+  "reviewBehavior": "ERROR_IF_IN_REVIEW",
+  "githubEnvironment": "play-internal",
+  "serviceAccountSecret": "GOOGLE_PLAY_SERVICE_ACCOUNT_JSON"
+}

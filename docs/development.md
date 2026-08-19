@@ -126,6 +126,10 @@ documentation:
 ./scripts/validate-play-internal-provisioning.sh
 ./scripts/validate-tagged-release.sh
 ./scripts/tests/test-tagged-release.sh
+./scripts/validate-play-closed-promotion.sh
+./scripts/tests/test-play-closed-promotion.sh
+./scripts/validate-play-production-promotion.sh
+./scripts/tests/test-play-production-promotion.sh
 ./scripts/validate-documentation.sh
 ```
 

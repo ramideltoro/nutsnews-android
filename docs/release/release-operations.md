@@ -1,9 +1,10 @@
 # NutsNews Android release operations
 
-This runbook covers automated delivery to Google Play Internal Testing and a
-separate, explicitly confirmed promotion of an already verified bundle to the
-Alpha closed-testing track. It does not authorize or automate production
-promotion.
+This runbook covers automated delivery to Google Play Internal Testing and
+separate, explicitly confirmed promotions of an already verified bundle to the
+Alpha closed-testing and Production tracks. The Production workflow reuses the
+published Alpha artifact; it does not rebuild, upload, or receive signing
+credentials.
 
 ## Release contract
 
@@ -104,7 +105,8 @@ The tagged workflow performs these gates in order:
 5. Enter `play-internal`, re-verify the AAB, upload and commit only to `internal` using Play's automatic review-submission behavior, then query package, track, version name, and version code.
 6. Create the GitHub Release and attach that same verified AAB only after Play verification succeeds.
 
-No workflow job deploys or promotes to production.
+The tagged workflow never deploys or promotes to Production. Production is a
+separate manual workflow with its own exact confirmation and lifecycle gates.
 
 ## Replace an Alpha release that is in review
 
@@ -132,6 +134,55 @@ gh workflow run play-closed-promotion.yml \
 Run this workflow only when replacing the existing Alpha review is intended.
 Submitting another app change can restart Google Play's review wait time. The
 workflow has no production path and receives no release-signing credential.
+
+## Promote a published Alpha release to Production
+
+Production promotion is allowed only after all of the following are true:
+
+1. Android developer verification reports every distributed package as
+   registered.
+2. Play Console reports no blocking app-content, policy, or store-listing task.
+3. If the developer account is subject to new-personal-account testing rules,
+   the required closed test is complete and Play has approved the production
+   access application.
+4. The exact version is `RELEASE_LIFECYCLE_STATE_PUBLISHED` on Alpha.
+5. The tagged release, Alpha promotion, Android CI, and Security runs for the
+   candidate are successful.
+
+The Production workflow first queries the release-lifecycle API. It refuses an
+Alpha candidate that is merely drafted, staged, in review, or rejected. It also
+uses `ERROR_IF_IN_REVIEW`, so it never cancels or replaces an unrelated Play
+review. The release is a full rollout (`completed`) because the workflow is for
+an explicit Production launch; later staged update policy can be added as a
+separate reviewed change.
+
+For version `1.1.9` (`1001009`), run:
+
+```sh
+gh workflow run play-production-promotion.yml \
+  --repo ramideltoro/nutsnews-android \
+  --ref main \
+  -f version_name=1.1.9 \
+  -f version_code=1001009 \
+  -f release_notes='Improves navigation spacing, Favorites discovery and removal confirmation, and adds a first-launch feature walkthrough.' \
+  -f production_confirmation=PROMOTE_TO_PRODUCTION
+```
+
+The safe outcomes are:
+
+- `published`: the release is available on Production.
+- `in-review`: Play accepted and is reviewing the Production release.
+- `submitted`: the edit was committed but the lifecycle endpoint has not yet
+  reported the release.
+- `pending-console-review`: Play required the committed change to be sent from
+  Publishing overview.
+- `approved-not-published`: managed publishing is enabled and the approved
+  release must be published from Play Console.
+
+Any missing Production access, unmet testing requirement, active review,
+service-account permission problem, or Play validation error fails the workflow
+with the structured Play message. Do not weaken the guard or cancel a review to
+bypass the failure.
 
 ## Post-release verification
 
@@ -162,7 +213,8 @@ therefore a roll-forward:
 3. Merge only after required checks pass on the restored source state.
 4. Choose a new SemVer whose generated version code is higher than every code Play has seen.
 5. Create a new tag on the repaired `main` and let the normal Internal workflow run.
-6. Verify tester delivery before considering any separate manual production action.
+6. Verify tester delivery before running the separately confirmed Production
+   promotion workflow.
 
 Deleting a GitHub Release or tag does not remove a Play release and is not a
 rollback. Never attempt to replace an AAB under an existing version code.
